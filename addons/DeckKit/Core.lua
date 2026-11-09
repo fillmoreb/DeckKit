@@ -122,6 +122,17 @@ function ns.AddCommand(name, fn, help)
     commands[name] = { fn = fn, help = help }
 end
 
+-- WoW's taint log (Logs/taint.log): what an addon touched when the game says "Interface action
+-- failed because of an AddOn". Off normally; on while hunting one down.
+ns.AddCommand("taint", function(arg)
+    local set = C_CVar and C_CVar.SetCVar or SetCVar
+    local get = C_CVar and C_CVar.GetCVar or GetCVar
+    arg = strtrim(arg or ""):lower()
+    if arg == "on" or arg == "off" then set("taintLog", arg == "on" and "1" or "0") end
+    ns.Print("taint log " .. (tostring(get("taintLog")) ~= "0" and "on (Logs/taint.log)" or "off")
+        .. ". /deckkit taint on|off")
+end, "WoW's taint log for tracking down \"Interface action failed\": on | off")
+
 SLASH_DECKKIT1 = "/deckkit"
 SLASH_DECKKIT2 = "/dkit"
 SlashCmdList.DECKKIT = function(msg)
