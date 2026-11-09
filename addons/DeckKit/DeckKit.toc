@@ -12,3 +12,4 @@ Override.lua
 Settings.lua
 Menu.lua
 Paddles.lua
+Debug.lua
