@@ -5,7 +5,10 @@
 --                leaves room to press the other one first.
 --   Hold both    no peeks: dictation (set Decktation's push-to-talk to the same two grips). A
 --                "Listening" indicator shows mid-screen; when you let go it says "Transcribing"
---                until your next chat message arrives (or a timeout).
+--                until your next chat message arrives (or a timeout). With Decktation's status
+--                hook set up (deck-setup/decktation-hook.sh), it follows Decktation's real state
+--                instead: signal keys (INSERT recording, HOME transcribing, END done, DELETE
+--                error) bound to DeckKit's dictation-signal bindings.
 --   Double-tap   hide / show that side's interface: whatever sits along that screen edge, from any
 --                addon (see "Hiding a side" below), plus anything a module adds.
 --
@@ -95,6 +98,8 @@ end
 -- Chords, holds and taps
 ------------------------------------------------------------------------
 
+local signalled = false -- Decktation has sent a real status: follow those, not the paddles
+
 local function StartChord()
     chord = true
     for _, s in pairs(sides) do
@@ -105,11 +110,11 @@ local function StartChord()
         if s.peeking then s.peeking = false; Peek(side, false) end
     end
     transcribing = false
-    if Setting("dictationIndicator") then Show("Listening", 1, 0.3, 0.3, true) end
+    if Setting("dictationIndicator") and not signalled then Show("Listening", 1, 0.3, 0.3, true) end
 end
 
 local function ChordLetGo() -- the first grip released: dictation stops, transcription starts
-    if transcribing or not Setting("dictationIndicator") then return end
+    if transcribing or signalled or not Setting("dictationIndicator") then return end
     transcribing = true
     Show("Transcribing", 1, 0.82, 0, false, TRANSCRIBE_TIMEOUT)
 end
@@ -235,6 +240,52 @@ function Paddles.Press(side, down)
         s.lastTap = now
     end
 end
+
+-- Decktation's status, sent as key presses by its status hook (see the top of this file).
+function Paddles.Signal(event)
+    signalled = true
+    ns.Debug("dictation", event)
+    if not Setting("dictationIndicator") then return end
+    if event == "record_start" then
+        transcribing = false
+        Show("Listening", 1, 0.3, 0.3, true)
+    elseif event == "record_stop" then
+        transcribing = true
+        Show("Transcribing", 1, 0.82, 0, false, TRANSCRIBE_TIMEOUT)
+    elseif event == "transcription_done" then
+        HideBox()
+    elseif event == "error" then
+        Show("Didn't catch that", 1, 0.45, 0.45, false, 2)
+    end
+end
+function DeckKit_DictationSignal(event) Paddles.Signal(event) end
+
+BINDING_NAME_DECKKIT_DICTATION_START = "Dictation signal: recording (sent by Decktation)"
+BINDING_NAME_DECKKIT_DICTATION_STOP = "Dictation signal: transcribing (sent by Decktation)"
+BINDING_NAME_DECKKIT_DICTATION_DONE = "Dictation signal: done (sent by Decktation)"
+BINDING_NAME_DECKKIT_DICTATION_ERROR = "Dictation signal: error (sent by Decktation)"
+
+-- The signal keys start out bound, once, only where a key still has its default binding (camera
+-- pitch / view presets, which a gamepad doesn't use) or none. Rebinding them afterwards sticks.
+local SIGNAL_KEYS = {
+    { key = "INSERT", action = "DECKKIT_DICTATION_START", default = "PITCHUP" },
+    { key = "HOME", action = "DECKKIT_DICTATION_STOP", default = "PREVVIEW" },
+    { key = "END", action = "DECKKIT_DICTATION_DONE", default = "NEXTVIEW" },
+    { key = "DELETE", action = "DECKKIT_DICTATION_ERROR", default = "PITCHDOWN" },
+}
+ns.On("PLAYER_LOGIN", function()
+    if ns.db.dictationKeysSet or InCombatLockdown() then return end
+    ns.db.dictationKeysSet = true
+    local changed = false
+    for _, s in ipairs(SIGNAL_KEYS) do
+        local current = GetBindingAction(s.key) or ""
+        if not GetBindingKey(s.action) and (current == "" or current == s.default) then
+            SetBinding(s.key, s.action)
+            changed = true
+        end
+    end
+    if changed then SaveBindings(GetCurrentBindingSet()) end
+end)
 
 -- "Transcribing" ends when your own message shows up in chat.
 local CHAT_EVENTS = { "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_EMOTE", "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER",

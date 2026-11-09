@@ -55,8 +55,10 @@ the bar you're using). DeckHUD can move the crossbar for you: `/deckkit layout c
 
 ## Patches to other people's addons/plugins (`patches/`)
 
-- `decktation/strip-blank-audio.patch` – stops whisper tags like `[BLANK_AUDIO]` being typed into chat.
-  Re-apply after a Decktation update.
+- `decktation/status-hooks.patch` – adds a `statusHookCommand` setting to Decktation 0.3.22: a command run
+  on record_start / record_stop / transcription_done / error (`DECKTATION_EVENT`). With
+  `deck-setup/decktation-hook.sh` as that command, DeckKit's dictation indicator follows Decktation's real
+  state (signal keys INSERT / HOME / END / DELETE). Re-apply after a Decktation update until it's upstream.
 
 ## License
 

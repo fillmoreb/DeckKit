@@ -1,0 +1,120 @@
+--- a/decktation_backend.py	2026-11-09 15:52:25
++++ b/decktation_backend.py	2026-11-09 15:53:04
+@@ -9,6 +9,7 @@
+ import subprocess
+ import time
+ import shutil
++import shlex
+ from pathlib import Path
+ 
+ # Decky API v1 uses ``decky``. Keep the old module name as a compatibility
+@@ -175,6 +176,7 @@
+     "showNotifications": True,
+     "hapticFeedback": False,
+     "recordingIndicator": "toast",
++    "statusHookCommand": "",
+     "enabled": False,
+     "game": "wow",
+     "confirmMode": False,
+@@ -230,6 +232,32 @@
+     return indicator
+ 
+ 
++def _status_hook(event):
++    """Run the user's status hook command, if set, for a recording status change.
++
++    The command (config "statusHookCommand") runs in the background with
++    DECKTATION_EVENT set to record_start, record_stop, transcription_done or
++    error, so other tools (an in-game indicator, an overlay, lights) can follow
++    dictation. It never blocks or breaks dictation.
++    """
++    try:
++        command = str(_read_button_config().get("statusHookCommand") or "").strip()
++        if not command:
++            return
++        env = os.environ.copy()
++        env["DECKTATION_EVENT"] = event
++        subprocess.Popen(
++            shlex.split(command),
++            env=env,
++            stdin=subprocess.DEVNULL,
++            stdout=subprocess.DEVNULL,
++            stderr=subprocess.DEVNULL,
++            start_new_session=True,
++        )
++    except Exception as error:
++        logger.warning(f"Status hook failed for {event}: {error}")
++
++
+ def _read_button_config():
+     config = dict(DEFAULT_BUTTON_CONFIG)
+     saved_config = {}
+@@ -705,9 +733,11 @@
+                                     try:
+                                         Plugin.voice_service.start_recording()
+                                         Plugin.recording_start_count += 1
++                                        _status_hook("record_start")
+                                         if Plugin.recording_overlay and _read_button_config()["recordingIndicator"] == "overlay":
+                                             Plugin.recording_overlay.show("compact")
+                                     except Exception as e:
++                                        _status_hook("error")
+                                         if Plugin.haptic_feedback:
+                                             Plugin.haptic_feedback.end_session()
+                                         Plugin._finish_dictation_trace(False)
+@@ -723,11 +753,13 @@
+                         # Button released
+                         logger.info("Button combo released - stopping recording")
+                         if Plugin.voice_service and Plugin.voice_service.is_recording:
++                            _status_hook("record_stop")
+                             if Plugin.recording_overlay and _read_button_config()["recordingIndicator"] == "overlay":
+                                 Plugin.recording_overlay.show("transcribing")
+                             try:
+                                 Plugin.voice_service.stop_recording()
+                             except Exception as e:
++                                _status_hook("error")
+                                 Plugin._finish_dictation_trace(False)
+                                 if telemetry_is_enabled():
+                                     telemetry_capture_error(
+@@ -738,6 +770,7 @@
+                                     )
+                                 raise
+                             else:
++                                _status_hook("transcription_done")
+                                 Plugin._finish_dictation_trace(True)
+                             finally:
+                                 Plugin._hide_unless_pending()
+@@ -1657,9 +1690,11 @@
+                 Plugin._start_dictation_trace()
+                 try:
+                     Plugin.voice_service.start_recording()
++                    _status_hook("record_start")
+                     if Plugin.recording_overlay and _read_button_config()["recordingIndicator"] == "overlay":
+                         Plugin.recording_overlay.show("compact")
+                 except Exception as e:
++                    _status_hook("error")
+                     if Plugin.haptic_feedback:
+                         Plugin.haptic_feedback.end_session()
+                     Plugin._finish_dictation_trace(False)
+@@ -1687,11 +1722,14 @@
+             # Stream shutdown happens promptly in the worker, while Decky's
+             # event loop remains available for status/UI requests during
+             # transcription.
++            if Plugin.voice_service.is_recording:
++                _status_hook("record_stop")
+             if Plugin.recording_overlay and Plugin.voice_service.is_recording and _read_button_config()["recordingIndicator"] == "overlay":
+                 Plugin.recording_overlay.show("transcribing")
+             try:
+                 await asyncio.to_thread(Plugin.voice_service.stop_recording, send)
+             except Exception as e:
++                _status_hook("error")
+                 Plugin._finish_dictation_trace(False)
+                 if telemetry_is_enabled():
+                     telemetry_capture_error(
+@@ -1702,6 +1740,7 @@
+                     )
+                 raise
+             else:
++                _status_hook("transcription_done")
+                 Plugin._finish_dictation_trace(True)
+             finally:
+                 Plugin._hide_unless_pending()
