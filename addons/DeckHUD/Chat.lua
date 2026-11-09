@@ -7,7 +7,8 @@ local _, ns = ...
 
 local DEFAULTS = { chatThin = true, chatNoCombatLog = true, chatTuck = true }
 local MARGIN = 4                -- gap to the left edge, in UIParent units (1 per pixel on the Deck)
-local BOTTOM = 17               -- the edit box's frame bottom: just above the XP bar along the bottom
+local BOTTOM = 4                -- the edit box's frame bottom...
+local BAR_GAP = 2               -- ...or this far above the XP bar, while that's along the bottom
 local EDIT_DX, EDIT_DY = 5, 34  -- the edit box's offset from the chat frame's bottom-left
 local EDIT_PAD = 5              -- the edit box's typing area sits 5 px inside its frame
 local WHITE = "Interface\\Buttons\\WHITE8X8"
@@ -92,6 +93,20 @@ end
 
 local placing = false
 
+-- Where the edit box's bottom goes: near the edge, unless the XP bar runs along the bottom under it.
+local function Bottom()
+    -- (the bars themselves: StatusTrackingBarManager is an invisible holder that stays at the bottom)
+    for _, name in ipairs({ "MainStatusTrackingBarContainer", "SecondaryStatusTrackingBarContainer", "MainMenuExpBar" }) do
+        local bar = _G[name]
+        local bottom, left, top = bar and bar.GetBottom and bar:GetBottom(), bar and bar.GetLeft and bar:GetLeft(), bar and bar.GetTop and bar:GetTop()
+        if type(bottom) == "number" and type(left) == "number" and type(top) == "number" and bar:IsShown()
+            and bottom < 40 and left < MARGIN + 4 + ChatFrame1:GetWidth() + 10 then
+            return math.max(BOTTOM, top + BAR_GAP)
+        end
+    end
+    return BOTTOM
+end
+
 local function Tuck()
     if DB().chatTuck == false then return end
     placing = true
@@ -99,7 +114,7 @@ local function Tuck()
     -- column is hidden here, so drop the clamp to get into the corner.
     ChatFrame1:SetClampedToScreen(false)
     ChatFrame1:ClearAllPoints()
-    ChatFrame1:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", MARGIN + 4, BOTTOM + EDIT_DY)
+    ChatFrame1:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", MARGIN + 4, Bottom() + EDIT_DY)
     placing = false
 end
 

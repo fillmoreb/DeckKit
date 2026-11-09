@@ -111,7 +111,43 @@ function Layout.Restore()
     return true, backup.when
 end
 
-local GAMEPAD_BAR = Enum and Enum.EditModeSystem and Enum.EditModeSystem.GamepadMainActionBar
+local SYSTEMS = Enum and Enum.EditModeSystem or {}
+local GAMEPAD_BAR = SYSTEMS.GamepadMainActionBar
+
+-- The suggested layout for the Deck: the XP bar (and the bar that stacks with it, e.g.
+-- reputation) along the top edge, which frees the bottom so the crossbar can sit low.
+local SUGGESTED = {
+    { system = SYSTEMS.StatusTrackingBar, index = 1,
+      anchor = { point = "TOP", relativeTo = "UIParent", relativePoint = "TOP", offsetX = 0, offsetY = 0 } },
+    { system = SYSTEMS.StatusTrackingBar, index = 2,
+      anchor = { point = "TOP", relativeTo = "UIParent", relativePoint = "TOP", offsetX = 0, offsetY = -17 } },
+    { system = GAMEPAD_BAR,
+      anchor = { point = "BOTTOM", relativeTo = "UIParent", relativePoint = "BOTTOM", offsetX = 0, offsetY = 6 } },
+}
+
+-- All the suggested positions in one change (one backup). Takes effect after a reload.
+function Layout.ApplySuggested()
+    if InCombatLockdown() then return false, "not in combat" end
+    local info, layout = Layout.Active()
+    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
+    if not Backup(layout) then return false, "couldn't back up the layout first" end
+    local n = 0
+    for _, s in ipairs(SUGGESTED) do
+        local sys = s.system and FindSystem(layout, s.system, s.index)
+        if sys then
+            for k, v in pairs(s.anchor) do sys.anchorInfo[k] = v end
+            sys.isInDefaultPosition = false
+            n = n + 1
+        end
+    end
+    C_EditMode.SaveLayouts(info)
+    return true, n
+end
+
+local function ReloadSoon(what)
+    ns.Print(what .. " Reloading the interface...")
+    C_Timer.After(1, function() if not pcall(ReloadUI) then ns.Print("Reload (F6 or /reload) to see it.") end end)
+end
 
 ns.AddCommand("layout", function(arg)
     local cmd, rest = strtrim(arg or ""):lower():match("^(%S*)%s*(.-)$")
@@ -119,6 +155,10 @@ ns.AddCommand("layout", function(arg)
         if not GAMEPAD_BAR then return ns.Print("This client has no gamepad action bar in Edit Mode.") end
         local ok, err = Layout.SetAnchor(GAMEPAD_BAR, nil, { point = "BOTTOM", relativeTo = "UIParent", relativePoint = "BOTTOM", offsetY = tonumber(rest) })
         ns.Print(ok and ("Crossbar moved to " .. rest .. " px from the bottom (layout backed up). /reload to see it.") or ("Not changed: " .. err .. "."))
+    elseif cmd == "suggested" then
+        local ok, info = Layout.ApplySuggested()
+        if ok then ReloadSoon("Suggested layout applied (" .. info .. " frames, layout backed up).")
+        else ns.Print("Not changed: " .. info .. ".") end
     elseif cmd == "restore" then
         local ok, info = Layout.Restore()
         ns.Print(ok and ("Restored the layout backup from " .. info .. ". /reload to see it.") or ("Not restored: " .. info .. "."))
@@ -127,9 +167,25 @@ ns.AddCommand("layout", function(arg)
         if #list == 0 then return ns.Print("No layout backups yet.") end
         for i, b in ipairs(list) do ns.Print(i .. ". " .. b.when .. "  " .. tostring(b.name)) end
     else
-        ns.Print("/deckkit layout crossbar <px from bottom>  |  restore  |  backups")
+        ns.Print("/deckkit layout suggested  |  crossbar <px from bottom>  |  restore  |  backups")
     end
-end, "Edit Mode layout tweaks: crossbar <height>, restore, backups")
+end, "Edit Mode layout: suggested, crossbar <height>, restore, backups")
+
+-- On the Suggested settings page (Suggested.lua makes the page; these go after its rows).
+Layout.MenuItems = {
+    { type = "action", label = "Apply suggested layout",
+      hint = "XP bar along the top, crossbar near the bottom. Backs up your Edit Mode layout, then reloads.",
+      run = function()
+          local ok, info = Layout.ApplySuggested()
+          if ok then ReloadSoon("Suggested layout applied.") else ns.Print("Not changed: " .. info .. ".") end
+      end },
+    { type = "action", label = "Undo the last layout change",
+      hint = "Puts back your Edit Mode layout from before DeckKit's last change, then reloads.",
+      run = function()
+          local ok, info = Layout.Restore()
+          if ok then ReloadSoon("Layout from " .. info .. " restored.") else ns.Print("Not restored: " .. info .. ".") end
+      end },
+}
 
 ns.On("PLAYER_LOGIN", function()
     C_Timer.After(3, function()

@@ -56,5 +56,6 @@ table.insert(items, { type = "action", label = "Apply all suggested",
             or ("Applied " .. n .. " suggested setting" .. (n == 1 and "" or "s") .. "."))
     end })
 table.insert(items, { type = "info", label = "Switching one off puts back what you had before." })
+for _, item in ipairs(ns.Layout and ns.Layout.MenuItems or {}) do table.insert(items, item) end
 
 DeckKit.Settings.Add("DeckHUD-Suggested", "|cffe0c060Suggested settings|r", items)
