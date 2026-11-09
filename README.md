@@ -1,3 +1,5 @@
+<p align="center"><img src="media/deckkit-logo-400.png" width="200" alt="DeckKit logo"></p>
+
 # DeckKit
 
 Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-side setup that goes with them.
@@ -46,6 +48,6 @@ then `./deploy.sh WayPad MapDeck` (or no arguments for all) and `/reload` in gam
 
 MIT, see [`LICENSE`](LICENSE). DeckKit's controller input is adapted from BagPad (MIT, © 2026 Chris), and the shared button overrides and
 wand shoot from Improved Forever (MIT, © 2026 markg).
-The Steam art in `deck-setup/wowforever-art/` is AI-generated and not covered by the MIT License.
+The Steam art in `deck-setup/wowforever-art/` and the logo in `media/` are AI-generated and not covered by the MIT License.
 DeckKit is an unofficial fan project, not affiliated with Blizzard Entertainment. World of Warcraft,
 Hearthstone and related marks belong to Blizzard.
