@@ -27,15 +27,26 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 - **Never rename a SavedVariables table or a binding name.** Players' data and keybinds are stored
   under those names. This also holds while moving code into the DeckKit core.
 - Use `/deckkit` (and `/dkit`) for suite commands. `/deck` is taken by other Forever addons.
-- Each addon stays a separate addon. The planned **DeckKit core** addon will hold the shared
-  controller input, windows, printing/events and settings, and the feature addons will depend on it.
-  Until then `WayPad/Input.lua` and `DisenchantDeck/Input.lua` (and `Window.lua`) are copies that have
-  drifted apart. WayPad's copy is the newer one (it has the "draining" fix: the press that closes a
-  window stays consumed until released). Fix input bugs in both copies, or better, in the core.
+- Each feature stays a separate addon on top of the **DeckKit core** (`addons/DeckKit`), which holds
+  the shared controller input (`Input.lua`), the window look (`Window.lua`), and in `Core.lua` the
+  `DeckKit` global, per-module event buses, `DeckKit.TakeSticks` and `/deckkit`; `Override.lua` is
+  `DeckKit.Override`, which shares pad buttons between modules. A module lists
+  `## Dependencies: DeckKit` and starts its first file with
+  `DeckKit.NewModule(ns, ADDON, "<colored title>")`, which sets `ns.Print`, `ns.On`, `ns.Input`,
+  `ns.Window`, `ns.Override`, `ns.AddCommand` and `ns.TITLE`. Shared behaviour gets fixed once, in the core. Never copy core code into
+  a module.
+- Never bind a pad button directly from a module. Claim it with
+  `ns.Override.Set(key, id, { when = "[macro conditions]", priority = n, macro = "..." })`; the core
+  picks the winner per press, in secure code. X (PAD3) today: wand shoot (20, `[harm,nodead]`), fishing
+  (10, `[nocombat,nochanneling]`).
+- Module bindings go in the DeckKit section of Key Bindings: `category="BINDING_HEADER_DECKKIT"` in
+  `Bindings.xml`, with the module's own `header`.
 - Gamepad input: secure actions (casting, using items) need SecureActionButtons and override
   bindings. You can't trigger them from insecure Lua. See `DisenchantDeck/List.lua` for the pattern.
-- Credit borrowed code. `WayPad/Input.lua` is adapted from BagPad's MIT-licensed
-  `Input/Controller.lua`.
+- Credit borrowed code, in the file header and in `LICENSE`. `DeckKit/Input.lua` is adapted from
+  BagPad's MIT-licensed `Input/Controller.lua`; `DeckKit/Override.lua` and
+  `DeckSundries/WandShoot.lua` from Improved Forever's (MIT) `Override.lua` and `WandShoot.lua`.
+- Module commands go under `/deckkit <name>` (`ns.AddCommand`), not new slash commands.
 
 ## Checking and deploying
 

@@ -1,32 +1,11 @@
 -- DisenchantDeck: a controller list of what's in your bags that can be disenchanted.
 --
 --   Core.lua    events, saved hidden list, the bag scan
---   Input.lua   controller capture for the window (same as WayPad's)
---   Window.lua  the window look (same as WayPad's)
 --   List.lua    the list: A disenchants, Y hides / shows again, LB/RB switch lists, B closes
-local _, ns = ...
+local ADDON, ns = ...
 
-ns.TITLE = "|cffb070ffDisenchantDeck|r"
+DeckKit.NewModule(ns, ADDON, "|cffb070ffDisenchantDeck|r") -- Print, On, Input, Window
 ns.DISENCHANT = 13262
-
-function ns.Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(ns.TITLE .. ": " .. msg)
-end
-
-local events = CreateFrame("Frame")
-local listeners = {}
-
-function ns.On(event, fn)
-    if not listeners[event] then
-        listeners[event] = {}
-        events:RegisterEvent(event)
-    end
-    table.insert(listeners[event], fn)
-end
-
-events:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(listeners[event]) do fn(...) end
-end)
 
 ns.On("ADDON_LOADED", function(name)
     if name ~= "DisenchantDeck" then return end

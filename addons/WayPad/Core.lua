@@ -1,7 +1,6 @@
 -- WayPad: controller-first waypoints for WoW: Forever.
 --
 --   Core.lua     waypoint store, position math, arrival, the update ticker
---   Input.lua    controller capture for the windows
 --   Arrow.lua    the floating arrow (no panel)
 --   Pins.lua     world map and minimap pins
 --   Editor.lua   "Add waypoint": six digit slots dialed with the d-pad
@@ -9,35 +8,12 @@
 --   Slash.lua    /waypad and /way
 local ADDON, ns = ...
 
-ns.TITLE = "|cff4fc3f7WayPad|r"
+DeckKit.NewModule(ns, ADDON, "|cff4fc3f7WayPad|r") -- Print, On, Input, Window
 ns.ARRIVE_YARDS = 10
 ns.ARRIVED_SHOWN = 2.5
 
 local db
 ns.points = {} -- { mapID, x, y, label } with x, y in 0..1
-
-function ns.Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(ns.TITLE .. ": " .. msg)
-end
-
-------------------------------------------------------------------------
--- Events
-------------------------------------------------------------------------
-
-local events = CreateFrame("Frame")
-local listeners = {}
-
-function ns.On(event, fn)
-    if not listeners[event] then
-        listeners[event] = {}
-        events:RegisterEvent(event)
-    end
-    table.insert(listeners[event], fn)
-end
-
-events:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(listeners[event]) do fn(...) end
-end)
 
 ------------------------------------------------------------------------
 -- Helpers

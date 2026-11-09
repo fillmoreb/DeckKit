@@ -1,3 +1,3 @@
 <Bindings>
-	<Binding name="CHATDECK_PEEK" header="CHATDECK" category="ADDONS" runOnUp="true">ChatDeck_Peek(keystate)</Binding>
+	<Binding name="CHATDECK_PEEK" header="CHATDECK" category="BINDING_HEADER_DECKKIT" runOnUp="true">ChatDeck_Peek(keystate)</Binding>
 </Bindings>

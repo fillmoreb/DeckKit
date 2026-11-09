@@ -1,4 +1,4 @@
--- DisenchantDeck's window look (same as WayPad's): a dark panel, a title, and a button-hint line at the bottom.
+-- The DeckKit window look: a dark panel, a title, and a button-hint line at the bottom.
 local _, ns = ...
 
 local Window = {}

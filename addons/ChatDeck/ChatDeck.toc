@@ -4,5 +4,6 @@
 ## Version: 1.0.0
 ## Author: Ben Fillmore
 ## SavedVariables: ChatDeckDB
+## Dependencies: DeckKit
 
 ChatDeck.lua

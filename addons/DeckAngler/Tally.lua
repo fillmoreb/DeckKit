@@ -1,18 +1,25 @@
--- Fishing Tally: counts what you catch while a fishing pole is equipped.
+-- DeckAngler: controller fishing.
 --
+--   Tally.lua      the session tally panel, missed-catch chime, idle reminder, /deckkit fish
+--   OneButton.lua  with a pole equipped, Square (X) casts Fishing
+--
+-- The tally counts what you catch while a fishing pole is equipped.
 -- A session starts when a fishing pole goes into the main hand and ends when
 -- anything else replaces it. Only items actually looted from fishing loot
 -- windows are counted. The panel shows the running tally; when the session
 -- ends, a summary goes to chat and the final tally stays up briefly.
 --
--- /fishtally          show the last session's tally again
--- /fishtally reset    move the panel back under the controller legend
--- /fishtally chime    play the missed-catch chime; /fishtally chime on|off
--- /fishtally alert    list idle alert sounds; /fishtally alert <name|number> picks and plays one (default: double)
--- /fishtally idle     play the idle sound; /fishtally idle <seconds>|on|off (default 60s)
+-- /deckkit fish          show the last session's tally again
+-- /deckkit fish button   one-button fishing on X: /deckkit fish button on|off
+-- /deckkit fish reset    move the panel back under the controller legend
+-- /deckkit fish chime    play the missed-catch chime; /deckkit fish chime on|off
+-- /deckkit fish alert    list idle alert sounds; /deckkit fish alert <name|number> picks and plays one (default: double)
+-- /deckkit fish idle     play the idle sound; /deckkit fish idle <seconds>|on|off (default 60s)
 -- (drag the panel with the mouse to move it)
 
-local PREFIX = "|cff4fc3f7Fishing Tally|r: "
+local ADDON, ns = ...
+
+DeckKit.NewModule(ns, ADDON, "|cff3fd0c0DeckAngler|r")
 local MAIN_HAND = 16
 local LINGER = 20      -- seconds the final tally stays up after a session
 local MAX_ROWS = 14
@@ -30,14 +37,12 @@ local KNOWN_POLES = {
     [44050] = true, [45858] = true,
 }
 
-local db          -- FishingTallyDB (per character)
+local db          -- DeckAnglerDB (per character)
 local session     -- { started, catches, items = { [itemID] = { name, icon, quality, count } } }
 local pending     -- loot slot -> item info, for the fishing loot window that's open
 local ticker, hideTimer
 
-local function out(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. msg)
-end
+local out = ns.Print
 
 ---------------------------------------------------------------------------
 -- Pole detection (instant item info needs no item cache)
@@ -49,11 +54,12 @@ local function PoleEquipped()
     local _, _, _, _, _, classID, subclassID = GetItemInfoInstant(id)
     return classID == WEAPON_CLASS and subclassID == FISHING_POLE_SUBCLASS
 end
+ns.PoleEquipped = PoleEquipped
 
 ---------------------------------------------------------------------------
 -- Display
 
-local panel = CreateFrame("Frame", "FishingTallyPanel", UIParent, "BackdropTemplate")
+local panel = CreateFrame("Frame", "DeckAnglerPanel", UIParent, "BackdropTemplate")
 panel:SetSize(WIDTH, 40)
 panel:SetFrameStrata("MEDIUM")
 panel:SetClampedToScreen(true)
@@ -234,7 +240,7 @@ end)
 local IDLE_DEFAULT = 60
 local IDLE_REPEAT = 15
 local IDLE_TEXT_EVERY = 60
--- Choices for /fishtally alert (soft UI sounds; numbers are fallbacks if a
+-- Choices for /deckkit fish alert (soft UI sounds; numbers are fallbacks if a
 -- SOUNDKIT name is missing).
 local SK = SOUNDKIT or {}
 local IDLE_SOUNDS = {
@@ -422,8 +428,8 @@ events:RegisterEvent("LOOT_SLOT_CLEARED")
 events:RegisterEvent("LOOT_CLOSED")
 events:SetScript("OnEvent", function(_, event, arg1, arg2, arg3)
     if event == "PLAYER_LOGIN" then
-        FishingTallyDB = FishingTallyDB or {}
-        db = FishingTallyDB
+        DeckAnglerDB = DeckAnglerDB or {}
+        db = DeckAnglerDB
         PlacePanel()
         SeekLegend()
     elseif not db then
@@ -452,13 +458,19 @@ events:SetScript("OnEvent", function(_, event, arg1, arg2, arg3)
     end
 end)
 
-SLASH_FISHINGTALLY1 = "/fishtally"
-SlashCmdList.FISHINGTALLY = function(msg)
+local function Command(msg)
     msg = (msg or ""):lower():match("^%s*(.-)%s*$")
+    local buttonArg = msg:match("^button%s*(%S*)$")
+    if buttonArg then
+        if buttonArg == "on" or buttonArg == "off" then db.oneButton = buttonArg == "on" end
+        if ns.OneButtonApply then ns.OneButtonApply() end
+        out("one-button fishing on X " .. (db.oneButton == false and "off" or "on") .. " (/deckkit fish button on|off).")
+        return
+    end
     if msg == "chime" or msg == "chime on" or msg == "chime off" then
         if msg == "chime" then
             PlaySound(CHIME, "Master")
-            out("missed-catch chime is " .. (db.chime == false and "off" or "on") .. " (/fishtally chime on|off).")
+            out("missed-catch chime is " .. (db.chime == false and "off" or "on") .. " (/deckkit fish chime on|off).")
         else
             db.chime = msg == "chime on"
             out("missed-catch chime " .. (db.chime and "on" or "off") .. ".")
@@ -483,7 +495,7 @@ SlashCmdList.FISHINGTALLY = function(msg)
             list[#list + 1] = (snd.key == current and "|cff00ff00" or "") .. i .. " " .. snd.key ..
                 (snd.key == current and "|r" or "")
         end
-        out("alert sounds: " .. table.concat(list, ", ") .. ". Pick one with /fishtally alert <name or number>.")
+        out("alert sounds: " .. table.concat(list, ", ") .. ". Pick one with /deckkit fish alert <name or number>.")
         PlayIdle(IdleSound())
         return
     end
@@ -499,7 +511,7 @@ SlashCmdList.FISHINGTALLY = function(msg)
             PlayIdle(IdleSound())
         end
         out("idle reminder " .. (db.idle == false and "off" or ("after " .. (db.idle or IDLE_DEFAULT) ..
-            "s without a cast")) .. " (/fishtally idle <seconds>|on|off).")
+            "s without a cast")) .. " (/deckkit fish idle <seconds>|on|off).")
         return
     end
     if msg == "reset" then
@@ -522,3 +534,5 @@ SlashCmdList.FISHINGTALLY = function(msg)
     Render(db.last)
     hideTimer = C_Timer.NewTimer(LINGER, function() hideTimer = nil; panel:Hide() end)
 end
+
+ns.AddCommand("fish", Command, "last fishing tally; button | chime | alert | idle | reset")

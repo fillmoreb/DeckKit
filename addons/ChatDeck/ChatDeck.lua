@@ -2,11 +2,14 @@
 --
 -- The keybinding (Bindings.xml, runOnUp) shows the peek on press and hides it on release.
 -- It shows the chat tab you have selected, its history plus anything new while you look.
--- While it's up the frame takes the gamepad sticks (EnableGamePadStick, as ImprovedForever's
+-- While it's up the frame takes the gamepad sticks (DeckKit.TakeSticks, as ImprovedForever's
 -- panel does), so the camera stays still and the right stick scrolls: up = older.
 --
 -- /chatdeck size <12-40>   font size        /chatdeck   show / hide (for testing at a desk)
-local _, ns = ...
+local ADDON, ns = ...
+
+DeckKit.NewModule(ns, ADDON, "|cff7fd8ffChatDeck|r")
+local Print = ns.Print
 
 local DEFAULTS = { size = 22, lines = 300 }
 local MARGIN = 60
@@ -17,8 +20,6 @@ local frame, text, hint, more
 local source -- the chat frame being shown
 local stickY = 0
 local carry = 0
-
-local function Print(msg) DEFAULT_CHAT_FRAME:AddMessage("|cff7fd8ffChatDeck|r: " .. msg) end
 
 local function SourceFrame()
     return SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME or ChatFrame1
@@ -73,12 +74,7 @@ local function Create()
     more:SetText("newer messages below")
 
     -- Take the sticks while shown: the camera and character stay still, the right stick scrolls.
-    if frame.EnableGamePadStick then
-        pcall(frame.EnableGamePadStick, frame, true)
-        frame:SetScript("OnGamePadStick", function(_, stick, _, y)
-            if stick == "Right" or stick == "Camera" then stickY = y or 0 end
-        end)
-    end
+    DeckKit.TakeSticks(frame, function(y) stickY = y end)
 
     frame:SetScript("OnUpdate", function(_, elapsed)
         local y = stickY

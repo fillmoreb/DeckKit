@@ -1,3 +1,3 @@
 <Bindings>
-	<Binding name="MAPDECK_PEEK" header="MAPDECK" category="ADDONS" runOnUp="true">MapDeck_Peek(keystate)</Binding>
+	<Binding name="MAPDECK_PEEK" header="MAPDECK" category="BINDING_HEADER_DECKKIT" runOnUp="true">MapDeck_Peek(keystate)</Binding>
 </Bindings>

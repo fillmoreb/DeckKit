@@ -1,8 +1,8 @@
--- Controller input for WayPad's windows.
+-- Controller input for DeckKit windows: DeckKit.Input.New(window, handlers).
 --
 -- Adapted from BagPad's Input/Controller.lua (MIT License, Copyright (c) 2026 Chris).
 --
--- While a WayPad window is open, an invisible catcher frame at the top strata receives
+-- While a window is open, an invisible catcher frame at the top strata receives
 -- OnGamePadButtonDown. Keys the window handles are consumed (propagation off for that press);
 -- every other key reaches the game as normal. The controller's mapped state is also polled each
 -- frame, as a backup and to repeat a held D-pad direction. Each press is handled once.

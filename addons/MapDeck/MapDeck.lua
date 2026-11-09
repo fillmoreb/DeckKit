@@ -7,7 +7,9 @@
 -- (up: zone -> continent) and back in (down). The camera stays still; auto-run keeps going.
 --
 -- /mapdeck   show / hide (for testing at a desk)
-local _, ns = ...
+local ADDON, ns = ...
+
+DeckKit.NewModule(ns, ADDON, "|cff8fd16fMapDeck|r")
 
 local MARGIN, HEADER = 24, 44
 local TILE = 256
@@ -282,12 +284,7 @@ local function Create()
     hint:SetPoint("TOPLEFT", MARGIN, -22)
 
     -- Take the sticks while shown (camera stays still); the right stick zooms.
-    if frame.EnableGamePadStick then
-        pcall(frame.EnableGamePadStick, frame, true)
-        frame:SetScript("OnGamePadStick", function(_, stick, _, y)
-            if stick == "Right" or stick == "Camera" then stickY = y or 0 end
-        end)
-    end
+    DeckKit.TakeSticks(frame, function(y) stickY = y end)
 
     local markerClock = 0
     frame:SetScript("OnUpdate", function(_, elapsed)

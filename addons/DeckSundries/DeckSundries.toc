@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: DeckSundries
+## Notes: Small controller extras for DeckKit. Wand shoot: Square fires your wand at an enemy instead of swinging. /deckkit
+## Version: 1.0.0
+## Author: Ben Fillmore
+## SavedVariables: DeckSundriesDB
+## Dependencies: DeckKit
+
+Core.lua
+WandShoot.lua

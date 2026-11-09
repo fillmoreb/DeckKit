@@ -1,4 +1,4 @@
 <Bindings>
-	<Binding name="WAYPAD_ADD" header="WAYPAD" category="ADDONS">WayPad_ToggleEditor()</Binding>
-	<Binding name="WAYPAD_MANAGE" category="ADDONS">WayPad_ToggleManager()</Binding>
+	<Binding name="WAYPAD_ADD" header="WAYPAD" category="BINDING_HEADER_DECKKIT">WayPad_ToggleEditor()</Binding>
+	<Binding name="WAYPAD_MANAGE" category="BINDING_HEADER_DECKKIT">WayPad_ToggleManager()</Binding>
 </Bindings>

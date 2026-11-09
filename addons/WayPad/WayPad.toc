@@ -4,13 +4,12 @@
 ## Version: 1.0.0
 ## Author: Ben Fillmore
 ## SavedVariablesPerCharacter: WayPadDB
+## Dependencies: DeckKit
 
 Core.lua
-Input.lua
 Arrow.lua
 Pins.xml
 Pins.lua
-Window.lua
 Editor.lua
 Manager.lua
 Slash.lua
