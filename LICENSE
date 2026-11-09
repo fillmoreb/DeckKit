@@ -22,6 +22,22 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 
+Artwork and trademarks
+
+The images in deck-setup/wowforever-art/ are AI-generated. The MIT License
+above does not cover them, and I claim no copyright or license in them. They
+are included as a convenience, as-is; use them at your own discretion.
+
+World of Warcraft, WoW, Hearthstone, Blizzard and related names, logos and
+designs are trademarks or registered trademarks of Blizzard Entertainment,
+Inc. DeckKit is an unofficial fan project and is not affiliated with,
+endorsed or sponsored by Blizzard Entertainment. Nothing in this repository
+grants any rights to Blizzard's trademarks or other intellectual property.
+If you are a rights holder and want something removed, open an issue and it
+will be taken down.
+
+--------------------------------------------------------------------------------
+
 Third-party code
 
 addons/WayPad/Input.lua (and its copy in addons/DisenchantDeck/Input.lua) is

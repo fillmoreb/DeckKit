@@ -39,3 +39,6 @@ then `./deploy.sh WayPad MapDeck` (or no arguments for all) and `/reload` in gam
 ## License
 
 MIT, see [`LICENSE`](LICENSE). WayPad's controller input is adapted from BagPad (MIT, © 2026 Chris).
+The Steam art in `deck-setup/wowforever-art/` is AI-generated and not covered by the MIT License.
+DeckKit is an unofficial fan project, not affiliated with Blizzard Entertainment. World of Warcraft,
+Hearthstone and related marks belong to Blizzard.
