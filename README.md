@@ -8,6 +8,10 @@ Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-si
 > rough edges that come with that, and please report anything broken. Notes for the assistant
 > live in [`CLAUDE.md`](CLAUDE.md), and you're welcome to use them if you work on DeckKit with AI too.
 
+> **Active development.** DeckKit grows out of actually playing on the Deck: features get added and
+> polished whenever I run into something I need, so expect regular updates. Suggestions are welcome
+> in the [issues](https://github.com/fillmoreb/DeckKit/issues).
+
 ## Addons (`addons/`)
 
 | Addon | What it does |
