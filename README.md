@@ -28,8 +28,8 @@ then `./deploy.sh WayPad MapDeck` (or no arguments for all) and `/reload` in gam
 
 ## Deck setup (`deck-setup/`)
 
-- `wowforever.bat` – lives at `C:\wowforever.bat` in the Lutris Battle.net prefix; starts Battle.net and
-  re-sends `launch WoWF` every 10 s until Wow.exe runs.
+- `wowforever.bat` – lives at `C:\wowforever.bat` in the Lutris Battle.net prefix; starts Battle.net, watches
+  its log for the login line, then sends `launch WoWF` (re-sending every few seconds until Wow.exe runs).
 - `addshortcut.py` + `wowforever-art/` – the "WoW Forever" Steam shortcut and its artwork.
 
 ## Patches to other people's addons/plugins (`patches/`)
