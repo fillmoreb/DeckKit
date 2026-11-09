@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: DisenchantDeck
+## Notes: Controller list of everything in your bags you can disenchant. A disenchants, Y hides, RB shows the hidden ones. /dd
+## Version: 1.0.0
+## Author: Ben Fillmore
+## SavedVariablesPerCharacter: DisenchantDeckDB
+
+Core.lua
+Input.lua
+Window.lua
+List.lua

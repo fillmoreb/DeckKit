@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: MapDeck
+## Notes: Hold a button to see the map full-screen. Works in combat. Right stick zooms out to the continent. /mapdeck
+## Version: 1.0.0
+## Author: Ben Fillmore
+## OptionalDeps: WayPad
+
+MapDeck.lua

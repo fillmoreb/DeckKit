@@ -1,0 +1,5 @@
+# Copy to deploy.local (git ignores it) and fill in your own values.
+# SSH target for the Steam Deck. The account needs sudo so it can write files as the "deck" user.
+DECK=deck@steamdeck.local
+# WoW: Forever's AddOns folder on the Deck (this example is an SD card install).
+ADDONS="/run/media/deck/<sd-card-id>/WorldOfWarcraft/World of Warcraft/_forever_/Interface/AddOns"

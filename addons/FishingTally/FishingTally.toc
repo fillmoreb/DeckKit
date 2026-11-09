@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: Fishing Tally
+## Notes: Tracks what you catch while a fishing pole is equipped. The session ends when you re-equip a weapon. /fishtally
+## Version: 1.0.0
+## Author: Ben Fillmore
+## SavedVariablesPerCharacter: FishingTallyDB
+
+FishingTally.lua

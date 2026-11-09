@@ -1,0 +1,11 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- A waypoint pin on the world map (mixin in Pins.lua). Hover only: clicks reach the map. -->
+	<Frame name="WayPadMapPinTemplate" mixin="WayPad_MapPinMixin" enableMouseMotion="true" hidden="true" virtual="true">
+		<Size x="22" y="22"/>
+		<Layers>
+			<Layer level="ARTWORK">
+				<Texture parentKey="Icon" setAllPoints="true"/>
+			</Layer>
+		</Layers>
+	</Frame>
+</Ui>

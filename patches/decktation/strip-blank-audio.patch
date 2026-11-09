@@ -1,0 +1,15 @@
+--- a/bin/wow_voice_chat.py
++++ b/bin/wow_voice_chat.py
+@@ -481,6 +481,12 @@
+             # injection intentionally rejects control characters; convert
+             # only presentation line breaks to spaces at this boundary.
+             text = re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", text).strip()
++            # Local patch: drop whisper non-speech tags ([BLANK_AUDIO], [MUSIC], (wind blowing), *coughs*)
++            # so silence or noise never gets typed into chat.
++            text = re.sub(r"\[[^\]]*\]", " ", text)
++            if re.fullmatch(r"\s*(\([^)]*\)|\*[^*]*\*)\s*", text):
++                text = ""
++            text = re.sub(r"\s{2,}", " ", text).strip()
+             text = _capitalize_standalone_i(text)
+             if self.transcription_language in (None, "en"):
+                 text = _replace_spoken_slash_command(text, self._spoken_punctuation_active())

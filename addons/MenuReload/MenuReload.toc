@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: MenuReload
+## Notes: Adds a Reload UI button to the game menu, right below AddOns.
+## Author: Ben Fillmore
+## Version: 1.0
+## SavedVariables: MenuReloadDB
+MenuReload.lua
