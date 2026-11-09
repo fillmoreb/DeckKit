@@ -183,3 +183,13 @@ ns.On("PLAYER_LOGIN", function()
     SLASH_WAYPADWAY1 = "/way"
     SlashCmdList.WAYPADWAY = Way
 end)
+
+ns.AddSettings({
+    { type = "action", label = "Add a waypoint", hint = "Dial in the coordinates with the d-pad.",
+      run = function() ns.Editor.Open() end },
+    { type = "action", label = "Manage waypoints", hint = "Make one active, edit or remove them.",
+      run = function() ns.Manager.Toggle() end },
+    { type = "action", label = "Reset the arrow position", hint = "Puts the arrow back at the top of the screen.",
+      run = function() ns.Arrow.Reset(); ns.Print("Arrow moved back to the top of the screen.") end },
+    { type = "info", label = "Bind Add / Manage in Key Bindings > DeckKit." },
+})

@@ -1,0 +1,3 @@
+<Bindings>
+	<Binding name="DECKKIT_RELOAD" header="DECKKIT" category="BINDING_HEADER_DECKKIT">ReloadUI()</Binding>
+</Bindings>

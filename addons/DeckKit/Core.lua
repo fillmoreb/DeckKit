@@ -4,10 +4,12 @@
 --   Input.lua   controller capture for windows (DeckKit.Input)
 --   Window.lua  the window look and sounds (DeckKit.Window)
 --   Override.lua  shared pad button overrides, e.g. X for wand shoot and fishing (DeckKit.Override)
+--   Settings.lua  the settings registry modules add their options to (ns.AddSettings)
+--   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
 --
 -- Each feature addon lists "## Dependencies: DeckKit" and starts with
 --   DeckKit.NewModule(ns, "WayPad", "|cff4fc3f7WayPad|r")
--- which gives its namespace Print, On, Input, Window, Override and AddCommand.
+-- which gives its namespace Print, On, Input, Window, Override, AddCommand and AddSettings.
 local ADDON, ns = ...
 
 DeckKit = ns
@@ -17,6 +19,7 @@ ns.TITLE = "|cffffb347DeckKit|r"
 -- Modules put their bindings in a DeckKit section of the Key Bindings screen
 -- (category="BINDING_HEADER_DECKKIT" in Bindings.xml), each under its own header.
 BINDING_HEADER_DECKKIT = "DeckKit"
+BINDING_NAME_DECKKIT_RELOAD = "Reload UI"
 
 local GetMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 ns.version = GetMetadata and GetMetadata(ADDON, "Version") or "?"
@@ -44,6 +47,24 @@ end
 
 ns.On = NewBus()
 
+ns.db = {}
+ns.On("ADDON_LOADED", function(name)
+    if name ~= ADDON then return end
+    DeckKitDB = DeckKitDB or {}
+    ns.db = DeckKitDB
+end)
+
+-- Reload UI starts out on F6 (if F6 is free), once: rebinding or clearing it sticks.
+-- It lets tools outside the game reload it with a key press.
+ns.On("PLAYER_LOGIN", function()
+    if ns.db.reloadKeySet then return end
+    ns.db.reloadKeySet = true
+    if not GetBindingKey("DECKKIT_RELOAD") and (GetBindingAction("F6") or "") == "" then
+        SetBinding("F6", "DECKKIT_RELOAD")
+        SaveBindings(GetCurrentBindingSet())
+    end
+end)
+
 function ns.Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(ns.TITLE .. ": " .. msg)
 end
@@ -64,6 +85,7 @@ function ns.NewModule(addonNS, name, title)
     addonNS.Window = ns.Window
     addonNS.Override = ns.Override
     addonNS.AddCommand = ns.AddCommand
+    addonNS.AddSettings = function(items) ns.Settings.Add(name, title, items) end
     table.insert(modules, { name = name, title = title,
         version = GetMetadata and GetMetadata(name, "Version") or "?" })
     return addonNS
@@ -107,12 +129,17 @@ SlashCmdList.DECKKIT = function(msg)
         command.fn(rest)
         return
     end
+    if name == "" then
+        ns.Menu.Toggle()
+        return
+    end
     local names = {}
     for _, m in ipairs(modules) do
         table.insert(names, m.title .. " " .. m.version)
     end
     ns.Print("version " .. ns.version .. ". Modules: "
         .. (#names > 0 and table.concat(names, ", ") or "none loaded") .. ".")
+    DEFAULT_CHAT_FRAME:AddMessage("  /deckkit: the DeckKit menu (or press Menu twice quickly)")
     for _, n in ipairs(commandOrder) do
         DEFAULT_CHAT_FRAME:AddMessage("  /deckkit " .. n .. (commands[n].help and (": " .. commands[n].help) or ""))
     end

@@ -536,3 +536,28 @@ local function Command(msg)
 end
 
 ns.AddCommand("fish", Command, "last fishing tally; button | chime | alert | idle | reset")
+
+local soundChoices = {}
+for _, snd in ipairs(IDLE_SOUNDS) do table.insert(soundChoices, { snd.key, snd.label }) end
+
+ns.AddSettings({
+    { type = "toggle", label = "X casts Fishing", hint = "With a fishing pole equipped, out of combat.",
+      get = function() return db.oneButton ~= false end,
+      set = function(on) db.oneButton = on; if ns.OneButtonApply then ns.OneButtonApply() end end },
+    { type = "toggle", label = "Missed-catch chime", hint = "Plays when the bobber times out without a bite.",
+      get = function() return db.chime ~= false end,
+      set = function(on) db.chime = on; if on then PlaySound(CHIME, "Master") end end },
+    { type = "choice", label = "Idle reminder", hint = "Pole equipped but no cast for this long.",
+      values = { { false, "Off" }, { 30, "30 sec" }, { 60, "1 min" }, { 120, "2 min" }, { 300, "5 min" } },
+      get = function() if db.idle == false then return false end return db.idle or IDLE_DEFAULT end,
+      set = function(v) db.idle = v end },
+    { type = "choice", label = "Reminder sound", hint = "Plays each one as you pick it.",
+      values = soundChoices,
+      get = function() return IdleSound().key end,
+      set = function(key)
+          db.idleSound = key
+          PlayIdle(IdleSound())
+      end },
+    { type = "action", label = "Show the last tally", run = function() Command("") end },
+    { type = "action", label = "Reset the tally panel position", run = function() Command("reset") end },
+})

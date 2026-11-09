@@ -3,8 +3,11 @@
 ## Notes: Shared core for the DeckKit controller addons (WayPad, DisenchantDeck, ChatDeck, MapDeck, DeckAngler, DeckSundries). /deckkit
 ## Version: 1.0.0
 ## Author: Ben Fillmore
+## SavedVariables: DeckKitDB
 
 Core.lua
 Input.lua
 Window.lua
 Override.lua
+Settings.lua
+Menu.lua

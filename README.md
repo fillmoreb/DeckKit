@@ -12,12 +12,13 @@ Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-si
 
 | Addon | What it does |
 |---|---|
-| **DeckKit** | The shared core: controller input, windows, shared button overrides (X is shared by wand shoot and fishing), a DeckKit section in Key Bindings, `/deckkit` |
+| **DeckKit** | The shared core: controller input, windows, shared button overrides (X is shared by wand shoot and fishing), the **DeckKit menu** with every module's settings (double-tap ☰ Menu, or `/deckkit`), a DeckKit section in Key Bindings, Reload UI on F6 |
 | **WayPad** | Waypoints dialed in with the d-pad, floating arrow, map + minimap pins, `/way` |
 | **DisenchantDeck** | List of disenchantable bag items: A disenchants, Y hides, LB/RB shows hidden (`/dd`) |
 | **ChatDeck** | Hold a button to read chat full-screen; right stick scrolls |
 | **MapDeck** | Hold a button for a full-screen map (works in combat); right stick zooms to the continent |
 | **DeckAngler** | Controller fishing: with a pole equipped X casts; per-session catch tally, missed-catch chime, idle reminder (`/deckkit fish`) |
+| **DeckHUD** | Interface tweaks: square minimap in the top-right corner, as wide as the quest tracker, without the edge buttons; thin chat frame tucked into the bottom-left without the Combat Log tab; Edit Mode layout changes with backups (`/deckkit layout`) |
 | **DeckSundries** | Small extras. Wand shoot: Square fires your wand at an enemy instead of swinging (`/deckkit wandshoot`) |
 | **MenuReload** | Reload UI button in the game menu, under AddOns |
 

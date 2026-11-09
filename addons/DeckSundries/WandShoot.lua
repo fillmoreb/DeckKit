@@ -38,6 +38,13 @@ ns.On("PLAYER_LOGIN", Apply)
 ns.On("PLAYER_EQUIPMENT_CHANGED", Apply)
 ns.On("SPELLS_CHANGED", Apply)
 
+ns.AddSettings({
+    { type = "toggle", label = "Wand shoot",
+      hint = "X fires your wand at a living enemy instead of a melee swing.",
+      get = function() return ns.db.wandShoot ~= false end,
+      set = function(on) ns.db.wandShoot = on; Apply() end },
+})
+
 ns.AddCommand("wandshoot", function()
     ns.db.wandShoot = ns.db.wandShoot == false
     Apply()

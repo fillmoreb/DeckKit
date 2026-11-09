@@ -158,3 +158,15 @@ loader:SetScript("OnEvent", function(self, event, name)
         self:UnregisterAllEvents()
     end
 end)
+
+ns.AddSettings({
+    { type = "range", label = "Font size", min = 12, max = 40, step = 2,
+      hint = "Text size in the chat peek.",
+      get = function() return db and db.size or DEFAULTS.size end,
+      set = function(v)
+          db.size = v
+          if text then text:SetFont(STANDARD_TEXT_FONT, v, "") end
+      end },
+    { type = "info", label = "Hold your peek button to read chat; the right stick scrolls." },
+    { type = "info", label = "Bind it in Key Bindings > DeckKit." },
+})

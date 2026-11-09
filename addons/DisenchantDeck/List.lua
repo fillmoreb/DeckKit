@@ -206,3 +206,13 @@ function DisenchantDeck_Toggle() List.Toggle() end
 SLASH_DISENCHANTDECK1 = "/dd"
 SLASH_DISENCHANTDECK2 = "/disenchantdeck"
 SlashCmdList.DISENCHANTDECK = function() List.Toggle() end
+
+ns.AddSettings({
+    { type = "action", label = "Open the disenchant list", run = List.Open },
+    { type = "action", label = "Show hidden items again", hint = "Un-hides everything you hid with Y.",
+      run = function()
+          local n = 0
+          for id in pairs(ns.db.hidden) do ns.db.hidden[id] = nil; n = n + 1 end
+          ns.Print(n == 0 and "Nothing was hidden." or ("Showing " .. n .. " hidden item" .. (n == 1 and "" or "s") .. " again."))
+      end },
+})

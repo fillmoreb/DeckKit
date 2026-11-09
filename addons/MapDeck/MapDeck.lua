@@ -346,3 +346,8 @@ loader:SetScript("OnEvent", function(self)
     if not frame then Create() end
     self:UnregisterAllEvents()
 end)
+
+ns.AddSettings({
+    { type = "info", label = "Hold your peek button for the map; right stick up zooms out." },
+    { type = "info", label = "Bind it in Key Bindings > DeckKit." },
+})
