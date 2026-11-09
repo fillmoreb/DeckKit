@@ -6,8 +6,8 @@
 --   Hold both    no peeks: dictation (set Decktation's push-to-talk to the same two grips). A
 --                "Listening" indicator shows mid-screen; when you let go it says "Transcribing"
 --                until your next chat message arrives (or a timeout).
---   Double-tap   hide / show that side's interface (modules add what goes: DeckHUD hides the chat
---                and the guide on the left, the minimap and quest tracker on the right).
+--   Double-tap   hide / show that side's interface: whatever sits along that screen edge, from any
+--                addon (see "Hiding a side" below), plus anything a module adds.
 --
 -- Modules: ns.Paddles.SetPeek(side, fn(on)), ns.Paddles.AddSideToggle(side, fn(hidden)),
 -- and their peek bindings call ns.Paddles.Press(side, down). With chords off in the menu, each
@@ -114,10 +114,78 @@ local function ChordLetGo() -- the first grip released: dictation stops, transcr
     Show("Transcribing", 1, 0.82, 0, false, TRANSCRIBE_TIMEOUT)
 end
 
+------------------------------------------------------------------------
+-- Hiding a side
+--
+-- Every top-level frame touching the outer EDGE of the screen on that side is made transparent,
+-- whichever addon made it, and given back its own transparency when the side comes back. Only
+-- what's on screen when you hide it: windows opened afterwards still show. Full-screen frames,
+-- tooltips, popups and DeckKit's own frames are left alone. While hidden, frames that fade
+-- themselves back in are put back to transparent once a second.
+------------------------------------------------------------------------
+
+local EDGE = 0.15
+local swept = { left = {}, right = {} } -- frame -> its alpha before hiding
+local SKIP_NAMES = { "Tooltip", "^DropDownList", "^StaticPopup", "^DeckKit", "^DeckHUD" }
+
+local function Skip(f)
+    if f.IsForbidden and f:IsForbidden() then return true end
+    local name = f:GetName()
+    if name then
+        for _, pattern in ipairs(SKIP_NAMES) do
+            if name:find(pattern) then return true end
+        end
+    end
+end
+
+local function OnEdge(f, side, W, H)
+    if not f:IsShown() or f:GetAlpha() == 0 then return false end
+    local l, r, w, h = f:GetLeft(), f:GetRight(), f:GetWidth(), f:GetHeight()
+    if not (l and r and w and h) or w > W * 0.6 or h > H * 0.9 then return false end
+    if side == "left" then return l < W * EDGE end
+    return r > W * (1 - EDGE)
+end
+
+local function Sweep(side)
+    local W, H = UIParent:GetWidth(), UIParent:GetHeight()
+    for _, f in ipairs({ UIParent:GetChildren() }) do
+        if not swept[side][f] and not Skip(f) and OnEdge(f, side, W, H) then
+            swept[side][f] = f:GetAlpha()
+            f:SetAlpha(0)
+        end
+    end
+end
+
+local function Unsweep(side)
+    for f, alpha in pairs(swept[side]) do f:SetAlpha(alpha) end
+    wipe(swept[side])
+end
+
+local keeper
+local function KeepSwept()
+    local any = next(swept.left) or next(swept.right)
+    if any and not keeper then
+        keeper = C_Timer.NewTicker(1, function()
+            for _, list in pairs(swept) do
+                for f in pairs(list) do if f:GetAlpha() > 0 then f:SetAlpha(0) end end
+            end
+        end)
+    elseif not any and keeper then
+        keeper:Cancel()
+        keeper = nil
+    end
+end
+
+local function SetSide(side, hidden)
+    if hidden then Sweep(side) else Unsweep(side) end
+    KeepSwept()
+    for _, fn in ipairs(toggles[side]) do fn(hidden) end
+end
+
 function Paddles.ToggleSide(side)
     ns.db.hidden = ns.db.hidden or {}
     ns.db.hidden[side] = not ns.db.hidden[side]
-    for _, fn in ipairs(toggles[side]) do fn(ns.db.hidden[side]) end
+    SetSide(side, ns.db.hidden[side])
     Show(SIDE_NAME[side] .. (ns.db.hidden[side] and " hidden" or " shown"), 1, 1, 1, false, 1.2)
 end
 
@@ -183,10 +251,15 @@ end
 -- Put the sides back the way they were left.
 ns.On("PLAYER_LOGIN", function()
     C_Timer.After(1, function()
-        for side, fns in pairs(toggles) do
-            local hidden = ns.db.hidden and ns.db.hidden[side] or false
-            if hidden then for _, fn in ipairs(fns) do fn(true) end end
+        for side in pairs(toggles) do
+            if ns.db.hidden and ns.db.hidden[side] then SetSide(side, true) end
         end
+        -- Some addons show their frames a little later: catch those too.
+        C_Timer.After(4, function()
+            for side in pairs(toggles) do
+                if ns.db.hidden and ns.db.hidden[side] then Sweep(side); KeepSwept() end
+            end
+        end)
     end)
 end)
 

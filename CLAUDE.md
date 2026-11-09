@@ -43,6 +43,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   `Bindings.xml`, with the module's own `header`.
 - Gamepad input: secure actions (casting, using items) need SecureActionButtons and override
   bindings. You can't trigger them from insecure Lua. See `DisenchantDeck/List.lua` for the pattern.
+- Stay agnostic of other addons: no code paths that know about a specific third-party addon
+  (RestedXP, Questie, TomTom...). Use Blizzard APIs, generic mechanisms (e.g. hiding whatever sits
+  along a screen edge) and common conventions (`GetMinimapShape`, LibDBIcon button names).
 - Credit borrowed code, in the file header and in `LICENSE`. `DeckKit/Input.lua` is adapted from
   BagPad's MIT-licensed `Input/Controller.lua`; `DeckKit/Override.lua` and
   `DeckSundries/WandShoot.lua` from Improved Forever's (MIT) `Override.lua` and `WandShoot.lua`.

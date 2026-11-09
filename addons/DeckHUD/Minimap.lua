@@ -266,13 +266,11 @@ ns.AddSettings({
     { type = "info", label = "Disable DeckHUD in the AddOns list for Blizzard's minimap." },
 })
 
--- Double-tapping the right paddle (DeckKit's paddle chords) hides the right side: the minimap and
--- the quest tracker. The minimap is hidden outright: its quest-area outlines and player arrow are
--- drawn by the engine and ignore transparency (it isn't a protected frame, so this works in combat).
--- The tracker only goes transparent, so its secure quest-item buttons are never touched.
+-- Double-tapping the right paddle (DeckKit's paddle chords) hides the right side. DeckKit makes
+-- whatever sits along that edge transparent; the minimap has to be hidden outright instead, since
+-- its quest-area outlines and player arrow are drawn by the engine and ignore transparency (it
+-- isn't a protected frame, so this works in combat).
 DeckKit.Paddles.AddSideToggle("right", function(hidden)
     Holder():SetShown(not hidden)
     Minimap:SetAlpha(1)
-    local tracker = _G.ObjectiveTrackerFrame or _G.QuestWatchFrame or _G.WatchFrame
-    if tracker then tracker:SetAlpha(hidden and 0 or 1) end
 end)

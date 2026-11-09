@@ -27,7 +27,7 @@ local function Place()
     if pos then
         frame:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4])
     else
-        frame:SetPoint("TOP", UIParent, "TOP", 0, -40) -- above RestedXP's arrow (CENTER +200)
+        frame:SetPoint("TOP", UIParent, "TOP", 0, -40) -- near the top, clear of arrows other addons put mid-screen
     end
 end
 
