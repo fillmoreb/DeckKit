@@ -62,7 +62,7 @@ local function CreateProvider()
         local map = self:GetMap()
         local mapID = map:GetMapID()
         if not mapID then return end
-        for i, p in ipairs(ns.points) do
+        for i, p in ipairs(ns.DrawnPoints()) do
             local x, y = ns.TranslateToMap(p.mapID, p.x, p.y, mapID)
             if x then map:AcquirePin(PIN, i):SetPosition(x, y) end
         end
@@ -112,7 +112,7 @@ function Pins.UpdateMinimap()
     local rotates = GetCVar("rotateMinimap") == "1"
     local facing = ns.player.facing
     local square = GetMinimapShape and GetMinimapShape() == "SQUARE"
-    for i, p in ipairs(ns.points) do
+    for i, p in ipairs(ns.DrawnPoints()) do
         local pin = MiniPin(i)
         local active = i == ns.active
         local g = ns.Guide(p)
@@ -143,7 +143,7 @@ function Pins.UpdateMinimap()
             pin:Hide()
         end
     end
-    for i = #ns.points + 1, #minipins do minipins[i]:Hide() end
+    for i = #ns.DrawnPoints() + 1, #minipins do minipins[i]:Hide() end
 end
 
 function Pins.Refresh()

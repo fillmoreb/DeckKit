@@ -185,6 +185,16 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ns.AddSettings({
+    { type = "choice", label = "Waypoints go to",
+      hint = "Auto: another waypoint addon (TomTom-compatible) if one is installed, otherwise WayPad's own.",
+      values = { { "auto", "Auto" }, { "waypad", "WayPad" }, { "other", "Waypoint addon" } },
+      get = function() return ns.HandOff.Mode() end,
+      set = function(mode)
+          ns.HandOff.SetMode(mode)
+          if mode ~= "waypad" and not ns.HandOff.Available() then
+              ns.Print("No TomTom-compatible waypoint addon is installed, so WayPad keeps its own waypoints.")
+          end
+      end },
     { type = "action", label = "Add a waypoint", hint = "Dial in the coordinates with the d-pad.",
       run = function() ns.Editor.Open() end },
     { type = "action", label = "Manage waypoints", hint = "Make one active, edit or remove them.",

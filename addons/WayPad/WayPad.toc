@@ -7,6 +7,7 @@
 ## Dependencies: DeckKit
 
 Core.lua
+HandOff.lua
 Arrow.lua
 Pins.xml
 Pins.lua

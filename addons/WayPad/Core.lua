@@ -165,6 +165,7 @@ function ns.Add(mapID, x, y, label)
     table.insert(ns.points, { mapID = mapID, x = x, y = y, label = label })
     ns.active = #ns.points
     ns.arrival = nil
+    if ns.HandOff then ns.HandOff.Added(ns.points[ns.active]) end
     ns.Changed()
     return ns.points[ns.active]
 end
@@ -172,19 +173,23 @@ end
 function ns.Edit(i, x, y)
     local p = ns.points[i]
     if not p then return end
+    local old = { mapID = p.mapID, x = p.x, y = p.y, label = p.label }
     p.x, p.y, p.continent = x, y, nil
+    if ns.HandOff then ns.HandOff.Edited(old, p, ns.active == i) end
     ns.Changed()
 end
 
 function ns.SetActive(i)
     if ns.points[i] then
         ns.active = i
+        if ns.HandOff then ns.HandOff.Activated(ns.points[i]) end
         ns.Changed()
     end
 end
 
 function ns.Remove(i)
     if not ns.points[i] then return end
+    if ns.HandOff then ns.HandOff.Removed(ns.points[i]) end
     table.remove(ns.points, i)
     if ns.active == i then
         ns.active = #ns.points > 0 and #ns.points or nil -- the newest left
@@ -195,6 +200,7 @@ function ns.Remove(i)
 end
 
 function ns.ClearAll()
+    if ns.HandOff then for _, p in ipairs(ns.points) do ns.HandOff.Removed(p) end end
     wipe(ns.points)
     ns.active = nil
     ns.Changed()
@@ -226,7 +232,9 @@ local inTick
 
 local function TickBody()
     ReadPlayer()
-    local p = ns.Active()
+    -- Another waypoint addon has the waypoints: it does the arrow and arrival, not WayPad.
+    local handedOff = ns.HandOff and ns.HandOff.Active()
+    local p = not handedOff and ns.Active()
     local g = p and ns.Guide(p)
     if g and g.state == "ok" and g.yards <= ns.ARRIVE_YARDS then
         PlayArrival()
@@ -242,7 +250,7 @@ local function TickBody()
         debugNext = GetTime() + 1
         DebugLine(g)
     end
-    if #ns.points == 0 and not ns.arrival and not ns.debug and ticker then
+    if (#ns.points == 0 or handedOff) and not ns.arrival and not ns.debug and ticker then
         ticker:Cancel()
         ticker = nil
     end

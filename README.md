@@ -19,7 +19,7 @@ Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-si
 | Addon | What it does |
 |---|---|
 | **DeckKit** | The shared core: controller input, windows, shared button overrides (X is shared by wand shoot and fishing), the **DeckKit menu** with every module's settings (double-tap ☰ Menu, or `/deckkit`), a DeckKit section in Key Bindings, Reload UI on F6 |
-| **WayPad** | Waypoints dialed in with the d-pad, floating arrow, map + minimap pins, `/way` |
+| **WayPad** | Waypoints dialed in with the d-pad, floating arrow, map + minimap pins, `/way`. With a TomTom-compatible waypoint addon installed, it hands waypoints to that instead (one system at a time) |
 | **DisenchantDeck** | List of disenchantable bag items: A disenchants, Y hides, LB/RB shows hidden (`/dd`) |
 | **ChatDeck** | Hold a button to read chat full-screen; right stick scrolls |
 | **MapDeck** | Hold a button for a full-screen map (works in combat); right stick zooms to the continent |

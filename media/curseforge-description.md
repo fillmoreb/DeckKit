@@ -10,7 +10,7 @@ Press the **Menu (☰) button twice quickly**, or type `/deckkit`, to open one s
 
 ## What's included
 
-**WayPad** – Waypoints without a keyboard. Dial in coordinates digit by digit with the d-pad, then follow a floating arrow to the active waypoint. Waypoints show on the world map and minimap. A list window lets you make one active, edit it or remove it. Supports TomTom-style `/way 45.2 62.8` too.
+**WayPad** – Waypoints without a keyboard. Dial in coordinates digit by digit with the d-pad, then follow a floating arrow to the active waypoint. Waypoints show on the world map and minimap. A list window lets you make one active, edit it or remove it. Supports TomTom-style `/way 45.2 62.8` too. If you use a TomTom-compatible waypoint addon, WayPad can hand your waypoints to it instead and act as its controller front end (one waypoint system at a time; set in the menu).
 
 **MapDeck** – Hold a button to see the map full-screen, even in combat. While it's held, the right stick zooms out from the zone to the continent and back in. Shows you, your party, quest markers and WayPad waypoints.
 
