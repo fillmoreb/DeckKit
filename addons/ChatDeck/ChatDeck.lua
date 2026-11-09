@@ -121,11 +121,17 @@ local function Hide()
 end
 
 -- keystate: "down" on press, "up" on release (runOnUp). Repeats of "down" just keep it up.
-function ChatDeck_Peek(keystate)
-    if keystate == "up" then Hide() else
-        if not (frame and frame:IsShown()) then Show() end
-    end
+local function Peek(on)
+    if not on then Hide()
+    elseif not (frame and frame:IsShown()) then Show() end
 end
+
+-- The peek binding is the left paddle of DeckKit's paddle chords (hold, both held, double-tap).
+-- keystate: "down" on press (repeats while held), "up" on release (runOnUp).
+function ChatDeck_Peek(keystate)
+    DeckKit.Paddles.Press("left", keystate ~= "up")
+end
+DeckKit.Paddles.SetPeek("left", Peek)
 
 BINDING_HEADER_CHATDECK = "ChatDeck"
 BINDING_NAME_CHATDECK_PEEK = "Peek at chat (hold)"

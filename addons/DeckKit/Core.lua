@@ -6,6 +6,7 @@
 --   Override.lua  shared pad button overrides, e.g. X for wand shoot and fishing (DeckKit.Override)
 --   Settings.lua  the settings registry modules add their options to (ns.AddSettings)
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
+--   Paddles.lua   paddle chords: the two peek buttons held, held together (dictation) or double-tapped
 --
 -- Each feature addon lists "## Dependencies: DeckKit" and starts with
 --   DeckKit.NewModule(ns, "WayPad", "|cff4fc3f7WayPad|r")
@@ -84,6 +85,7 @@ function ns.NewModule(addonNS, name, title)
     addonNS.Input = ns.Input
     addonNS.Window = ns.Window
     addonNS.Override = ns.Override
+    addonNS.Paddles = ns.Paddles
     addonNS.AddCommand = ns.AddCommand
     addonNS.AddSettings = function(items) ns.Settings.Add(name, title, items) end
     table.insert(modules, { name = name, title = title,

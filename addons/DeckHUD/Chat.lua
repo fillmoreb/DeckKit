@@ -156,3 +156,12 @@ ns.AddSettings({
           if on then Tuck() else ns.Print("Type /reload to put the chat back where it was.") end
       end },
 })
+
+-- Double-tapping the left paddle (DeckKit's paddle chords) hides the left side: the chat (frame,
+-- edit box, tabs, DeckHUD's thin frames) and RestedXP's guide window. Transparency, as on the right.
+DeckKit.Paddles.AddSideToggle("left", function(hidden)
+    local a = hidden and 0 or 1
+    for _, f in ipairs({ ChatFrame1, ChatFrame1EditBox, GeneralDockManager, chatBox, editBox, _G.RXPFrame }) do
+        if f then f:SetAlpha(a) end
+    end
+end)

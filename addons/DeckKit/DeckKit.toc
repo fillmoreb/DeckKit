@@ -11,3 +11,4 @@ Window.lua
 Override.lua
 Settings.lua
 Menu.lua
+Paddles.lua

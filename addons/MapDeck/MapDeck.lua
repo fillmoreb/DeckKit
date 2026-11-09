@@ -118,24 +118,27 @@ local function DrawArt()
     local explored = C_MapExplorationInfo and C_MapExplorationInfo.GetExploredMapTextures
         and C_MapExplorationInfo.GetExploredMapTextures(mapID) or {}
     for _, info in ipairs(explored) do
-        if not info.isShownByMouseOver then
-            for j = 1, info.numTexturesTall do
+        -- Some maps leave out the piece counts; they follow from the size (256-pixel tiles).
+        local tall = info.numTexturesTall or math.ceil((info.textureHeight or 0) / TILE)
+        local wide = info.numTexturesWide or math.ceil((info.textureWidth or 0) / TILE)
+        if not info.isShownByMouseOver and info.fileDataIDs then
+            for j = 1, tall do
                 local ph, fh = TILE, TILE
-                if j == info.numTexturesTall then
+                if j == tall then
                     ph = info.textureHeight % TILE
                     if ph == 0 then ph = TILE end
                     fh = 16
                     while fh < ph do fh = fh * 2 end
                 end
-                for k = 1, info.numTexturesWide do
+                for k = 1, wide do
                     local pw, fw = TILE, TILE
-                    if k == info.numTexturesWide then
+                    if k == wide then
                         pw = info.textureWidth % TILE
                         if pw == 0 then pw = TILE end
                         fw = 16
                         while fw < pw do fw = fw * 2 end
                     end
-                    local file = info.fileDataIDs[(j - 1) * info.numTexturesWide + k]
+                    local file = info.fileDataIDs[(j - 1) * wide + k]
                     if file then
                         n = n + 1
                         local t = Pool(overlays, n, "BORDER")
@@ -326,10 +329,16 @@ local function Hide()
 end
 
 -- keystate: "down" on press, "up" on release (runOnUp). Repeats of "down" just keep it up.
-function MapDeck_Peek(keystate)
-    if keystate == "up" then Hide()
+local function Peek(on)
+    if not on then Hide()
     elseif not (frame and frame:IsShown()) then Show() end
 end
+
+-- The peek binding is the right paddle of DeckKit's paddle chords (hold, both held, double-tap).
+function MapDeck_Peek(keystate)
+    DeckKit.Paddles.Press("right", keystate ~= "up")
+end
+DeckKit.Paddles.SetPeek("right", Peek)
 
 BINDING_HEADER_MAPDECK = "MapDeck"
 BINDING_NAME_MAPDECK_PEEK = "Peek at the map (hold)"

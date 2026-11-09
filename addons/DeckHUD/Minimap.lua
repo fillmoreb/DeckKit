@@ -210,18 +210,6 @@ ns.On("ADDON_LOADED", function(name)
 end)
 
 ns.On("PLAYER_LOGIN", function()
-    -- (development) the chat frames, once their layout has settled
-    C_Timer.After(3, function()
-        local ok, dump = pcall(Inventory, { "ChatFrame1", "ChatFrame1Tab", "ChatFrame2", "ChatFrame2Tab",
-            "ChatFrame1EditBox", "ChatFrame1ButtonFrame", "GeneralDockManager", "ChatFrameMenuButton",
-            "ChatFrameChannelButton", "QuickJoinToastButton", "ChatFrame1Background", "ChatFrame1TabText" })
-        db.chatDump = ok and dump or { "inventory failed: " .. tostring(dump) }
-        local _, ph = GetPhysicalScreenSize()
-        local cf = ChatFrame1
-        db.chatGeom = string.format("UIParent %.0fx%.0f phys h %s; ChatFrame1 L%.0f B%.0f W%.0f H%.0f; EditBox L%.0f B%.0f W%.0f H%.0f",
-            UIParent:GetWidth(), UIParent:GetHeight(), tostring(ph), cf:GetLeft() or -1, cf:GetBottom() or -1, cf:GetWidth(), cf:GetHeight(),
-            ChatFrame1EditBox:GetLeft() or -1, ChatFrame1EditBox:GetBottom() or -1, ChatFrame1EditBox:GetWidth(), ChatFrame1EditBox:GetHeight())
-    end)
     Apply()
     if db.zoom then Minimap:SetZoom(math.min(db.zoom, Minimap:GetZoomLevels() - 1)) end
     -- Addons register their minimap buttons at different times.
@@ -277,3 +265,14 @@ ns.AddSettings({
       end },
     { type = "info", label = "Disable DeckHUD in the AddOns list for Blizzard's minimap." },
 })
+
+-- Double-tapping the right paddle (DeckKit's paddle chords) hides the right side: the minimap and
+-- the quest tracker. The minimap is hidden outright: its quest-area outlines and player arrow are
+-- drawn by the engine and ignore transparency (it isn't a protected frame, so this works in combat).
+-- The tracker only goes transparent, so its secure quest-item buttons are never touched.
+DeckKit.Paddles.AddSideToggle("right", function(hidden)
+    Holder():SetShown(not hidden)
+    Minimap:SetAlpha(1)
+    local tracker = _G.ObjectiveTrackerFrame or _G.QuestWatchFrame or _G.WatchFrame
+    if tracker then tracker:SetAlpha(hidden and 0 or 1) end
+end)

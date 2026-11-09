@@ -33,6 +33,20 @@ Everything except MenuReload needs **DeckKit** installed too. Keep SavedVariable
 Deploy to the Deck: copy `deploy.local.example` to `deploy.local` and fill in your Deck's SSH target and AddOns path,
 then `./deploy.sh WayPad MapDeck` (or no arguments for all) and `/reload` in game.
 
+## Suggested WoW settings
+
+These suit playing on the Deck. Each is a toggle on the **Suggested settings** page of the DeckKit menu
+(double-tap ☰), with **Apply all suggested** to set them in one go; switching one off restores what you had.
+
+| Setting | Suggested | Why |
+|---|---|---|
+| Chat style | Classic | Enter sends a message *and* closes the input box, including dictated messages |
+| Auto loot | On | Opening a corpse takes everything; no picking items one by one on a controller |
+| Controller button legend | Hidden | The always-on list of what each button does, once you know them |
+
+Also worth turning on in **Edit Mode**: *Use Compact Action Bar* on the Gamepad Action Bar (it shows only
+the bar you're using). DeckHUD can move the crossbar for you: `/deckkit layout crossbar <px from bottom>`.
+
 ## Deck setup (`deck-setup/`)
 
 - `wowforever.bat` – lives at `C:\wowforever.bat` in the Lutris Battle.net prefix; starts Battle.net, waits 8 s,
