@@ -94,6 +94,9 @@ local function Show(text, r, g, b, dot_, seconds)
     if seconds then timer = C_Timer.NewTimer(seconds, function() timer = nil; box:Hide(); transcribing = false end) end
 end
 
+-- A short notice in the same spot, for any module: DeckKit.Notice("text", seconds).
+function ns.Notice(text, seconds) Show(text, 1, 1, 1, false, seconds or 2) end
+
 local function HideBox()
     if timer then timer:Cancel(); timer = nil end
     transcribing = false

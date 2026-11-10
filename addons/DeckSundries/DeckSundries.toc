@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: DeckSundries
-## Notes: Small controller extras for DeckKit. Wand shoot: Square fires your wand at an enemy instead of swinging. /deckkit
+## Notes: Small controller extras for DeckKit. Wand shoot: Square fires your wand at an enemy instead of swinging. Friends reply: Y on a friend makes them your /r target. /deckkit
 ## Version: 1.0.0
 ## Author: Ben Fillmore
 ## SavedVariables: DeckSundriesDB
@@ -8,3 +8,4 @@
 
 Core.lua
 WandShoot.lua
+FriendsWhisper.lua

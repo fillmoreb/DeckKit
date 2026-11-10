@@ -10,7 +10,8 @@
 --
 -- Each feature addon lists "## Dependencies: DeckKit" and starts with
 --   DeckKit.NewModule(ns, "WayPad", "|cff4fc3f7WayPad|r")
--- which gives its namespace Print, On, Input, Window, Override, AddCommand and AddSettings.
+-- which gives its namespace Print, On, Input, Window, Override, Paddles, AddCommand, AddSettings,
+-- Debug (a line on the debug strip) and Notice (a short message mid-screen).
 local ADDON, ns = ...
 
 DeckKit = ns
@@ -86,6 +87,8 @@ function ns.NewModule(addonNS, name, title)
     addonNS.Window = ns.Window
     addonNS.Override = ns.Override
     addonNS.Paddles = ns.Paddles
+    addonNS.Debug = function(...) if ns.Debug then ns.Debug(title:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "") .. ":", ...) end end
+    addonNS.Notice = function(...) if ns.Notice then ns.Notice(...) end end
     addonNS.AddCommand = ns.AddCommand
     addonNS.AddSettings = function(items) ns.Settings.Add(name, title, items) end
     table.insert(modules, { name = name, title = title,

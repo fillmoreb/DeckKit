@@ -159,3 +159,9 @@ ns.Settings.Add("DeckKit", ns.TITLE, {
       get = function() return on end,
       set = function(enable) SetOn(enable) end },
 })
+
+-- Blocked / forbidden actions (the "...has been blocked from an action..." message): which addon and
+-- which protected function, while the strip is on.
+for _, event in ipairs({ "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN" }) do
+    pcall(ns.On, event, function(addon, func) ns.Debug(event, tostring(addon), tostring(func)) end)
+end

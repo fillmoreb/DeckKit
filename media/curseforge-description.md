@@ -25,7 +25,7 @@ Press the **Menu (☰) button twice quickly**, or type `/deckkit`, to open one s
 - a **thin chat frame** tucked into the bottom-left corner, without the Combat Log tab
 - Edit Mode layout tools (`/deckkit layout`), which back up your layout before changing it
 
-**DeckSundries** – Small extras. **Wand shoot:** with a wand equipped and a living enemy targeted, X fires your wand instead of a melee swing; anything else still interacts normally.
+**DeckSundries** – Small extras. **Wand shoot:** with a wand equipped and a living enemy targeted, X fires your wand instead of a melee swing; anything else still interacts normally. **Friends reply:** Y on a friend in the friends list makes them your reply target, so /r (or dictating "reply ...") whispers them.
 
 **MenuReload** – Adds a Reload UI button to the game menu.
 

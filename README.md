@@ -25,7 +25,7 @@ Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-si
 | **MapDeck** | Hold a button for a full-screen map (works in combat); right stick zooms to the continent |
 | **DeckAngler** | Controller fishing: with a pole equipped X casts; per-session catch tally, missed-catch chime, idle reminder (`/deckkit fish`) |
 | **DeckHUD** | Interface tweaks: square minimap in the top-right corner, as wide as the quest tracker, without the edge buttons; thin chat frame tucked into the bottom-left without the Combat Log tab; Edit Mode layout changes with backups (`/deckkit layout`) |
-| **DeckSundries** | Small extras. Wand shoot: Square fires your wand at an enemy instead of swinging (`/deckkit wandshoot`) |
+| **DeckSundries** | Small extras. Wand shoot: Square fires your wand at an enemy instead of swinging (`/deckkit wandshoot`). Friends reply: Y on a friend in the friends list makes them your reply target, so `/r` (or dictating "reply ...") whispers them |
 | **MenuReload** | Reload UI button in the game menu, under AddOns |
 
 Everything except MenuReload needs **DeckKit** installed too. Keep SavedVariables and binding names unchanged when refactoring so existing data and binds carry over.
