@@ -2,7 +2,8 @@
 --
 -- This draws the map itself (the zone's art tiles plus the explored-area overlays) instead of
 -- opening Blizzard's map window, so it works in combat and fills the screen. On it: you (an
--- arrow that turns with you), your party, quest markers, and WayPad's waypoints.
+-- arrow that turns with you), your party, quests (? / ! / in progress), the tracked quest's
+-- areas, WayPad's waypoints, and your corpse.
 -- While it's up the frame takes the gamepad sticks, like ChatDeck: the right stick zooms out
 -- (up: zone -> continent) and back in (down). The camera stays still; auto-run keeps going.
 --
@@ -15,8 +16,8 @@ local MARGIN, HEADER = 24, 44
 local TILE = 256
 local DEADZONE, STEP = 0.6, 0.35 -- zoom: push past 60%, at most one step per 0.35 s
 
-local frame, canvas, art, title, coords, hint
-local tiles, overlays, dots = {}, {}, {}
+local frame, canvas, art, marks, blob, title, coords, hint
+local tiles, overlays, dots, backs = {}, {}, {}, {}
 local playerArrow
 local mapID, homeMap -- shown map; the map you're standing in
 local layerW, layerH = 1, 1
@@ -53,14 +54,24 @@ local function UnitPos(unit, onMap)
     if Readable(x) and Readable(y) and (x ~= 0 or y ~= 0) then return x, y end
 end
 
+-- Your corpse, on whichever map we ask about (zone or continent). Blizzard's map draws it as a tombstone.
+local function CorpsePos(onMap)
+    local getCorpse = C_DeathInfo and C_DeathInfo.GetCorpseMapPosition
+    if not getCorpse then return end
+    local ok, pos = pcall(getCorpse, onMap)
+    if not (ok and pos) then return end
+    local x, y = pos:GetXY()
+    if Readable(x) and Readable(y) and (x ~= 0 or y ~= 0) then return x, y end
+end
+
 ------------------------------------------------------------------------
 -- Drawing
 ------------------------------------------------------------------------
 
-local function Pool(list, i, layer, sub)
+local function Pool(list, i, layer, sub, owner)
     local t = list[i]
     if not t then
-        t = art:CreateTexture(nil, layer, nil, sub)
+        t = (owner or art):CreateTexture(nil, layer, nil, sub)
         list[i] = t
     end
     t:ClearAllPoints()
@@ -82,6 +93,9 @@ local function Fit()
     art:ClearAllPoints()
     -- SetPoint offsets are in the art's own (scaled) units.
     art:SetPoint("CENTER", frame, "CENTER", 0, -HEADER / 2 / scale)
+    -- The quest areas are drawn to the blob frame's size at draw time, so give it that size now
+    -- rather than through anchors (on the first open those aren't laid out yet).
+    if blob then blob:SetSize(layerW, layerH) end
 end
 
 local function DrawArt()
@@ -156,8 +170,9 @@ local function DrawArt()
 end
 
 -- Small markers in map space (scaled back so they stay a fixed size on screen).
-local function Dot(i, x, y, size, r, g, b, a, atlas)
-    local t = Pool(dots, i, "OVERLAY", 1)
+-- back: an atlas drawn behind, a bit larger (the in-progress quest circle). Its texture is hidden otherwise.
+local function Dot(i, x, y, size, r, g, b, a, atlas, back)
+    local t = Pool(dots, i, "OVERLAY", 1, marks)
     local s = size / art:GetScale()
     t:SetSize(s, s)
     t:SetPoint("CENTER", art, "TOPLEFT", x * layerW, -y * layerH)
@@ -166,7 +181,16 @@ local function Dot(i, x, y, size, r, g, b, a, atlas)
         t:SetVertexColor(1, 1, 1, a or 1)
     else
         t:SetTexture("Interface\\Buttons\\WHITE8X8")
+        t:SetTexCoord(0, 1, 0, 1) -- pooled: undo an earlier atlas's crop
         t:SetVertexColor(r, g, b, a or 1)
+    end
+    if back then
+        local bt = Pool(backs, i, "OVERLAY", 0, marks)
+        bt:SetSize(s * 1.45, s * 1.45)
+        bt:SetPoint("CENTER", t, "CENTER")
+        bt:SetAtlas(back)
+    elseif backs[i] then
+        backs[i]:Hide()
     end
     return t
 end
@@ -178,8 +202,14 @@ local function DrawMarkers()
     if ok and type(quests) == "table" then
         for _, q in ipairs(quests) do
             if Readable(q.x) and Readable(q.y) then
+                -- ? to turn in, ! to pick up, otherwise in progress (the same icons as the quest tracker)
+                local okC, done = pcall(C_QuestLog.IsComplete, q.questID)
+                local icon = (okC and done == true) and "QuestTurnin"
+                    or q.isQuestStart and (q.isDaily and "QuestDaily" or "QuestNormal")
+                local inProgress = not icon
                 n = n + 1
-                Dot(n, q.x, q.y, 14, 1, 0.82, 0, 1)
+                Dot(n, q.x, q.y, inProgress and 20 or 22, 1, 0.82, 0, 1, icon or "Quest-In-Progress-Icon-yellow",
+                    inProgress and "UI-QuestPoi-QuestNumber" or nil)
             end
         end
     end
@@ -206,7 +236,16 @@ local function DrawMarkers()
             end
         end
     end
+    -- Your corpse
+    local cx, cy = CorpsePos(mapID)
+    if cx then
+        n = n + 1
+        Dot(n, cx, cy, 28, 0.8, 0.8, 0.8, 1, "poi-graveyard-neutral")
+    end
     HideFrom(dots, n + 1)
+    for i, t in pairs(backs) do -- has gaps (only some markers have one)
+        if i > n then t:Hide() end
+    end
 end
 
 local function DrawPlayer()
@@ -226,12 +265,36 @@ local function DrawPlayer()
     coords:SetText(hx and string.format("%.1f, %.1f", hx * 100, hy * 100) or "")
 end
 
+-- Quest areas, like Blizzard's map shows for a selected quest: the super-tracked quest, or else
+-- every watched quest. The game fills the shapes in itself (QuestPOIFrame).
+local function BlobQuests()
+    local st = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID and C_SuperTrack.GetSuperTrackedQuestID()
+    if Readable(st) and st ~= 0 then return { st } end
+    local list = {}
+    local count = C_QuestLog.GetNumQuestWatches and C_QuestLog.GetNumQuestWatches() or 0
+    for i = 1, count do
+        local id = C_QuestLog.GetQuestIDForQuestWatchIndex(i)
+        if id then table.insert(list, id) end
+    end
+    return list
+end
+
+local function DrawBlobs()
+    if not blob then return end
+    blob:DrawNone()
+    blob:SetMapID(mapID)
+    for _, id in ipairs(BlobQuests()) do
+        pcall(blob.DrawBlob, blob, id, true)
+    end
+end
+
 local function Render()
     local info = MapInfo(mapID)
     title:SetText(info and info.name or "")
     if not DrawArt() then
         title:SetText((info and info.name or "") .. "  |cff888888(no map here)|r")
     end
+    DrawBlobs()
     DrawMarkers()
     DrawPlayer()
     local parent = info and info.parentMapID
@@ -276,7 +339,26 @@ local function Create()
     art = CreateFrame("Frame", nil, frame)
     art:SetClipsChildren(true)
 
-    playerArrow = art:CreateTexture(nil, "OVERLAY", nil, 7)
+    -- Above the art: the quest areas, then the markers (a child frame draws over its parent's textures).
+    local ok, b = pcall(CreateFrame, "QuestPOIFrame", nil, art)
+    if ok and b then
+        blob = b
+        blob:SetPoint("TOPLEFT", art, "TOPLEFT")
+        blob:SetSize(1, 1)
+        -- redraw once a new size lands, in case it lags behind Fit
+        blob:SetScript("OnSizeChanged", function() if frame:IsShown() then DrawBlobs() end end)
+        blob:SetFrameLevel(art:GetFrameLevel() + 1)
+        blob:SetFillTexture("Interface\\WorldMap\\UI-QuestBlob-Inside")
+        blob:SetBorderTexture("Interface\\WorldMap\\UI-QuestBlob-Outside")
+        blob:SetFillAlpha(128)
+        blob:SetBorderAlpha(192)
+        blob:SetBorderScalar(1.0)
+    end
+    marks = CreateFrame("Frame", nil, art)
+    marks:SetAllPoints(art)
+    marks:SetFrameLevel(art:GetFrameLevel() + 2)
+
+    playerArrow = marks:CreateTexture(nil, "OVERLAY", nil, 7)
     playerArrow:SetTexture("Interface\\Minimap\\MinimapArrow")
 
     title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
@@ -311,6 +393,10 @@ local function Create()
         end
     end)
     frame:SetScript("OnSizeChanged", function() if frame:IsShown() then Render() end end)
+    for _, e in ipairs({ "QUEST_WATCH_LIST_CHANGED", "SUPER_TRACKING_CHANGED", "QUEST_LOG_UPDATE" }) do
+        pcall(frame.RegisterEvent, frame, e)
+    end
+    frame:SetScript("OnEvent", function() if frame:IsShown() then DrawBlobs() end end)
 end
 
 local function Show()
@@ -360,3 +446,7 @@ ns.AddSettings({
     { type = "info", label = "Hold your peek button for the map; right stick up zooms out." },
     { type = "info", label = "Bind it in Key Bindings > DeckKit." },
 })
+
+
+
+

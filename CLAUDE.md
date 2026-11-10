@@ -20,7 +20,12 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   if unsure.
 - Replaying the same sound kit within about 0.3 s is dropped silently, even with
   `PlaySound(kit, channel, false)`.
-- Lua errors are written to `_forever_/Logs/General.log` (grep for `Lua Error`).
+- Lua errors are written to `_forever_/Logs/General.log` (grep for `Lua Error`). Check its
+  timestamp: a wedged client can stop writing it while still running, and then APIs misbehave too
+  (`C_DeathInfo.GetCorpseMapPosition` returned nil until a restart).
+- Old texture paths may be missing (e.g. `Interface\WorldMap\WorldMapCorpse`) and draw as nothing,
+  with no error. Check with `tex:GetTextureFileID()` (nil = missing) or prefer atlases checked
+  via `C_Texture.GetAtlasInfo`.
 
 ## Rules
 
