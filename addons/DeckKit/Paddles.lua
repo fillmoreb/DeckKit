@@ -61,8 +61,6 @@ local function Box()
     dot = box:CreateTexture(nil, "OVERLAY")
     dot:SetSize(14, 14)
     dot:SetPoint("LEFT", 16, 0)
-    dot:SetTexture("Interface\\COMMON\\Indicator-Red")
-    if not dot:GetTexture() then dot:SetColorTexture(0.9, 0.15, 0.15) end
     label = box:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     label:SetPoint("LEFT", dot, "RIGHT", 10, 0)
     pulse = dot:CreateAnimationGroup()
@@ -74,8 +72,16 @@ local function Box()
     return box
 end
 
-local function Show(text, r, g, b, withDot, seconds)
+-- dot: nil, or a color for a pulsing light ("Red", "Yellow": the game's Indicator-<color>).
+local DOT_FALLBACK = { Red = { 0.9, 0.15, 0.15 }, Yellow = { 1, 0.82, 0 } }
+
+local function Show(text, r, g, b, dot_, seconds)
     Box()
+    local withDot = type(dot_) == "string"
+    if withDot then
+        dot:SetTexture("Interface\\COMMON\\Indicator-" .. dot_)
+        if not dot:GetTexture() then local c = DOT_FALLBACK[dot_]; dot:SetColorTexture(c[1], c[2], c[3]) end
+    end
     if timer then timer:Cancel(); timer = nil end
     label:SetText(text)
     label:SetTextColor(r, g, b)
@@ -110,13 +116,13 @@ local function StartChord()
         if s.peeking then s.peeking = false; Peek(side, false) end
     end
     transcribing = false
-    if Setting("dictationIndicator") and not signalled then Show("Listening", 1, 0.3, 0.3, true) end
+    if Setting("dictationIndicator") and not signalled then Show("Listening", 1, 0.3, 0.3, "Red") end
 end
 
 local function ChordLetGo() -- the first grip released: dictation stops, transcription starts
     if transcribing or signalled or not Setting("dictationIndicator") then return end
     transcribing = true
-    Show("Transcribing", 1, 0.82, 0, false, TRANSCRIBE_TIMEOUT)
+    Show("Transcribing", 1, 0.82, 0, "Yellow", TRANSCRIBE_TIMEOUT)
 end
 
 ------------------------------------------------------------------------
@@ -248,10 +254,10 @@ function Paddles.Signal(event)
     if not Setting("dictationIndicator") then return end
     if event == "record_start" then
         transcribing = false
-        Show("Listening", 1, 0.3, 0.3, true)
+        Show("Listening", 1, 0.3, 0.3, "Red")
     elseif event == "record_stop" then
         transcribing = true
-        Show("Transcribing", 1, 0.82, 0, false, TRANSCRIBE_TIMEOUT)
+        Show("Transcribing", 1, 0.82, 0, "Yellow", TRANSCRIBE_TIMEOUT)
     elseif event == "transcription_done" then
         HideBox()
     elseif event == "error" then

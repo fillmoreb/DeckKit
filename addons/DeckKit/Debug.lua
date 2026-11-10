@@ -152,3 +152,10 @@ end, "debug strip for tools outside the game: on | off | clear | keys | binds <K
 ns.On("PLAYER_LOGIN", function()
     if ns.db.debug then SetOn(true); ns.Debug("debug strip on (kept from last session)") end
 end)
+
+ns.Settings.Add("DeckKit", ns.TITLE, {
+    { type = "toggle", label = "Debug strip",
+      hint = "Colored cells top-left that tools outside the game can read. Leave off unless debugging.",
+      get = function() return on end,
+      set = function(enable) SetOn(enable) end },
+})
