@@ -14,8 +14,8 @@ DeckKit.NewModule(ns, ADDON, "|cffffd060QuestPad|r")
 BINDING_HEADER_QUESTPAD = "QuestPad"
 BINDING_NAME_QUESTPAD_USE = "Use the quest item"
 
-local DEFAULTS = { enabled = true, byTarget = true, y = -180 }
-local ART = "Interface\\ExtraButton\\ExtraButtonGeneric"
+local DEFAULTS = { enabled = true, byTarget = true, y = -190 }
+local ART = "Interface\\ExtraButton\\Default"
 local TICK = 0.25
 local REDRAW = 3 -- seconds
 local QUEST_TITLE_LINE = Enum.TooltipDataLineType and Enum.TooltipDataLineType.QuestTitle or 17
