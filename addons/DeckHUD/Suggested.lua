@@ -9,7 +9,8 @@ local _, ns = ...
 local SUGGESTED = {
     { cvar = "chatStyle", value = "classic", off = "im",
       label = "Classic chat style",
-      hint = "Enter sends a chat message and closes the input box, dictated messages included." },
+      hint = "Enter sends a chat message and closes the input box, dictated messages included. "
+          .. "Turned on, it works particularly well with Decktation." },
     { cvar = "autoLootDefault", value = "1", off = "0",
       label = "Auto loot",
       hint = "Opening a corpse takes everything, with no picking items one by one." },
@@ -37,7 +38,7 @@ local function Set(s, on)
     end
 end
 
-local items = {}
+local items = { { type = "section", tab = "Screen", label = "Suggested settings", order = 1 } }
 for _, s in ipairs(SUGGESTED) do
     if GetCVar(s.cvar) ~= nil then -- only settings this client has
         table.insert(items, { type = "toggle", label = s.label, hint = s.hint,

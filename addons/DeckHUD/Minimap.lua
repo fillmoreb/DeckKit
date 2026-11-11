@@ -161,11 +161,43 @@ local function Place(force)
     Minimap:SetZoom(z)
 end
 
+-- The zone's name across the top of the map (Blizzard's sits in the hidden cluster), coloured
+-- like Blizzard's: green friendly, red hostile, gold contested, blue sanctuary.
+local zoneBar
+local ZONE_COLORS = { friendly = { 0.1, 1, 0.1 }, hostile = { 1, 0.1, 0.1 }, contested = { 1, 0.7, 0 },
+    sanctuary = { 0.41, 0.8, 0.94 }, arena = { 1, 0.1, 0.1 }, combat = { 1, 0.1, 0.1 } }
+
+local function ZoneTitle()
+    if not zoneBar then
+        zoneBar = CreateFrame("Frame", nil, Holder())
+        zoneBar:SetPoint("TOPLEFT")
+        zoneBar:SetPoint("TOPRIGHT")
+        zoneBar:SetHeight(18)
+        zoneBar:SetFrameLevel(Holder():GetFrameLevel() + 25)
+        local bg = zoneBar:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints()
+        bg:SetColorTexture(0, 0, 0, 0.55)
+        zoneBar.text = zoneBar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        zoneBar.text:SetPoint("LEFT", 4, 0)
+        zoneBar.text:SetPoint("RIGHT", -4, 0)
+        zoneBar.text:SetWordWrap(false)
+    end
+    zoneBar:SetShown(db.zoneTitle ~= false)
+    local name = GetMinimapZoneText and GetMinimapZoneText() or GetZoneText()
+    zoneBar.text:SetText(name or "")
+    local c = ZONE_COLORS[(GetZonePVPInfo and GetZonePVPInfo()) or ""] or { 1, 0.82, 0 }
+    zoneBar.text:SetTextColor(c[1], c[2], c[3])
+end
+for _, e in ipairs({ "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA", "PLAYER_ENTERING_WORLD" }) do
+    ns.On(e, function() if Minimap then ZoneTitle() end end)
+end
+
 local function Apply()
     if not Minimap then return end
     Place(true)
     Shape()
     HideButtons()
+    ZoneTitle()
 end
 ns.Apply = Apply
 
@@ -231,9 +263,14 @@ ns.On("DISPLAY_SIZE_CHANGED", function() if Minimap then Place(true) end end)
 ns.On("UI_SCALE_CHANGED", function() if Minimap then Place(true) end end)
 
 ns.AddSettings({
+    { type = "section", tab = "Screen", label = "Minimap", order = 3 },
     { type = "toggle", label = "Square minimap",
       get = function() return db.square ~= false end,
       set = function(on) db.square = on; Shape(); Place(true) end },
+    { type = "toggle", label = "Zone name on the map",
+      hint = "The zone or area you're in, across the top of the minimap, coloured friendly / hostile / contested.",
+      get = function() return db.zoneTitle ~= false end,
+      set = function(on) db.zoneTitle = on; ZoneTitle() end },
     { type = "toggle", label = "Thin border", hint = "A 1-pixel dark edge around the square map.",
       get = function() return db.border ~= false end,
       set = function(on) db.border = on; Shape() end },

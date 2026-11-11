@@ -1,11 +1,12 @@
--- DeckHUD chat: a thin frame instead of Blizzard's chat art, no Combat Log tab, and the chat
--- tucked into the bottom-left corner. Each is a toggle on DeckHUD's page of the DeckKit menu.
+-- DeckHUD chat: a thin frame instead of Blizzard's chat art, no gamepad button
+-- hints under the edit box, and the chat tucked into the bottom-left corner. Each is a toggle on
+-- DeckHUD's page of the DeckKit menu.
 --
 -- Forever's chat is Blizzard's floating chat frame: ChatFrame1 (General) with its edit box hanging
 -- 2 px below it (5 px further left, 32 tall), ChatFrame2 (Combat Log) docked as a second tab.
 local _, ns = ...
 
-local DEFAULTS = { chatThin = true, chatNoCombatLog = true, chatTuck = true }
+local DEFAULTS = { chatThin = true, chatTuck = true, chatNoLegend = true }
 local MARGIN = 4                -- gap to the left edge, in UIParent units (1 per pixel on the Deck)
 local BOTTOM = 4                -- the edit box's frame bottom...
 local BAR_GAP = 2               -- ...or this far above the XP bar, while that's along the bottom
@@ -72,18 +73,20 @@ local function Thin()
 end
 
 ------------------------------------------------------------------------
--- No Combat Log tab
+-- No button hints under the edit box
 ------------------------------------------------------------------------
 
-local function NoCombatLog()
-    if not ChatFrame2Tab then return end
-    if DB().chatNoCombatLog ~= false then
-        Keep(ChatFrame2Tab, "chatNoCombatLog")
-        if SELECTED_CHAT_FRAME == ChatFrame2 and FCFDock_SelectWindow and GENERAL_CHAT_DOCK then
-            FCFDock_SelectWindow(GENERAL_CHAT_DOCK, ChatFrame1)
-        end
-    else
-        ChatFrame2Tab:Show()
+-- Forever's gamepad legend under the chat box ("{A} Send  {X} Chat Channels  {Y} Tab Settings
+-- {B} Back"), shown whenever the edit box has focus while Gamepad UI is on. It's the footer's
+-- ChatFrameN.FloatingChatFrameinputLegend (lowercase i), made the first time the box gets focus.
+-- Only its alpha is touched: hooking or hiding it taints the chat box, and then Enter can't run
+-- slash commands. Blizzard sets the alpha of its parts but never of the legend itself.
+local function NoLegend()
+    local alpha = DB().chatNoLegend ~= false and 0 or 1
+    for i = 1, (NUM_CHAT_WINDOWS or 10) do
+        local cf = _G["ChatFrame" .. i]
+        local legend = cf and cf.FloatingChatFrameinputLegend
+        if legend and legend:GetAlpha() ~= alpha then legend:SetAlpha(alpha) end
     end
 end
 
@@ -122,7 +125,7 @@ end
 
 local function Apply()
     Thin()
-    NoCombatLog()
+    NoLegend()
     Tuck()
 end
 
@@ -137,21 +140,15 @@ ns.On("PLAYER_LOGIN", function()
     if not ChatFrame1 then return end
     Apply()
     C_Timer.After(1, Apply) -- after the chat frames and Edit Mode have settled
+    C_Timer.NewTicker(0.1, NoLegend) -- the legend is made on the first focus; no hooks (see NoLegend)
     -- Edit Mode (or the chat's own layout code) moving it back: tuck it in again.
     hooksecurefunc(ChatFrame1, "SetPoint", function()
         if not placing and DB().chatTuck ~= false then C_Timer.After(0, Tuck) end
     end)
-    -- Switching tabs (LB/RB cycles them) onto the hidden Combat Log: back to General.
-    if FCFDock_SelectWindow then
-        hooksecurefunc("FCFDock_SelectWindow", function(_, frame)
-            if frame == ChatFrame2 and DB().chatNoCombatLog ~= false then
-                C_Timer.After(0, function() FCFDock_SelectWindow(GENERAL_CHAT_DOCK, ChatFrame1) end)
-            end
-        end)
-    end
 end)
 
 ns.AddSettings({
+    { type = "section", tab = "Screen", label = "Chat", order = 2 },
     { type = "toggle", label = "Chat: thin frame",
       hint = "A thin dark edge instead of Blizzard's chat art. Turning it off needs a /reload.",
       get = function() return DB().chatThin ~= false end,
@@ -160,9 +157,10 @@ ns.AddSettings({
           Thin()
           if not on then ns.Print("Type /reload to bring back the original chat frame art.") end
       end },
-    { type = "toggle", label = "Chat: hide the Combat Log tab",
-      get = function() return DB().chatNoCombatLog ~= false end,
-      set = function(on) DB().chatNoCombatLog = on; NoCombatLog() end },
+    { type = "toggle", label = "Chat: hide the button hints",
+      hint = "No {A} Send / {X} Chat Channels / {Y} Tab Settings bar under the chat box.",
+      get = function() return DB().chatNoLegend ~= false end,
+      set = function(on) DB().chatNoLegend = on; NoLegend() end },
     { type = "toggle", label = "Chat: tuck into the corner",
       hint = "Bottom-left, close to the edges. Turning it off needs a /reload.",
       get = function() return DB().chatTuck ~= false end,
