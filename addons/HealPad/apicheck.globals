@@ -1,0 +1,2 @@
+# Optional: Blizzard_MacroUI is load-on-demand; its MacroFrame_Show exists only after loading it.
+MacroFrame_Show

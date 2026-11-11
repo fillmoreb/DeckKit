@@ -394,8 +394,9 @@ local FISHING_IDS = { [7620] = true, [7731] = true, [7732] = true, [18248] = tru
 local channelEnd             -- endTimeMS of the fishing channel in progress
 
 local function SpellName(id)
-    if C_Spell and C_Spell.GetSpellName then return C_Spell.GetSpellName(id) end
-    return GetSpellInfo and (GetSpellInfo(id))
+    if C_Spell.GetSpellName then return C_Spell.GetSpellName(id) end
+    local info = C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(id)
+    return info and info.name
 end
 
 local function IsFishing(spellID, name)

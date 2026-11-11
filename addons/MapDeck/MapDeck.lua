@@ -272,8 +272,9 @@ local function DrawMarkers()
         if pos and Readable(pos.x) then
             n = n + 1
             local t = Dot(n, pos.x, pos.y, 26, 1, 1, 1, 1, info.atlasName)
-            if not info.atlasName and GetPOITextureCoords and info.textureIndex then
-                local l, r, top, b = GetPOITextureCoords(info.textureIndex)
+            local coords = C_Minimap and C_Minimap.GetPOITextureCoords
+            if not info.atlasName and coords and info.textureIndex then
+                local l, r, top, b = coords(info.textureIndex)
                 t:SetTexture("Interface\\Minimap\\POIIcons")
                 t:SetTexCoord(l, r, top, b)
                 t:SetVertexColor(1, 1, 1, 1)

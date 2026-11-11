@@ -27,9 +27,9 @@ function ns.DisenchantName()
     if C_Spell and C_Spell.GetSpellName then return C_Spell.GetSpellName(ns.DISENCHANT) end
     if C_Spell and C_Spell.GetSpellInfo then
         local info = C_Spell.GetSpellInfo(ns.DISENCHANT)
-        return info and info.name
+        if info and info.name then return info.name end
     end
-    return GetSpellInfo and (GetSpellInfo(ns.DISENCHANT)) or "Disenchant"
+    return "Disenchant"
 end
 
 ------------------------------------------------------------------------
@@ -47,8 +47,7 @@ local function ContainerInfo(bag, slot)
 end
 
 local function NumSlots(bag)
-    if C_Container and C_Container.GetContainerNumSlots then return C_Container.GetContainerNumSlots(bag) end
-    return GetContainerNumSlots and GetContainerNumSlots(bag) or 0
+    return C_Container.GetContainerNumSlots(bag) or 0
 end
 
 local function Disenchantable(info)

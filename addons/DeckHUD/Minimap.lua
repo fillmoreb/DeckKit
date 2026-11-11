@@ -185,7 +185,8 @@ local function ZoneTitle()
     zoneBar:SetShown(db.zoneTitle ~= false)
     local name = GetMinimapZoneText and GetMinimapZoneText() or GetZoneText()
     zoneBar.text:SetText(name or "")
-    local c = ZONE_COLORS[(GetZonePVPInfo and GetZonePVPInfo()) or ""] or { 1, 0.82, 0 }
+    local pvp = C_PvP and C_PvP.GetZonePVPInfo and C_PvP.GetZonePVPInfo()
+    local c = ZONE_COLORS[pvp or ""] or { 1, 0.82, 0 }
     zoneBar.text:SetTextColor(c[1], c[2], c[3])
 end
 for _, e in ipairs({ "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA", "PLAYER_ENTERING_WORLD" }) do

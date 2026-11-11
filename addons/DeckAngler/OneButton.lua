@@ -9,8 +9,11 @@ local _, ns = ...
 local MAIN_HAND = 16
 
 local function FishingName()
-    local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(7620)
-    if not name and GetSpellInfo then name = GetSpellInfo(7620) end
+    local name = C_Spell.GetSpellName and C_Spell.GetSpellName(7620)
+    if not name and C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(7620)
+        name = info and info.name
+    end
     return name or "Fishing"
 end
 

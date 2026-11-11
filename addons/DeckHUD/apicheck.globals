@@ -1,0 +1,5 @@
+# Optional: LibStub comes with other addons (for LibDBIcon minimap buttons), if any are installed.
+LibStub
+# Older clients' quest trackers; Forever has ObjectiveTrackerFrame.
+QuestWatchFrame
+WatchFrame
