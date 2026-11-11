@@ -14,6 +14,7 @@ DeckKit.NewModule(ns, ADDON, "|cffe0c060DeckHUD|r")
 local DEFAULTS = { square = true, hideButtons = true, border = true, overlayRoom = true, matchTracker = true, size = 170 }
 local OVERLAY_PX = 30 -- screen pixels kept clear for the Steam battery overlay (it's about 26 tall)
 local MARGIN_PX = 4   -- gap to the screen edges
+local DIALOG_PX = 6   -- extra gap on the right for the dialog border
 
 ns.db = {}
 local db = ns.db
@@ -107,7 +108,7 @@ local function Mask()
     return string.format("Interface\\AddOns\\DeckHUD\\masks\\crop_%02d", cropPct)
 end
 
--- Border style: "dialog" (the classic dialog box edge, BACKDROP_DARK_DIALOG_32_32, edge only),
+-- Border style: "dialog" (the classic gold dialog box edge, BACKDROP_GOLD_DIALOG_32_32, edge only),
 -- "metal" (the thin metal frame of DeckKit windows: the SimplePanelTemplate nine-slice), "line"
 -- (1 px dark edge) or false (none). Older saves only have db.border = false for none.
 local function BorderStyle()
@@ -139,8 +140,8 @@ local function Shape()
         dialog = CreateFrame("Frame", nil, Holder(), "BackdropTemplate")
         dialog:SetPoint("TOPLEFT", -7, 7)
         dialog:SetPoint("BOTTOMRIGHT", 7, -7)
-        local b = BACKDROP_DARK_DIALOG_32_32 or BACKDROP_DIALOG_32_32
-        dialog:SetBackdrop({ edgeFile = b and b.edgeFile or "Interface\\DialogFrame\\UI-DialogBox-Border",
+        local b = BACKDROP_GOLD_DIALOG_32_32 or BACKDROP_DIALOG_32_32
+        dialog:SetBackdrop({ edgeFile = b and b.edgeFile or "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
             edgeSize = b and b.edgeSize or 32, tile = true, tileEdge = true })
         dialog:SetFrameLevel(Holder():GetFrameLevel() + 30)
     end
@@ -155,11 +156,14 @@ local function Layout()
     local margin = PixelsToUnits(MARGIN_PX)
     local top = PixelsToUnits(MARGIN_PX + (db.overlayRoom ~= false and OVERLAY_PX or 0))
     local size = db.size or DEFAULTS.size
+    -- The dialog border sticks out past the map; keep it clear of the screen's right edge.
+    local inset = (db.square ~= false and BorderStyle() == "dialog") and PixelsToUnits(DIALOG_PX) or 0
     local t = db.matchTracker ~= false and db.square ~= false and Tracker()
-    if not t then return size, size, margin, top end
+    if not t then return size, size, margin + inset, top end
     local k = t:GetEffectiveScale() / UIParent:GetEffectiveScale()
     local w = (t:GetRight() - t:GetLeft()) * k
-    local right = UIParent:GetRight() - t:GetRight() * k
+    local right = UIParent:GetRight() - t:GetRight() * k + inset
+    w = w - inset
     local h = (UIParent:GetTop() - top) - (t:GetTop() * k + margin) -- down to just above the tracker
     return w, math.max(60, math.min(w, h)), right, top
 end
@@ -305,7 +309,7 @@ ns.AddSettings({
     { type = "choice", label = "Border", values = { { "dialog", "Dialog" }, { "metal", "Thin metal" }, { "line", "Thin line" }, { false, "None" } },
       hint = "Dialog: the classic dialog box edge. Thin metal: the frame of DeckKit's windows. Thin line: a 1-pixel dark edge.",
       get = function() return BorderStyle() end,
-      set = function(v) db.borderStyle = v; Shape() end },
+      set = function(v) db.borderStyle = v; Shape(); Place(true) end },
     { type = "toggle", label = "Hide buttons around the edge",
       hint = "Zone text, tracking, calendar, mail, zoom and addon buttons. Turning it off needs a /reload.",
       get = function() return db.hideButtons ~= false end,
