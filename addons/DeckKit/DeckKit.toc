@@ -4,8 +4,10 @@
 ## Version: 1.0.0
 ## Author: Ben Fillmore
 ## SavedVariables: DeckKitDB
+## OptionalDeps: DeckDev
 
 Core.lua
+Debug.lua
 Input.lua
 Window.lua
 UI.lua
@@ -14,4 +16,3 @@ Settings.lua
 Menu.lua
 Sample.lua
 Paddles.lua
-Debug.lua
