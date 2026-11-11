@@ -2,7 +2,7 @@
 -- right now. Which quest:
 --   1. the quest your target belongs to (from the target's tooltip quest lines), else
 --   2. the quest whose area you're standing in: the real shape the map draws for it, not a
---      distance from its centre. A hidden quest-area frame (QuestPOIFrame) draws the areas of
+--      distance from its centre. An invisible quest-area frame (QuestPOIFrame) draws the areas of
 --      every quest that has an item, then answers "which area is this point in?" for your position.
 -- The key bound to QUESTPAD_USE (Controls > Bindings) clicks the button. Items need a secure click,
 -- so the item, the button and its key only change out of combat; in combat it keeps what it had.
@@ -17,6 +17,7 @@ BINDING_NAME_QUESTPAD_USE = "Use the quest item"
 local DEFAULTS = { enabled = true, byTarget = true, y = -180 }
 local ART = "Interface\\ExtraButton\\ExtraButtonGeneric"
 local TICK = 0.25
+local REDRAW = 3 -- seconds
 local QUEST_TITLE_LINE = Enum.TooltipDataLineType and Enum.TooltipDataLineType.QuestTitle or 17
 
 local db = {}
@@ -25,6 +26,8 @@ local items = {}      -- questID -> { link, icon, whenComplete }
 local itemsDirty = true
 local drawnKey        -- what the area frame last drew (map + quests); nil = draw again
 local drawnAt = 0     -- the area frame answers only after a frame has passed since drawing
+local requestedMap    -- map whose quest-area data we asked the game for
+local lastHit
 local current         -- questID shown on the button
 local previewUntil = 0 -- showing a sample (to place the button) until this time
 
@@ -83,6 +86,15 @@ local function AreaQuest()
     table.sort(ids)
     local key = map .. ":" .. table.concat(ids, ",")
     if key ~= drawnKey then
+        -- The areas' shapes only exist once the game has loaded them for this map (the world map
+        -- asks the same way when it opens). Ask, then draw on a later tick.
+        if requestedMap ~= map then
+            requestedMap = map
+            if C_QuestLog.SetMapForQuestPOIs then C_QuestLog.SetMapForQuestPOIs(map) end
+            if QuestPOIUpdateIcons then QuestPOIUpdateIcons() end
+            ns.Debug("requested map", map)
+            return Wanted(current) and current or nil
+        end
         area:SetMapID(map)
         area:DrawNone()
         for _, questID in ipairs(ids) do area:DrawBlob(questID, true) end
@@ -94,6 +106,10 @@ local function AreaQuest()
     if not pos then return end
     local x, y = pos:GetXY()
     local questID = area:UpdateMouseOverTooltip(x, y)
+    -- The shapes can arrive after we drew (no event says so): while outside every area, draw again
+    -- now and then.
+    if not questID and GetTime() - drawnAt > REDRAW then drawnKey = nil end
+    if questID ~= lastHit then ns.Debug("area hit", tostring(questID), string.format("%.3f,%.3f", x, y)); lastHit = questID end
     return Wanted(questID) and questID or nil
 end
 
@@ -192,7 +208,12 @@ local function Create()
     area = CreateFrame("QuestPOIFrame", nil, UIParent)
     area:SetSize(512, 512)
     area:SetPoint("CENTER")
-    area:Hide() -- answers while hidden; nothing is ever drawn on screen
+    -- It must be shown to answer (a frame that has never been shown has no layout to test against);
+    -- fully transparent and not clickable, so nothing appears.
+    area:SetAlpha(0)
+    area:EnableMouse(false)
+    area:SetFrameStrata("BACKGROUND")
+    area:Show()
 
     Place()
 end
@@ -237,7 +258,8 @@ end)
 local function Dirty() itemsDirty = true; drawnKey = nil end
 ns.On("QUEST_LOG_UPDATE", Dirty)
 ns.On("BAG_UPDATE_DELAYED", Dirty)
-ns.On("ZONE_CHANGED_NEW_AREA", function() drawnKey = nil end)
+ns.On("ZONE_CHANGED_NEW_AREA", function() drawnKey = nil; requestedMap = nil end)
+ns.On("QUEST_POI_UPDATE", function() drawnKey = nil end) -- area data arrived or changed: draw again
 ns.On("PLAYER_TARGET_CHANGED", function() clock = TICK end) -- answer right away
 ns.On("UPDATE_BINDINGS", function() if button then Bind() end end)
 ns.On("PLAYER_REGEN_ENABLED", function() if button then clock = TICK; Bind() end end)
