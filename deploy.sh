@@ -1,19 +1,22 @@
 #!/bin/bash
-# Copy addons from addons/ onto the Steam Deck. Usage: ./deploy.sh WayPad MapDeck ...   (no args: all)
-# Syntax-checks every .lua first. WoW needs a /reload afterwards.
+# Deploy addons from addons/ onto the Steam Deck with deckctl (from ~/Projects/AddonTools): syntax
+# check, apicheck, swap each addon folder in whole, reload, and verify.
+# Usage: ./deploy.sh [--no-reload] WayPad MapDeck ...   (no names: all)
+#
+# A good deploy ends "addons loaded N/N, 0 Lua errors, 0 blocked". Anything else exits 1: look at it
+# (deckctl errors / deckctl blocked). DeckDev itself is deployed from AddonTools (./deploy.sh there).
 set -euo pipefail
-cd "$(dirname "$0")/addons"
-# Machine-specific settings (DECK, ADDONS) live in deploy.local, which git ignores. See deploy.local.example.
-CONF="$(cd .. && pwd)/deploy.local"
-[ -f "$CONF" ] || { echo "missing deploy.local: copy deploy.local.example and fill it in" >&2; exit 1; }
-. "$CONF"
-: "${DECK:?set DECK in deploy.local}" "${ADDONS:?set ADDONS in deploy.local}"
-[ $# -eq 0 ] && set -- */
-names=()
-for a in "$@"; do a=${a%/}; [ -d "$a" ] || { echo "no addon $a" >&2; exit 1; }; names+=("$a"); done
-if command -v luac >/dev/null; then
-  find "${names[@]}" -name '*.lua' -print0 | xargs -0 -n1 luac -p
-fi
-COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -cf - "${names[@]}" |
-  ssh "$DECK" "cd /tmp && sudo -u deck bash -c 'cd \"$ADDONS\" && tar xf - && find . -maxdepth 3 -name \"._*\" -delete'"
-echo "deployed: ${names[*]}  (/reload in WoW)"
+cd "$(dirname "$0")"
+DECKCTL="${ADDONTOOLS:-$HOME/Projects/AddonTools}/deck/deckctl"
+[ -x "$DECKCTL" ] || { echo "deckctl not found at $DECKCTL (set ADDONTOOLS)" >&2; exit 1; }
+# Machine-specific settings (DECK, ADDONS) in deploy.local, which git ignores; see deploy.local.example.
+[ -f deploy.local ] && export DECKCTL_CONF="$PWD/deploy.local"
+args=(); names=()
+for a in "$@"; do
+  case "$a" in
+    --*) args+=("$a") ;;
+    *) a=${a%/}; a=${a#addons/}; [ -d "addons/$a" ] || { echo "no addon $a" >&2; exit 1; }; names+=("addons/$a") ;;
+  esac
+done
+[ ${#names[@]} -gt 0 ] || names=(addons/*/)
+exec "$DECKCTL" deploy ${args[@]+"${args[@]}"} "${names[@]%/}"
