@@ -71,7 +71,7 @@ end
 -- Shape, border, place
 ------------------------------------------------------------------------
 
-local border, holder
+local border, metal, holder
 local placing = false
 local placed = {} -- last width / height / right / top, to skip needless re-placing
 
@@ -107,6 +107,15 @@ local function Mask()
     return string.format("Interface\\AddOns\\DeckHUD\\masks\\crop_%02d", cropPct)
 end
 
+-- Border style: "metal" (the game's thin metal frame, as on DeckKit windows: the
+-- SimplePanelTemplate nine-slice), "line" (1 px dark edge) or false (none). Older saves only have
+-- db.border = false for none.
+local function BorderStyle()
+    if db.borderStyle ~= nil then return db.borderStyle end
+    if db.border == false then return false end
+    return "metal"
+end
+
 local function Shape()
     Minimap:SetMaskTexture(Mask())
     if not border then
@@ -117,7 +126,16 @@ local function Shape()
         border:SetBackdropBorderColor(0, 0, 0, 0.9)
         border:SetFrameLevel(Holder():GetFrameLevel() + 20)
     end
-    border:SetShown(db.border ~= false and db.square ~= false)
+    if not metal then
+        -- Its own frame above the map (the map would draw over textures on the holder itself).
+        metal = CreateFrame("Frame", nil, Holder())
+        metal:SetAllPoints()
+        metal:SetFrameLevel(Holder():GetFrameLevel() + 30)
+        DeckKit.UI.Border(metal, "SimplePanelTemplate")
+    end
+    local style, square = BorderStyle(), db.square ~= false
+    border:SetShown(square and style == "line")
+    metal:SetShown(square and style == "metal")
 end
 
 -- Width, height and offsets from the top-right corner, in UIParent units.
@@ -272,9 +290,10 @@ ns.AddSettings({
       hint = "The zone or area you're in, across the top of the minimap, coloured friendly / hostile / contested.",
       get = function() return db.zoneTitle ~= false end,
       set = function(on) db.zoneTitle = on; ZoneTitle() end },
-    { type = "toggle", label = "Thin border", hint = "A 1-pixel dark edge around the square map.",
-      get = function() return db.border ~= false end,
-      set = function(on) db.border = on; Shape() end },
+    { type = "choice", label = "Border", values = { { "metal", "Metal" }, { "line", "Thin line" }, { false, "None" } },
+      hint = "Metal: the game's thin metal frame, like DeckKit's windows. Thin line: a 1-pixel dark edge.",
+      get = function() return BorderStyle() end,
+      set = function(v) db.borderStyle = v; Shape() end },
     { type = "toggle", label = "Hide buttons around the edge",
       hint = "Zone text, tracking, calendar, mail, zoom and addon buttons. Turning it off needs a /reload.",
       get = function() return db.hideButtons ~= false end,
