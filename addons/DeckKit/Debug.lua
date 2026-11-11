@@ -154,6 +154,7 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ns.Settings.Add("DeckKit", ns.TITLE, {
+    { type = "section", tab = "Tools", label = "DeckKit", order = 9 },
     { type = "toggle", label = "Debug strip",
       hint = "Colored cells top-left that tools outside the game can read. Leave off unless debugging.",
       get = function() return on end,
@@ -165,3 +166,13 @@ ns.Settings.Add("DeckKit", ns.TITLE, {
 for _, event in ipairs({ "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN" }) do
     pcall(ns.On, event, function(addon, func) ns.Debug(event, tostring(addon), tostring(func)) end)
 end
+
+-- Blocked / forbidden protected calls: say which addon and which function, in chat, the moment it
+-- happens (the taint log only reaches the disk when the game exits). Only while debug is on.
+local function Blocked(event, addon, func)
+    if not on then return end
+    ns.Print(string.format("|cffff5555%s|r: %s called %s", event == "ADDON_ACTION_FORBIDDEN" and "forbidden"
+        or "blocked", tostring(addon), tostring(func)))
+end
+ns.On("ADDON_ACTION_BLOCKED", function(...) Blocked("ADDON_ACTION_BLOCKED", ...) end)
+ns.On("ADDON_ACTION_FORBIDDEN", function(...) Blocked("ADDON_ACTION_FORBIDDEN", ...) end)

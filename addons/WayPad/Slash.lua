@@ -185,6 +185,7 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ns.AddSettings({
+    { type = "section", tab = "Map & travel", label = "Waypoints", order = 1 },
     { type = "choice", label = "Waypoints go to",
       hint = "Auto: another waypoint addon (TomTom-compatible) if one is installed, otherwise WayPad's own.",
       values = { { "auto", "Auto" }, { "waypad", "WayPad" }, { "other", "Waypoint addon" } },
@@ -201,5 +202,6 @@ ns.AddSettings({
       run = function() ns.Manager.Toggle() end },
     { type = "action", label = "Reset the arrow position", hint = "Puts the arrow back at the top of the screen.",
       run = function() ns.Arrow.Reset(); ns.Print("Arrow moved back to the top of the screen.") end },
-    { type = "info", label = "Bind Add / Manage in Key Bindings > DeckKit." },
+    { type = "binding", action = "WAYPAD_ADD", tab = "Controls", section = "Bindings", sectionOrder = 9 },
+    { type = "binding", action = "WAYPAD_MANAGE", tab = "Controls", section = "Bindings", sectionOrder = 9 },
 })

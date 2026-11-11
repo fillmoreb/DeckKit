@@ -324,6 +324,7 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ns.Settings.Add("DeckKit", ns.TITLE, {
+    { type = "section", tab = "Controls", label = "Paddles", order = 3 },
     { type = "toggle", label = "Paddle chords",
       hint = "Peek buttons: hold for the peek, hold both for dictation, double-tap to hide that side.",
       get = function() return Setting("paddleChords") end,
@@ -337,7 +338,7 @@ ns.Settings.Add("DeckKit", ns.TITLE, {
       format = function(v) return string.format("%d ms", math.floor(v * 1000 + 0.5)) end,
       get = function() return Setting("doubleTap") end,
       set = function(v) ns.db.doubleTap = v end },
-    { type = "toggle", label = "Dictation indicator",
+    { type = "toggle", label = "Dictation indicator", tab = "Screen", section = "Dictation", sectionOrder = 4,
       hint = "\"Listening\" while both peek buttons are held, then \"Transcribing\".",
       get = function() return Setting("dictationIndicator") end,
       set = function(on) ns.db.dictationIndicator = on end },

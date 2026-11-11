@@ -39,6 +39,7 @@ ns.On("PLAYER_EQUIPMENT_CHANGED", Apply)
 ns.On("SPELLS_CHANGED", Apply)
 
 ns.AddSettings({
+    { type = "section", tab = "Controls", label = "Buttons", order = 2 },
     { type = "toggle", label = "Wand shoot",
       hint = "X fires your wand at a living enemy instead of a melee swing.",
       get = function() return ns.db.wandShoot ~= false end,

@@ -59,6 +59,7 @@ CreateFrame("Frame"):SetScript("OnUpdate", function()
 end)
 
 ns.AddSettings({
+    { type = "section", tab = "Controls", label = "Buttons", order = 2 },
     { type = "toggle", label = "Y sets reply in the friends list",
       hint = "Y on a friend makes them your reply target: /r (or dictating \"reply ...\") whispers them.",
       get = function() return ns.db.friendsWhisper ~= false end,

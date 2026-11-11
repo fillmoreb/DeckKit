@@ -1,197 +1,135 @@
 -- The DeckKit menu: every module's settings in one window, run entirely from the controller.
 --
---   Up/Down     pick a setting           Left/Right  change it
---   A           toggle / next choice / run an action
---   LB/RB       previous / next module   B or Menu   close
+-- Tabs (LB/RB) group settings by what they're about, not by addon: Controls, Screen, Map & travel,
+-- Healing, Tools. Each tab is a scrolling list of sections on the left (each addon's rows under a
+-- gold heading) and, on the right, what the focused setting does. Look and behaviour come from
+-- UI.lua (the game's pointer, 45 degree d-pad moves, A / B / footer prompts).
 --
 -- Opens when the controller's Menu button (three lines, PADFORWARD) is pressed twice quickly, or
 -- with /deckkit. The first press still opens the game's own menu wheel; that wheel is closed when
 -- this opens. The button is only watched, never taken. (Double-press approach from Improved
 -- Forever's Menu.lua, MIT License, Copyright (c) 2026 markg.)
 local _, ns = ...
+local UI = ns.UI
 
 local Menu = {}
 ns.Menu = Menu
 
-local ROWS, ROW_H, WIDTH = 9, 30, 460
 local DOUBLE = 0.35 -- seconds between the two Menu presses
+local WIDTH, HEIGHT = 900, 580
+local LIST_W = 560
 
-local win, rows, header, desc
-local page, sel, offset = 1, nil, 0
+local screen
 
-local function Pages() return ns.Settings.pages end
-local function Items() local p = Pages()[page]; return p and p.items or {} end
-local function Selectable(item) return item and item.type ~= "info" end
+local DEFAULT_HINT = {
+    toggle = "{A} turns it on or off.",
+    choice = "{DPAD_LR} steps through the choices; {A} shows them all.",
+    range = "{DPAD_LR} changes it.",
+    action = "{A} does it.",
+    binding = "{A}, then press a back grip (L4 R4 L5 R5). {X} clears it.",
+}
 
-local function ValueText(item)
-    if item.type == "toggle" then
-        return item.get() and "|cff5fd35fOn|r" or "|cff888888Off|r"
-    elseif item.type == "choice" then
-        local v, text = item.get(), nil
-        for _, c in ipairs(item.values) do
-            if c[1] == v then text = c[2] end
-        end
-        return "<   " .. (text or tostring(v)) .. "   >"
-    elseif item.type == "range" then
-        local v = item.get()
-        return "<   " .. (item.format and item.format(v) or tostring(v)) .. "   >"
-    elseif item.type == "action" then
-        return ns.Window.Glyph("A")
+local function BuildTab(tabName, sections)
+    local tab = screen:AddTab(tabName)
+    local bodyH = HEIGHT - 76 - 42
+
+    local left = UI.Panel(tab.frame, nil)
+    left:SetPoint("TOPLEFT")
+    left:SetPoint("BOTTOMLEFT")
+    left:SetWidth(LIST_W)
+    local list = UI.ScrollList(left, LIST_W - 12, bodyH - 12)
+    list:SetPoint("TOPLEFT", 6, -6)
+    local W = LIST_W - 12 - 22 -- room for the scroll bar
+
+    local right = UI.Panel(tab.frame, nil)
+    right:SetPoint("TOPLEFT", left, "TOPRIGHT", 12, 0)
+    right:SetPoint("BOTTOMRIGHT")
+    local RW = WIDTH - 28 - LIST_W - 12 - 28
+    local dHead = UI.Heading(right, "")
+    dHead:SetPoint("TOPLEFT", 14, -14)
+    dHead:SetWidth(RW)
+    dHead:SetWordWrap(true)
+    local dText = UI.Description(right, "", RW)
+    dText:SetPoint("TOPLEFT", dHead, "BOTTOMLEFT", 0, -8)
+    local dFrom = UI.Description(right, "", RW)
+    dFrom:SetFontObject(UI.Font.smallDim)
+    dFrom:SetPoint("BOTTOMLEFT", 14, 12)
+
+    local function Details(item, label)
+        dHead:SetText(ns.Window.Glyphs(label or item.label or ""))
+        dText:SetText(ns.Window.Glyphs(item.hint or DEFAULT_HINT[item.type] or ""))
+        dFrom:SetText(item.from and ("From " .. item.from) or "")
     end
-    return ""
-end
 
-local function Hints(item)
-    local what = ""
-    if item then
-        if item.type == "toggle" then what = "{A} {DPAD_LR} Change     "
-        elseif item.type == "choice" or item.type == "range" then what = "{DPAD_LR} Change     "
-        elseif item.type == "action" then what = "{A} Go     " end
-    end
-    return what .. (#Pages() > 1 and "{LB} {RB} Module     " or "") .. "{B} Close"
-end
-
-function Menu.Render()
-    if not (win and win:IsShown()) then return end
-    local pages, items = Pages(), Items()
-    local p = pages[page]
-    header:SetText(#pages > 1 and (ns.Window.Glyph("LB") .. "   " .. p.title .. "   " .. ns.Window.Glyph("RB")
-        .. "   |cff888888" .. page .. "/" .. #pages .. "|r") or p.title)
-
-    if sel then
-        if sel <= offset then offset = sel - 1 end
-        if sel > offset + ROWS then offset = sel - ROWS end
-    end
-    offset = math.max(0, math.min(offset, math.max(0, #items - ROWS)))
-
-    for r, row in ipairs(rows) do
-        local i = offset + r
-        local item = items[i]
-        if item then
-            if item.type == "info" then
-                row.label:SetFontObject("GameFontDisable")
-                row.label:SetText(ns.Window.Glyphs(item.label))
-                row.value:SetText("")
-            else
-                row.label:SetFontObject("GameFontHighlight")
-                row.label:SetText(ns.Window.Glyphs(item.label))
-                row.value:SetText(ValueText(item))
+    local content = list.content
+    local statuses = {}
+    local y = 0
+    for _, section in ipairs(sections) do
+        local h = UI.Heading(content, section.label)
+        h:SetPoint("TOPLEFT", 10, -y - 6)
+        local rule = content:CreateTexture(nil, "ARTWORK")
+        rule:SetColorTexture(0.45, 0.42, 0.35, 0.5)
+        rule:SetHeight(1)
+        rule:SetPoint("TOPLEFT", 10, -y - 28)
+        rule:SetWidth(W - 10)
+        y = y + 34
+        for _, item in ipairs(section.rows) do
+            local f, h2
+            local focus = function(self) Details(item, self and self.dkLabel) end
+            local opts = { label = item.label, get = item.get, set = item.set, onFocus = focus,
+                disabled = item.disabled, reason = item.reason }
+            if item.type == "toggle" then
+                f = UI.Checkbox(content, W, opts)
+            elseif item.type == "choice" then
+                opts.values = item.values
+                f = UI.Selector(content, W, opts)
+            elseif item.type == "range" then
+                opts.min, opts.max, opts.step, opts.format = item.min, item.max, item.step, item.format
+                f = UI.Stepper(content, W, opts)
+            elseif item.type == "action" then
+                opts.verb = item.verb
+                opts.run = function()
+                    if item.keepOpen then item.run() return end
+                    -- Close first: the action often opens another DeckKit window, which takes the pad next.
+                    screen:Hide()
+                    C_Timer.After(0, item.run)
+                end
+                f = UI.Action(content, W, opts)
+            elseif item.type == "binding" then
+                if _G["BINDING_NAME_" .. item.action] then
+                    opts.action, opts.label = item.action, item.label
+                    f = UI.KeyBinding(content, W, opts)
+                    f.dkLabel = _G["BINDING_NAME_" .. item.action]
+                end
+            elseif item.type == "status" then
+                f = UI.StatusRow(content, W, item)
+                statuses[#statuses + 1] = f
+                h2 = 24
+            elseif item.type == "info" then
+                local d = UI.Description(content, item.label, W - 20)
+                d:SetPoint("TOPLEFT", 10, -y - 2)
+                y = y + d:GetStringHeight() + 8
             end
-            row.bg:SetColorTexture(1, 0.82, 0, i == sel and 0.25 or 0)
-            row:Show()
-        else
-            row:Hide()
+            if f then
+                f:SetPoint("TOPLEFT", 0, -y)
+                y = y + (h2 or UI.ROW_H) + 2
+            end
         end
+        y = y + 12
     end
-    local item = sel and items[sel]
-    desc:SetText(item and item.hint and ns.Window.Glyphs(item.hint) or "")
-    win:SetHints(Hints(item))
+    list:SetContentHeight(y)
+
+    local function Statuses() for _, s in ipairs(statuses) do s:Update() end end
+    tab.onShow = Statuses
+    tab.onRefresh = Statuses
 end
 
-local function FirstSelectable()
-    for i, item in ipairs(Items()) do
-        if Selectable(item) then return i end
+local function Build()
+    screen = UI.NewScreen("DeckKitMenu", WIDTH, HEIGHT, "DeckKit")
+    for _, name in ipairs(ns.Settings.TABS) do
+        local sections = ns.Settings.SectionsOf(name)
+        if #sections > 0 then BuildTab(name, sections) end
     end
-end
-
-local function Move(d)
-    local items = Items()
-    if not sel then return end
-    local i = sel
-    for _ = 1, #items do
-        i = (i - 1 + d) % #items + 1
-        if Selectable(items[i]) then break end
-    end
-    if i ~= sel then
-        sel = i
-        ns.Window.Tick()
-        Menu.Render()
-    end
-end
-
-local function SwitchPage(d)
-    local n = #Pages()
-    if n < 2 then return end
-    page = (page - 1 + d) % n + 1
-    sel, offset = FirstSelectable(), 0
-    ns.Window.Tick()
-    Menu.Render()
-end
-
-function Menu.Close()
-    if win and win:IsShown() then
-        win:Hide()
-        ns.Window.Sound(false)
-    end
-end
-
--- dir: -1 / 1 for Left / Right, 0 for A.
-local function Change(dir)
-    local item = sel and Items()[sel]
-    if not item then return end
-    if item.type == "toggle" then
-        item.set(not item.get())
-    elseif item.type == "choice" then
-        local n, cur = #item.values, 1
-        for i, c in ipairs(item.values) do
-            if c[1] == item.get() then cur = i end
-        end
-        item.set(item.values[(cur - 1 + (dir == 0 and 1 or dir)) % n + 1][1])
-    elseif item.type == "range" then
-        if dir == 0 then return end
-        local v = math.max(item.min, math.min(item.max, item.get() + dir * (item.step or 1)))
-        if v == item.get() then return end
-        item.set(v)
-    elseif item.type == "action" then
-        if dir ~= 0 then return end
-        -- Close first: the action often opens another DeckKit window, which takes the pad next.
-        Menu.Close()
-        C_Timer.After(0, item.run)
-        return
-    end
-    ns.Window.Tick()
-    Menu.Render()
-end
-
-local function Create()
-    win = ns.Window.New("DeckKitMenu", WIDTH, 60 + ROWS * ROW_H + 64, "DeckKit")
-    header = win:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    header:SetPoint("TOP", 0, -36)
-    rows = {}
-    for r = 1, ROWS do
-        local row = CreateFrame("Frame", nil, win)
-        row:SetSize(WIDTH - 24, ROW_H)
-        row:SetPoint("TOPLEFT", 12, -58 - (r - 1) * ROW_H)
-        row.bg = row:CreateTexture(nil, "BACKGROUND")
-        row.bg:SetAllPoints()
-        row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        row.label:SetPoint("LEFT", 10, 0)
-        row.label:SetJustifyH("LEFT")
-        row.value = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        row.value:SetPoint("RIGHT", -10, 0)
-        row.value:SetJustifyH("RIGHT")
-        row.label:SetPoint("RIGHT", row.value, "LEFT", -10, 0)
-        row.label:SetWordWrap(false)
-        rows[r] = row
-    end
-    desc = win:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    desc:SetPoint("BOTTOMLEFT", 20, 34)
-    desc:SetPoint("BOTTOMRIGHT", -20, 34)
-    desc:SetHeight(28)
-    desc:SetJustifyH("CENTER")
-    desc:SetJustifyV("MIDDLE")
-
-    ns.Input.New(win, {
-        PADDUP = function() Move(-1) end,
-        PADDDOWN = function() Move(1) end,
-        PADDLEFT = function() Change(-1) end,
-        PADDRIGHT = function() Change(1) end,
-        PAD1 = function() Change(0) end,
-        PAD2 = Menu.Close,
-        PADFORWARD = Menu.Close,
-        PADLSHOULDER = function() SwitchPage(-1) end,
-        PADRSHOULDER = function() SwitchPage(1) end,
-    })
 end
 
 function Menu.Open()
@@ -199,16 +137,16 @@ function Menu.Open()
         ns.Print("The menu can't open in combat.")
         return
     end
-    if not win then Create() end
-    if not Pages()[page] then page = 1 end
-    if not (sel and Selectable(Items()[sel])) then sel, offset = FirstSelectable(), 0 end
-    win:Show()
-    ns.Window.Sound(true)
-    Menu.Render()
+    if not screen then Build() end
+    screen:Show()
+end
+
+function Menu.Close()
+    if screen then screen:Hide() end
 end
 
 function Menu.Toggle()
-    if win and win:IsShown() then Menu.Close() else Menu.Open() end
+    if screen and screen.win:IsShown() then Menu.Close() else Menu.Open() end
 end
 
 -- Menu pressed twice quickly.
@@ -220,7 +158,7 @@ CreateFrame("Frame"):SetScript("OnUpdate", function()
         local now = GetTime()
         if now - lastPress <= DOUBLE then
             lastPress = 0
-            if ns.db.menuDouble ~= false and not InCombatLockdown() and not (win and win:IsShown()) then
+            if ns.db.menuDouble ~= false and not InCombatLockdown() and not (screen and screen.win:IsShown()) then
                 -- Next frame: the game handles the press first (it closes or opens its wheel).
                 C_Timer.After(0, function()
                     local radial = _G.GamepadRadial
@@ -235,12 +173,28 @@ CreateFrame("Frame"):SetScript("OnUpdate", function()
     wasDown = down
 end)
 
--- The core's own page.
+-- The core's own rows.
 ns.Settings.Add("DeckKit", ns.TITLE, {
+    { type = "section", tab = "Controls", label = "Menu", order = 1 },
     { type = "toggle", label = "Double-tap {MENU} opens this",
       hint = "Press {MENU} twice quickly to open this menu. Typing /deckkit always works.",
       get = function() return ns.db.menuDouble ~= false end,
-      set = function(on) ns.db.menuDouble = on end },
-    { type = "info", label = "Module key bindings: Key Bindings > DeckKit." },
+      set = function(on)
+          ns.db.menuDouble = on
+          if not on then ns.Print("double-tap Menu is off. Type /deckkit to open the menu.") end
+      end },
+    { type = "section", tab = "Tools", label = "DeckKit", order = 9 },
     { type = "info", label = "Chat commands: /deckkit help" },
+    { type = "section", tab = "Controls", label = "Bindings", order = 9 },
+    { type = "status", label = "Reload UI", hint = "A keyboard key, for testing at a desk.",
+      get = function()
+          local k = GetBindingKey("DECKKIT_RELOAD")
+          return k or "Not bound", (not k) and UI.Color.dim or nil
+      end },
+    { type = "status", label = "Dictation signals",
+      hint = "Keys Decktation sends while you dictate. Changing them would break the indicator.",
+      get = function()
+          local ok = GetBindingKey("DECKKIT_DICTATION_START") ~= nil
+          return ok and "Set up" or "Not set up", ok and UI.Color.good or UI.Color.dim
+      end },
 })

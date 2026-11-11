@@ -86,7 +86,9 @@ function Input.New(window, handlers)
     end)
     -- Keyboard fallback (arrows, Enter, Escape) for testing at a desk.
     local KEYS = { UP = "PADDUP", DOWN = "PADDDOWN", LEFT = "PADDLEFT", RIGHT = "PADDRIGHT",
-        ENTER = "PAD1", ESCAPE = "PAD2", DELETE = "PAD4", E = "PAD3" }
+        ENTER = "PAD1", ESCAPE = "PAD2", DELETE = "PAD4", E = "PAD3",
+        -- The Deck's back grips arrive as F8-F11 (DeckKit's Steam layout); windows can take them.
+        F8 = "F8", F9 = "F9", F10 = "F10", F11 = "F11" }
     catcher:SetScript("OnKeyDown", function(_, key)
         if h.draining then
             SetPropagate(catcher, true)
@@ -121,10 +123,17 @@ function Handler:Release(key)
 end
 
 function Handler:Poll(elapsed)
+    -- The game menu opened on top (Menu button, then Game Menu): it needs the pad, so close the
+    -- window, as the game's own panels do. Polled, not hooked: hooks on its frames taint.
+    if GameMenuFrame and GameMenuFrame:IsShown() and not InCombatLockdown() then
+        self.window:Hide()
+        return
+    end
     for key in pairs(self.handlers) do
         local down = PolledDown(key)
-        if down == nil then return end
-        if down and not self.polled[key] then
+        if down == nil then
+            -- not a pad button (F8...) or no pad state: key events only
+        elseif down and not self.polled[key] then
             self:Handle(key)
         elseif down and self.held[key] then
             self.held[key] = self.held[key] + elapsed

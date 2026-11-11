@@ -21,11 +21,18 @@ local GLYPHS = {
     DPAD = { "gamepad-xbox1-dpadall-normal" },
     DPAD_LR = { "gamepad-xbox1-dpadleftright-normal" },
     DPAD_UD = { "gamepad-xbox1-dpadupdown-normal" },
+    RSTICK = { "gamepad-xbox1-stick-r-normal" },
+    LSTICK = { "gamepad-xbox1-stick-l-normal" },
+    DUP = { "gamepad-xbox1-dpadup-normal" },
+    DDOWN = { "gamepad-xbox1-dpaddown-normal" },
+    DLEFT = { "gamepad-xbox1-dpadleft-normal" },
+    DRIGHT = { "gamepad-xbox1-dpadright-normal" },
 }
 -- Without the art: the name, face buttons in the Deck's colors.
 local FALLBACK = {
     A = "|cff5fd35fA|r", B = "|cffe05555B|r", X = "|cff5a9cf0X|r", Y = "|cfff0d050Y|r",
     MENU = "Menu", VIEW = "View", DPAD = "D-pad", DPAD_LR = "Left/Right", DPAD_UD = "Up/Down",
+    RSTICK = "R", LSTICK = "L", DUP = "Up", DDOWN = "Down", DLEFT = "Left", DRIGHT = "Right",
 }
 local glyphCache = {}
 
