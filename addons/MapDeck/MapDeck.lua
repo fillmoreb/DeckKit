@@ -3,7 +3,8 @@
 -- This draws the map itself (the zone's art tiles plus the explored-area overlays) instead of
 -- opening Blizzard's map window, so it works in combat and fills the screen. On it: you (an
 -- arrow that turns with you), your party, quests (? / ! / in progress), the tracked quest's
--- areas, WayPad's waypoints, and your corpse.
+-- areas, WayPad's waypoints, the game's map pin, where a guard pointed you, flight masters, dungeon
+-- entrances, your raid, zone names on a continent, your corpse and (while dead) the spirit healer.
 -- While it's up the frame takes the gamepad sticks, like ChatDeck: the right stick zooms out
 -- (up: zone -> continent) and back in (down). The camera stays still; auto-run keeps going.
 --
@@ -81,6 +82,29 @@ end
 
 local function HideFrom(list, n)
     for i = n, #list do list[i]:Hide() end
+end
+
+-- Text on the map lives on an unscaled layer above the markers, so it stays readable at any zoom.
+local labelLayer
+local function Label(list, i, font)
+    local l = list[i]
+    if not l then
+        l = labelLayer:CreateFontString(nil, "OVERLAY", font)
+        l:SetShadowOffset(1, -1)
+        list[i] = l
+    end
+    l:ClearAllPoints()
+    l:Show()
+    return l
+end
+
+-- A texture file (Interface\...) in place of an atlas, if the game has it.
+local function UseFile(t, file)
+    t:SetTexture(file)
+    if t.GetTextureFileID and not t:GetTextureFileID() then return false end
+    t:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    t:SetVertexColor(1, 1, 1, 1)
+    return true
 end
 
 -- Fit the art (layer pixels) into the screen below the header.
@@ -225,14 +249,111 @@ local function DrawMarkers()
             end
         end
     end
-    -- Party
-    for i = 1, 4 do
-        local unit = "party" .. i
-        if UnitExists(unit) then
+    -- Blizzard's own map pin (the one you place on the world map, or from a chat link)
+    local okW, pin = pcall(C_Map.GetUserWaypointPositionForMap, mapID)
+    if okW and pin and Readable(pin.x) then
+        local tracked = C_SuperTrack and C_SuperTrack.IsSuperTrackingUserWaypoint
+            and C_SuperTrack.IsSuperTrackingUserWaypoint()
+        n = n + 1
+        Dot(n, pin.x, pin.y, tracked and 26 or 20, 1, 1, 1, 1,
+            tracked and "Waypoint-MapPin-Tracked" or "Waypoint-MapPin-Untracked")
+    end
+    -- Where a guard sent you ("Where is the weapon master?"): the game's flag, with its name
+    -- (the label sits on its own unscaled layer so it stays readable at any zoom).
+    if not ns.poiLabel then
+        ns.poiLabel = labelLayer:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        ns.poiLabel:SetShadowOffset(1, -1)
+    end
+    ns.poiLabel:Hide()
+    local okG, poiID = pcall(C_GossipInfo.GetPoiForUiMapID, mapID)
+    if okG and poiID then
+        local okI, info = pcall(C_GossipInfo.GetPoiInfo, mapID, poiID)
+        local pos = okI and info and info.position
+        if pos and Readable(pos.x) then
+            n = n + 1
+            local t = Dot(n, pos.x, pos.y, 26, 1, 1, 1, 1, info.atlasName)
+            if not info.atlasName and GetPOITextureCoords and info.textureIndex then
+                local l, r, top, b = GetPOITextureCoords(info.textureIndex)
+                t:SetTexture("Interface\\Minimap\\POIIcons")
+                t:SetTexCoord(l, r, top, b)
+                t:SetVertexColor(1, 1, 1, 1)
+            end
+            if info.name then
+                ns.poiLabel:ClearAllPoints()
+                ns.poiLabel:SetPoint("BOTTOM", t, "TOP", 0, 2)
+                ns.poiLabel:SetText(info.name)
+                ns.poiLabel:Show()
+            end
+        end
+    end
+    -- Flight masters (the ones you haven't found yet, faded). Forever returns the whole
+    -- continent's nodes for any map, in continent coordinates (ShouldMapShowTaxiNodes says no,
+    -- since its own map doesn't draw them), so place them from the continent onto this map.
+    local continent = mapID
+    for _ = 1, 6 do
+        local ci = MapInfo(continent)
+        if not ci or ci.mapType == (Enum.UIMapType and Enum.UIMapType.Continent or 2) then break end
+        continent = ci.parentMapID
+    end
+    local okN, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, continent)
+    if okN and type(nodes) == "table" then
+        local faction = UnitFactionGroup("player")
+        local F = Enum.FlightPathFaction or {}
+        local shown = 0
+        for _, node in ipairs(nodes) do
+            local pos = node.position
+            local mine = not ((node.faction == F.Horde and faction ~= "Horde")
+                or (node.faction == F.Alliance and faction ~= "Alliance"))
+            local x, y
+            if mine and pos then x, y = Translate(continent, pos.x, pos.y, mapID) end
+            if x then
+                n = n + 1
+                shown = shown + 1
+                Dot(n, x, y, 24, 0.3, 1, 0.3, node.isUndiscovered and 0.45 or 1,
+                    node.atlasName or "TaxiNode_Neutral")
+            end
+        end
+        local line = "mapdeck taxi map=" .. tostring(mapID) .. " cont=" .. tostring(continent)
+            .. " nodes=" .. #nodes .. " shown=" .. shown
+        if line ~= ns.lastTaxiLine and ns.Debug then ns.Debug(line) end -- once per change
+        ns.lastTaxiLine = line
+    end
+    -- Dungeon and raid entrances
+    local okD, dungeons = pcall(C_EncounterJournal.GetDungeonEntrancesForMap, mapID)
+    if okD and type(dungeons) == "table" then
+        for _, d in ipairs(dungeons) do
+            local pos = d.position
+            if pos and Readable(pos.x) then
+                n = n + 1
+                Dot(n, pos.x, pos.y, 24, 0.9, 0.5, 0.2, 1, d.atlasName or "Dungeon")
+            end
+        end
+    end
+    -- Where you'll come back to life if you release (the spirit healer), while you're dead
+    if UnitIsDeadOrGhost("player") and C_DeathInfo and C_DeathInfo.GetDeathReleasePosition then
+        local okR, rel = pcall(C_DeathInfo.GetDeathReleasePosition, mapID)
+        if okR and rel then
+            local x, y = rel:GetXY()
+            if Readable(x) and (x ~= 0 or y ~= 0) then
+                n = n + 1
+                local t = Dot(n, x, y, 24, 0.5, 0.8, 1, 1)
+                if not UseFile(t, "Interface\\Icons\\Spell_Holy_Resurrection") then
+                    Dot(n, x, y, 14, 0.5, 0.8, 1, 1) -- no icon: a pale blue square
+                end
+            end
+        end
+    end
+    -- Your group: the whole raid, or your party
+    local raid = IsInRaid and IsInRaid()
+    for i = 1, raid and 40 or 4 do
+        local unit = (raid and "raid" or "party") .. i
+        if UnitExists(unit) and not UnitIsUnit(unit, "player") then
             local x, y = UnitPos(unit, mapID)
             if x then
                 n = n + 1
-                Dot(n, x, y, 12, 0.35, 0.65, 1, 1)
+                local _, class = UnitClass(unit)
+                local c = raid and class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+                if c then Dot(n, x, y, 10, c.r, c.g, c.b, 1) else Dot(n, x, y, 12, 0.35, 0.65, 1, 1) end
             end
         end
     end
@@ -288,6 +409,28 @@ local function DrawBlobs()
     end
 end
 
+-- Zone names when zoomed out to a continent, at the middle of each zone.
+local zoneLabels = {}
+local function DrawZoneNames(info)
+    local n = 0
+    local continent = Enum.UIMapType and Enum.UIMapType.Continent or 2
+    if info and info.mapType == continent and C_Map.GetMapChildrenInfo then
+        local okC, children = pcall(C_Map.GetMapChildrenInfo, mapID, Enum.UIMapType and Enum.UIMapType.Zone or 3)
+        local k = art:GetEffectiveScale() / labelLayer:GetEffectiveScale()
+        for _, child in ipairs(okC and children or {}) do
+            local okR, left, right, top, bottom = pcall(C_Map.GetMapRectOnMap, child.mapID, mapID)
+            if okR and left and Readable(left) and right > left then
+                n = n + 1
+                local l = Label(zoneLabels, n, "GameFontNormal")
+                l:SetText(child.name)
+                l:SetPoint("CENTER", art, "TOPLEFT",
+                    (left + right) / 2 * layerW * k, -(top + bottom) / 2 * layerH * k)
+            end
+        end
+    end
+    HideFrom(zoneLabels, n + 1)
+end
+
 local function Render()
     local info = MapInfo(mapID)
     title:SetText(info and info.name or "")
@@ -297,6 +440,7 @@ local function Render()
     DrawBlobs()
     DrawMarkers()
     DrawPlayer()
+    DrawZoneNames(info)
     local parent = info and info.parentMapID
     local canOut = parent and parent ~= 0 and MapInfo(parent) and (MapInfo(parent).mapType or 0) >= 2
     local parts = {}
@@ -357,6 +501,10 @@ local function Create()
     marks = CreateFrame("Frame", nil, art)
     marks:SetAllPoints(art)
     marks:SetFrameLevel(art:GetFrameLevel() + 2)
+
+    labelLayer = CreateFrame("Frame", nil, frame)
+    labelLayer:SetAllPoints()
+    labelLayer:SetFrameLevel(marks:GetFrameLevel() + 5)
 
     playerArrow = marks:CreateTexture(nil, "OVERLAY", nil, 7)
     playerArrow:SetTexture("Interface\\Minimap\\MinimapArrow")
@@ -443,8 +591,9 @@ loader:SetScript("OnEvent", function(self)
 end)
 
 ns.AddSettings({
+    { type = "section", tab = "Map & travel", label = "Map", order = 2 },
     { type = "info", label = "Hold your peek button for the map; right stick up zooms out." },
-    { type = "info", label = "Bind it in Key Bindings > DeckKit." },
+    { type = "binding", action = "MAPDECK_PEEK", tab = "Controls", section = "Bindings", sectionOrder = 9 },
 })
 
 
