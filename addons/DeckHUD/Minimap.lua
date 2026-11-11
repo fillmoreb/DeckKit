@@ -71,7 +71,7 @@ end
 -- Shape, border, place
 ------------------------------------------------------------------------
 
-local border, metal, holder
+local border, metal, dialog, holder
 local placing = false
 local placed = {} -- last width / height / right / top, to skip needless re-placing
 
@@ -107,13 +107,13 @@ local function Mask()
     return string.format("Interface\\AddOns\\DeckHUD\\masks\\crop_%02d", cropPct)
 end
 
--- Border style: "metal" (the game's thin metal frame, as on DeckKit windows: the
--- SimplePanelTemplate nine-slice), "line" (1 px dark edge) or false (none). Older saves only have
--- db.border = false for none.
+-- Border style: "dialog" (the classic dialog box edge, BACKDROP_DARK_DIALOG_32_32, edge only),
+-- "metal" (the thin metal frame of DeckKit windows: the SimplePanelTemplate nine-slice), "line"
+-- (1 px dark edge) or false (none). Older saves only have db.border = false for none.
 local function BorderStyle()
     if db.borderStyle ~= nil then return db.borderStyle end
     if db.border == false then return false end
-    return "metal"
+    return "dialog"
 end
 
 local function Shape()
@@ -133,9 +133,21 @@ local function Shape()
         metal:SetFrameLevel(Holder():GetFrameLevel() + 30)
         DeckKit.UI.Border(metal, "SimplePanelTemplate")
     end
+    if not dialog then
+        -- Edge only (its dark background would cover the map), pushed out so the metal sits mostly
+        -- outside the map: the edge art draws about 11 px in from the frame's bounds.
+        dialog = CreateFrame("Frame", nil, Holder(), "BackdropTemplate")
+        dialog:SetPoint("TOPLEFT", -7, 7)
+        dialog:SetPoint("BOTTOMRIGHT", 7, -7)
+        local b = BACKDROP_DARK_DIALOG_32_32 or BACKDROP_DIALOG_32_32
+        dialog:SetBackdrop({ edgeFile = b and b.edgeFile or "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = b and b.edgeSize or 32, tile = true, tileEdge = true })
+        dialog:SetFrameLevel(Holder():GetFrameLevel() + 30)
+    end
     local style, square = BorderStyle(), db.square ~= false
     border:SetShown(square and style == "line")
     metal:SetShown(square and style == "metal")
+    dialog:SetShown(square and style == "dialog")
 end
 
 -- Width, height and offsets from the top-right corner, in UIParent units.
@@ -290,8 +302,8 @@ ns.AddSettings({
       hint = "The zone or area you're in, across the top of the minimap, coloured friendly / hostile / contested.",
       get = function() return db.zoneTitle ~= false end,
       set = function(on) db.zoneTitle = on; ZoneTitle() end },
-    { type = "choice", label = "Border", values = { { "metal", "Metal" }, { "line", "Thin line" }, { false, "None" } },
-      hint = "Metal: the game's thin metal frame, like DeckKit's windows. Thin line: a 1-pixel dark edge.",
+    { type = "choice", label = "Border", values = { { "dialog", "Dialog" }, { "metal", "Thin metal" }, { "line", "Thin line" }, { false, "None" } },
+      hint = "Dialog: the classic dialog box edge. Thin metal: the frame of DeckKit's windows. Thin line: a 1-pixel dark edge.",
       get = function() return BorderStyle() end,
       set = function(v) db.borderStyle = v; Shape() end },
     { type = "toggle", label = "Hide buttons around the edge",
