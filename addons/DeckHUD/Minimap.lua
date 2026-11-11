@@ -14,7 +14,8 @@ DeckKit.NewModule(ns, ADDON, "|cffe0c060DeckHUD|r")
 local DEFAULTS = { square = true, hideButtons = true, border = true, overlayRoom = true, matchTracker = true, size = 170 }
 local OVERLAY_PX = 30 -- screen pixels kept clear for the Steam battery overlay (it's about 26 tall)
 local MARGIN_PX = 4   -- gap to the screen edges
-local DIALOG_PX = 6   -- extra gap on the right for the dialog border
+local DIALOG_PX = 4   -- extra gap on the right for the dialog border
+local DIALOG_OUT = 3  -- how far the dialog border sits outside the map
 
 ns.db = {}
 local db = ns.db
@@ -108,7 +109,7 @@ local function Mask()
     return string.format("Interface\\AddOns\\DeckHUD\\masks\\crop_%02d", cropPct)
 end
 
--- Border style: "dialog" (the classic gold dialog box edge, BACKDROP_GOLD_DIALOG_32_32, edge only),
+-- Border style: "dialog" (the classic tooltip edge, BACKDROP_TUTORIAL_16_16, edge only),
 -- "metal" (the thin metal frame of DeckKit windows: the SimplePanelTemplate nine-slice), "line"
 -- (1 px dark edge) or false (none). Older saves only have db.border = false for none.
 local function BorderStyle()
@@ -135,14 +136,14 @@ local function Shape()
         DeckKit.UI.Border(metal, "SimplePanelTemplate")
     end
     if not dialog then
-        -- Edge only (its dark background would cover the map), pushed out so the metal sits mostly
-        -- outside the map: the edge art draws about 11 px in from the frame's bounds.
+        -- Edge only (its background would cover the map), pushed out so the edge sits mostly
+        -- outside the map: the edge art draws a few px in from the frame's bounds.
         dialog = CreateFrame("Frame", nil, Holder(), "BackdropTemplate")
-        dialog:SetPoint("TOPLEFT", -7, 7)
-        dialog:SetPoint("BOTTOMRIGHT", 7, -7)
-        local b = BACKDROP_GOLD_DIALOG_32_32 or BACKDROP_DIALOG_32_32
-        dialog:SetBackdrop({ edgeFile = b and b.edgeFile or "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
-            edgeSize = b and b.edgeSize or 32, tile = true, tileEdge = true })
+        dialog:SetPoint("TOPLEFT", -DIALOG_OUT, DIALOG_OUT)
+        dialog:SetPoint("BOTTOMRIGHT", DIALOG_OUT, -DIALOG_OUT)
+        local b = BACKDROP_TUTORIAL_16_16
+        dialog:SetBackdrop({ edgeFile = b and b.edgeFile or "Interface\\Tooltips\\UI-Tooltip-Border",
+            edgeSize = b and b.edgeSize or 16, tile = true, tileEdge = true })
         dialog:SetFrameLevel(Holder():GetFrameLevel() + 30)
     end
     local style, square = BorderStyle(), db.square ~= false
