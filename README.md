@@ -31,7 +31,9 @@ Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-si
 Everything except MenuReload needs **DeckKit** installed too. Keep SavedVariables and binding names unchanged when refactoring so existing data and binds carry over.
 
 Deploy to the Deck: copy `deploy.local.example` to `deploy.local` and fill in your Deck's SSH target and AddOns path,
-then `./deploy.sh WayPad MapDeck` (or no arguments for all) and `/reload` in game.
+then `./deploy.sh WayPad MapDeck` (or no arguments for all). Deploying uses `deckctl` from the
+AddonTools dev suite (~/Projects/AddonTools, or set `ADDONTOOLS`), which reloads the game and checks
+that every addon loaded without errors.
 
 ## Suggested WoW settings
 

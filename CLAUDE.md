@@ -20,7 +20,8 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   if unsure.
 - Replaying the same sound kit within about 0.3 s is dropped silently, even with
   `PlaySound(kit, channel, false)`.
-- Lua errors are written to `_forever_/Logs/General.log` (grep for `Lua Error`). Check its
+- Lua errors: `deckctl errors` (DeckDev catches them as they happen). The game also writes them to
+  `_forever_/Logs/General.log` (grep for `Lua Error`), late. Check its
   timestamp: a wedged client can stop writing it while still running, and then APIs misbehave too
   (`C_DeathInfo.GetCorpseMapPosition` returned nil until a restart).
 - Forever's own UI source (FrameXML) is mirrored at github.com/Ketho/wow-ui-source-forever
@@ -88,12 +89,30 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 
 ## Checking and deploying
 
-- Syntax check: `luac -p file.lua`. The Mac's `luac` is newer than 5.1, so this catches syntax errors
-  only, not 5.2+ features.
-- `./deploy.sh <Addon...>` (no arguments for all) syntax-checks and copies addons onto the
-  maintainer's Deck over SSH. It's specific to that machine. Then `/reload` in game.
-- There is no automated test harness. Behaviour has to be verified in the game; say plainly when a
-  change hasn't been tested in-game yet.
+The dev tooling lives in **~/Projects/AddonTools** (read its README): the **DeckDev** dev addon
+(log on a screen strip, Lua error and blocked-call capture, `DeckDev.Dump` / `DeckDev.Inspect`) and
+**`deck/deckctl`**, which drives the game from the Mac. Changes to the tooling go there, with tests.
+
+- `./deploy.sh <Addon...>` (no arguments for all) runs `deckctl deploy`: Lua 5.1 syntax check,
+  apicheck, whole-folder swap on the Deck, reload, verify. A good deploy ends **"addons loaded N/N,
+  0 Lua errors, 0 blocked"**; anything else exits 1 and is a failure to look at (`deckctl errors`,
+  `deckctl blocked`). DeckDev itself is deployed from AddonTools (`./deploy.sh` there).
+- `~/Projects/AddonTools/tools/apicheck.py addons/*`: globals Forever doesn't have. Keep it at 0
+  findings; optional or load-on-demand globals go in the addon's `apicheck.globals`.
+- In the game, with `deck/deckctl` (in AddonTools):
+  - `deckctl run 'return ...'` runs Lua and prints the results (tables through `DeckDev.Dump`);
+    `deckctl run --slash "/mapdeck"` runs a slash command. Nothing is typed into chat.
+  - `deckctl state`: the control record (session, last deploy, addons loaded, error and blocked
+    counts). `deckctl read`: the log. `deckctl errors` / `deckctl blocked`: this session's Lua
+    errors with stacks / blocked calls. `deckctl inspect NAME`: a frame's layout and state.
+  - `deckctl shot FILE.png`: a screenshot, when you need to see the screen.
+  - Log from addon code with `ns.Debug(...)` (lines prefixed with the module name, sent to DeckDev
+    when it's installed); turn the log on with `DeckDev.SetOn(true)` or `/deckdev on`.
+  - Raw xdotool only when deckctl can't do it (a real key press for secure code). Never movement
+    keys.
+- DeckKit must work without DeckDev: it's an optional dependency (`## OptionalDeps: DeckDev`).
+- There is no automated test harness for DeckKit itself yet. Behaviour has to be verified in the
+  game; say plainly when a change hasn't been tested in-game yet.
 
 ## Layout
 
