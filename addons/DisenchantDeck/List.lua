@@ -202,13 +202,57 @@ for _, event in ipairs({ "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP", "UNIT_SP
     ns.On(event, function(unit) if unit == "player" then Later() end end)
 end
 
+-- Picking Disenchant anywhere (spellbook, professions, an action button) leaves a "pick an item"
+-- cursor, which is no use on a controller. Open the list on top of it. The cursor stays (dropping
+-- it, SpellStopTargeting, is protected); a row's "/cast" + "/use" still works with it pending.
+-- Our own rows also start that cursor for an instant, so only react while the list is closed.
+local IsCurrent = (C_Spell and C_Spell.IsCurrentSpell) or IsCurrentSpell
+ns.On("CURRENT_SPELL_CAST_CHANGED", function()
+    if not (ns.db and ns.db.autoOpen ~= false) or not IsCurrent then return end
+    if (win and win:IsShown()) or InCombatLockdown() then return end
+    if not (SpellIsTargeting() and IsCurrent(ns.DISENCHANT)) then return end
+    C_Timer.After(0, function()
+        if (win and win:IsShown()) or InCombatLockdown() then return end
+        if not (SpellIsTargeting() and IsCurrent(ns.DISENCHANT)) then return end
+        -- With Gamepad UI on, the game opens the bags and puts the pad's focus there. Closing them
+        -- (not protected) should hand the d-pad back to the list.
+        if CloseAllBags then CloseAllBags() end
+        List.Open()
+    end)
+end)
+
+-- The loot window after a disenchant opens under ours, and ours would keep the pad (A would try the
+-- next disenchant instead of looting). Step aside while looting, then come back where we were.
+local awayForLoot = false
+ns.On("LOOT_OPENED", function()
+    if win and win:IsShown() and not InCombatLockdown() then
+        awayForLoot = true
+        win:Hide()
+    end
+end)
+ns.On("LOOT_CLOSED", function()
+    if not awayForLoot then return end
+    awayForLoot = false
+    C_Timer.After(0, function()
+        if InCombatLockdown() or win:IsShown() then return end
+        win:Show()
+        List.Refresh()
+    end)
+end)
+
 function DisenchantDeck_Toggle() List.Toggle() end
 SLASH_DISENCHANTDECK1 = "/dd"
 SLASH_DISENCHANTDECK2 = "/disenchantdeck"
 SlashCmdList.DISENCHANTDECK = function() List.Toggle() end
 
 ns.AddSettings({
+    { type = "section", tab = "Tools", label = "Disenchanting", order = 2 },
+    { type = "binding", action = "DISENCHANTDECK_TOGGLE", tab = "Controls", section = "Bindings", sectionOrder = 9 },
     { type = "action", label = "Open the disenchant list", run = List.Open },
+    { type = "toggle", label = "Open it when you pick Disenchant",
+      hint = "Choosing Disenchant from the spellbook, professions or an action button opens this list instead of the pick-an-item cursor.",
+      get = function() return ns.db.autoOpen ~= false end,
+      set = function(on) ns.db.autoOpen = on end },
     { type = "action", label = "Show hidden items again", hint = "Un-hides everything you hid with Y.",
       run = function()
           local n = 0
