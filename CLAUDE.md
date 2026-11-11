@@ -108,8 +108,14 @@ The dev tooling lives in **~/Projects/AddonTools** (read its README): the **Deck
   - `deckctl shot FILE.png`: a screenshot, when you need to see the screen.
   - Log from addon code with `ns.Debug(...)` (lines prefixed with the module name, sent to DeckDev
     when it's installed); turn the log on with `DeckDev.SetOn(true)` or `/deckdev on`.
-  - Raw xdotool only when deckctl can't do it (a real key press for secure code). Never movement
-    keys.
+  - Raw xdotool only for a real key press into secure code. Never movement keys.
+- **Don't roll your own game-driving or debugging tools in DeckKit.** If deckctl / DeckDev can't do
+  what you need, read `~/Projects/AddonTools/ROADMAP.md` first: it's probably a planned item
+  (scenario runner, input testing, event trace, log follow, sv/taint/crop helpers). Then stop and
+  tell Ben what you were trying to do and which item it matches, instead of improvising: no xdotool
+  loops, no one-off scripts in `deck-setup/`, no prints typed into chat. Tooling changes get built
+  in ~/Projects/AddonTools with tests, not here. The one exception is the real key press for secure
+  code above.
 - DeckKit must work without DeckDev: it's an optional dependency (`## OptionalDeps: DeckDev`).
 - There is no automated test harness for DeckKit itself yet. Behaviour has to be verified in the
   game; say plainly when a change hasn't been tested in-game yet.
