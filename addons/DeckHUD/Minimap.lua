@@ -118,8 +118,21 @@ local function BorderStyle()
     return "dialog"
 end
 
+-- Quest, task and archaeology areas on the minimap: where an area reaches past the edge, the game
+-- draws a "ring" glow along a circle, which cuts across a square map. Square: no ring. Round: the
+-- game's own look comes back on a /reload (the default values can't be read back).
+local function Blobs()
+    if db.square == false then return end
+    for _, kind in ipairs({ "Quest", "Task", "Arch" }) do
+        local scalar, alpha = Minimap["Set" .. kind .. "BlobRingScalar"], Minimap["Set" .. kind .. "BlobRingAlpha"]
+        if scalar then scalar(Minimap, 0) end
+        if alpha then alpha(Minimap, 0) end
+    end
+end
+
 local function Shape()
     Minimap:SetMaskTexture(Mask())
+    Blobs()
     if not border then
         border = CreateFrame("Frame", nil, Holder(), "BackdropTemplate")
         border:SetPoint("TOPLEFT", -1, 1)
