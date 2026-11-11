@@ -1,0 +1,4 @@
+<Bindings>
+	<!-- Bound keys click QuestPadButton through an override binding (items need a secure click). -->
+	<Binding name="QUESTPAD_USE" header="QUESTPAD" category="BINDING_HEADER_DECKKIT"></Binding>
+</Bindings>

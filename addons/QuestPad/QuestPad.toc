@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: QuestPad
+## Notes: A big button for the quest item you need right now: the quest whose area you're in, or the quest your target belongs to.
+## Version: 1.0.0
+## Author: Ben Fillmore
+## SavedVariablesPerCharacter: QuestPadDB
+## Dependencies: DeckKit
+
+QuestPad.lua
