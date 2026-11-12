@@ -55,18 +55,35 @@ local function Border(f, m)
     return border
 end
 
--- The name: first name only, in the class colour (players), and big. Re-run after every Blizzard update.
+-- The name: the first word only, for everyone; a player's in their class colour, an NPC's in the
+-- usual reaction colour (red hostile, yellow neutral, green friendly), shrunk to fit if it's long.
+-- Re-run after every Blizzard update.
 local naming = false
 local function Name()
     local f, _, m = Parts()
     if not f or naming or Style() ~= "compact" or not UnitExists("focus") then return end
     naming = true
     local full = GetUnitName("focus", false) or ""
-    m.Name:SetText(full:match("^(%S+)") or full)
+    full = full:match("^(%S+)") or full
+    local r, g, b = 1, 0.82, 0
     if UnitIsPlayer("focus") then
         local _, class = UnitClass("focus")
         local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-        if c then m.Name:SetTextColor(c.r, c.g, c.b) end
+        if c then r, g, b = c.r, c.g, c.b end
+    else
+        local reaction = UnitReaction("focus", "player")
+        local c = reaction and FACTION_BAR_COLORS and FACTION_BAR_COLORS[reaction]
+        if c then r, g, b = c.r, c.g, c.b end
+    end
+    m.Name:SetText(full)
+    m.Name:SetTextColor(r, g, b)
+    -- Shrink a long name until it fits the strip, down to a floor.
+    local size = NAME_SIZE
+    m.Name:SetFont(defaults[1], size, "OUTLINE")
+    local room = m.Name:GetWidth()
+    while size > 10 and room and room > 0 and m.Name:GetUnboundedStringWidth() > room do
+        size = size - 1
+        m.Name:SetFont(defaults[1], size, "OUTLINE")
     end
     naming = false
 end
