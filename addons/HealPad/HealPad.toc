@@ -6,3 +6,4 @@
 ## Dependencies: DeckKit
 
 HealPad.lua
+HealMacros.lua

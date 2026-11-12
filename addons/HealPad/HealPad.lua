@@ -223,138 +223,212 @@ if CompactUnitFrame_SetUpFrame then
 end
 
 ------------------------------------------------------------------------
--- Practice grid: fake raid frames to try the cursor solo (Blizzard hides its raid frames when
--- you're alone). Every frame is you, so focus lands on you. Out of combat only.
+-- Practice frames: Blizzard hides its raid-style frames when you're alone, so these stand in for
+-- them, laid out exactly as your Edit Mode party or raid frames would be. Every frame is you, so
+-- the cursor works on them as on the real ones and focus lands on you. They look like Blizzard's:
+-- class-coloured health, name, dark background. Made and moved out of combat only; off after a
+-- /reload.
 ------------------------------------------------------------------------
 
-local PRACTICE_COLS, PRACTICE_ROWS = 5, 4
-local PRACTICE_W, PRACTICE_H, PRACTICE_GAP = 72, 36, 2
-local practice -- the holder frame, made on first use
+local GROUP_TITLE_H = 14 -- a raid-style group's title ("Party", "Group 1") above its members
+local members = {}       -- every practice frame made so far, for health updates
 
-local function MakePractice()
-    practice = CreateFrame("Frame", nil, UIParent)
-    practice:SetSize(PRACTICE_COLS * (PRACTICE_W + PRACTICE_GAP), PRACTICE_ROWS * (PRACTICE_H + PRACTICE_GAP))
-    practice:SetPoint("LEFT", UIParent, "LEFT", 260, 40)
-    local title = practice:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("BOTTOMLEFT", practice, "TOPLEFT", 0, 4)
-    title:SetText("HealPad practice")
-    for i = 1, PRACTICE_COLS * PRACTICE_ROWS do
-        local col, row = (i - 1) % PRACTICE_COLS, math.floor((i - 1) / PRACTICE_COLS)
-        local f = CreateFrame("Button", "HealPadPractice" .. i, practice, "SecureUnitButtonTemplate")
-        f:SetSize(PRACTICE_W, PRACTICE_H)
-        f:SetPoint("TOPLEFT", col * (PRACTICE_W + PRACTICE_GAP), -row * (PRACTICE_H + PRACTICE_GAP))
-        f:SetAttribute("unit", "player")
-        local bg = f:CreateTexture(nil, "BACKGROUND")
-        bg:SetAllPoints()
-        bg:SetColorTexture(0.1, 0.45, 0.15, 0.85)
-        local label = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        label:SetPoint("CENTER")
-        label:SetText(string.format("%d,%d", col + 1, row + 1))
-    end
-end
-
-local function SetPractice(on)
-    if InCombatLockdown() then ns.Print("can't change the practice grid in combat.") return end
-    if on and not practice then MakePractice() end
-    if practice then practice:SetShown(on) end
-    if on then Refresh() end
-end
-
-local function PracticeShown() return practice ~= nil and practice:IsShown() end
-
-------------------------------------------------------------------------
--- Practice party: five frames exactly where your raid-style party frames would be (your Edit Mode
--- party position, size and direction), to see the layout and try the cursor while solo. Every frame
--- is you. They look like Blizzard's raid frames: class-coloured health, name, dark background.
-------------------------------------------------------------------------
-
-local PARTY_TITLE_H = 14 -- the group's "Party" title above the first member, if it can't be measured
-local party -- the frames, made on first use
-
-local function PartyLayout()
-    local S = Enum.EditModeUnitFrameSetting
-    local p = PartyFrame
-    local w, h = p:GetSettingValue(S.FrameWidth), p:GetSettingValue(S.FrameHeight)
-    local horizontal = p:GetSettingValueBool(S.UseHorizontalGroups)
-    local l, b, pw, ph = p:GetRect()
-    if not l or w == 0 or h == 0 then return end
-    -- Members start right of PartyFrame's padding and under the group title (CompactRaidGroup's layout).
-    local pad = p.leftPadding or 2
-    local title = CompactPartyFrame and CompactPartyFrame.title and CompactPartyFrame.title:GetHeight() or PARTY_TITLE_H
-    return l + pad, b + ph - title, w, h, horizontal
-end
-
-local function UpdatePartyHealth()
-    if not party then return end
+local function UpdateHealth()
     local max = UnitHealthMax("player")
-    for _, f in ipairs(party) do
+    for _, f in ipairs(members) do
         f.health:SetMinMaxValues(0, max > 0 and max or 1)
         f.health:SetValue(UnitHealth("player"))
     end
 end
 
-local function MakeParty()
-    party = {}
+local healthEvents = CreateFrame("Frame")
+healthEvents:RegisterUnitEvent("UNIT_HEALTH", "player")
+healthEvents:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
+healthEvents:SetScript("OnEvent", UpdateHealth)
+
+local function Member(name, parent)
+    local f = CreateFrame("Button", name, parent, "SecureUnitButtonTemplate")
+    f:SetAttribute("unit", "player")
+    f:SetAttribute("*type1", "target")
+    f:RegisterForClicks("AnyUp")
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0.1, 0.1, 0.1, 0.9)
     local _, class = UnitClass("player")
     local c = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]) or { r = 0.1, g = 0.8, b = 0.1 }
-    for i = 1, 5 do
-        local f = CreateFrame("Button", "HealPadPracticeParty" .. i, UIParent, "SecureUnitButtonTemplate")
-        f:SetAttribute("unit", "player")
-        f:SetAttribute("*type1", "target")
-        f:RegisterForClicks("AnyUp")
-        local bg = f:CreateTexture(nil, "BACKGROUND")
-        bg:SetAllPoints()
-        bg:SetColorTexture(0.1, 0.1, 0.1, 0.9)
-        f.health = CreateFrame("StatusBar", nil, f)
-        f.health:SetPoint("TOPLEFT", 1, -1)
-        f.health:SetPoint("BOTTOMRIGHT", -1, 1)
-        f.health:SetStatusBarTexture("Interface\\RaidFrame\\Raid-Bar-Hp-Fill")
-        f.health:SetStatusBarColor(c.r, c.g, c.b)
-        local name = f.health:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        name:SetPoint("TOPLEFT", 3, -3)
-        name:SetPoint("RIGHT", -3, 0)
-        name:SetJustifyH("LEFT")
-        name:SetWordWrap(false)
-        name:SetText(UnitName("player"))
-        f:Hide()
-        party[i] = f
-    end
-    local events = CreateFrame("Frame", nil, party[1])
-    events:RegisterUnitEvent("UNIT_HEALTH", "player")
-    events:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
-    events:SetScript("OnEvent", UpdatePartyHealth)
+    f.health = CreateFrame("StatusBar", nil, f)
+    f.health:SetPoint("TOPLEFT", 1, -1)
+    f.health:SetPoint("BOTTOMRIGHT", -1, 1)
+    f.health:SetStatusBarTexture("Interface\\RaidFrame\\Raid-Bar-Hp-Fill")
+    f.health:SetStatusBarColor(c.r, c.g, c.b)
+    local label = f.health:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    label:SetPoint("TOPLEFT", 3, -3)
+    label:SetPoint("RIGHT", -3, 0)
+    label:SetJustifyH("LEFT")
+    label:SetWordWrap(false)
+    label:SetText(UnitName("player"))
+    table.insert(members, f)
+    return f
 end
 
-local function PlaceParty()
-    local x, top, w, h, horizontal = PartyLayout()
-    if not x then return false end
-    for i, f in ipairs(party) do
+-- One raid-style group: a title, then its members in a column or a row (CompactRaidGroup's layout).
+-- first: the number of its first member, named HealPadPractice<first>.. (HealPad's frame list knows them).
+local function Group(parent, title, first)
+    local g = CreateFrame("Frame", nil, parent)
+    g.isFlowGroup = true -- like Blizzard's group frames: the flow starts a new line (row or column) for each
+    g.title = g:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    g.title:SetText(title)
+    g.members = {}
+    for m = 1, 5 do g.members[m] = Member("HealPadPractice" .. (first + m - 1), g) end
+    return g
+end
+
+local function LayGroup(g, w, h, horizontal)
+    g.title:ClearAllPoints()
+    g.title:SetPoint(horizontal and "TOPLEFT" or "TOP")
+    for m, f in ipairs(g.members) do
         f:ClearAllPoints()
         f:SetSize(w, h)
-        if horizontal then
-            f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x + (i - 1) * w, top)
+        if m == 1 then
+            f:SetPoint(horizontal and "TOPLEFT" or "TOP", g, horizontal and "TOPLEFT" or "TOP", 0, -GROUP_TITLE_H)
+        elseif horizontal then
+            f:SetPoint("LEFT", g.members[m - 1], "RIGHT")
         else
-            f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, top - (i - 1) * h)
+            f:SetPoint("TOP", g.members[m - 1], "BOTTOM")
         end
     end
+    if horizontal then g:SetSize(5 * w, GROUP_TITLE_H + h) else g:SetSize(w, GROUP_TITLE_H + 5 * h) end
+end
+
+------------------------------------------------------------------------
+-- Practice party: five frames where your raid-style party frames would be.
+------------------------------------------------------------------------
+
+local party -- a group frame, made on first use
+local partyShown = false
+
+local function PlaceParty()
+    local S = Enum.EditModeUnitFrameSetting
+    local p = PartyFrame
+    local w, h = p:GetSettingValue(S.FrameWidth), p:GetSettingValue(S.FrameHeight)
+    local l, b, pw, ph = p:GetRect()
+    if not l or w == 0 or h == 0 then return false end
+    -- The group sits right of PartyFrame's padding, at its top (PartyFrameMixin:UpdatePaddingAndLayout).
+    LayGroup(party, w, h, p:GetSettingValueBool(S.UseHorizontalGroups))
+    party:ClearAllPoints()
+    party:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", l + (p.leftPadding or 2), b + ph)
     return true
 end
 
-local partyShown = false
 local function PracticePartyShown() return partyShown end
 
 local function SetPracticeParty(on)
     if InCombatLockdown() then ns.Print("can't change the practice party in combat.") return end
-    if on and not party then MakeParty() end
+    if on and not party then
+        party = CreateFrame("Frame", nil, UIParent)
+        party.title = party:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        party.title:SetText(PARTY or "Party")
+        party.members = {}
+        for m = 1, 5 do party.members[m] = Member("HealPadPracticeParty" .. m, party) end
+    end
     if on and not PlaceParty() then ns.Print("couldn't read your party frame layout.") on = false end
     partyShown = on
-    for _, f in ipairs(party or {}) do f:SetShown(on) end
-    if on then UpdatePartyHealth(); Refresh() end
+    if party then party:SetShown(on) end
+    if on then UpdateHealth(); Refresh() end
 end
 
--- Follow Edit Mode changes while it's showing.
+------------------------------------------------------------------------
+-- Practice raid: 10, 25 or 40 frames where your raid frames would be, flowed the way Blizzard flows
+-- them (EditModeManagerFrameMixin:UpdateRaidContainerFlow), with its own FlowContainer helpers:
+-- separate groups (each a column or a row) or all members together, rows of your Edit Mode size.
+------------------------------------------------------------------------
+
+local RAID_GROUPS = { [10] = 2, [25] = 5, [40] = 8 } -- the groups Edit Mode's preview shows per size
+local raidSize = 25
+local raid -- the flow container, made on first use
+local raidShown = false
+
+-- Where a frame's TOPLEFT would be from its first anchor alone. The raid container has no size while
+-- you're solo, and its clamping to the screen then pushes it to the top edge, so its own GetTop lies.
+local function AnchoredTopLeft(frame)
+    local point, rel, relPoint, x, y = frame:GetPoint(1)
+    rel = rel or UIParent
+    if not (point and rel:GetLeft()) then return frame:GetLeft(), frame:GetTop() end
+    local rx = relPoint:find("LEFT") and rel:GetLeft() or relPoint:find("RIGHT") and rel:GetRight() or (rel:GetLeft() + rel:GetRight()) / 2
+    local ry = relPoint:find("TOP") and rel:GetTop() or relPoint:find("BOTTOM") and rel:GetBottom() or (rel:GetTop() + rel:GetBottom()) / 2
+    return rx + x, ry + y -- any point of a frame with no size is its top left
+end
+
+local function PlaceRaid()
+    local S, T = Enum.EditModeUnitFrameSetting, Enum.RaidGroupDisplayType
+    local c = CompactRaidFrameContainer
+    local w, h = c:GetSettingValue(S.FrameWidth), c:GetSettingValue(S.FrameHeight)
+    local left, top = AnchoredTopLeft(c)
+    if not left or w == 0 or h == 0 then return false end
+    local display = c:GetSettingValue(S.RaidGroupDisplayType)
+    local separate = display == T.SeparateGroupsVertical or display == T.SeparateGroupsHorizontal
+    local orientation = (display == T.SeparateGroupsVertical or display == T.CombineGroupsVertical) and "vertical" or "horizontal"
+    local perLine = separate and 5 or c:GetSettingValue(S.RowSize)
+    local groups = RAID_GROUPS[raidSize]
+
+    FlowContainer_RemoveAllObjects(raid)
+    FlowContainer_PauseUpdates(raid)
+    FlowContainer_SetOrientation(raid, orientation)
+    FlowContainer_SetMaxPerLine(raid, perLine)
+    raid:SetSize(3000, 3000) -- the flow fits to the container's size, as Blizzard's does
+    for gi, g in ipairs(raid.groups) do
+        local used = gi <= groups
+        g:SetShown(used and separate)
+        if used and separate then
+            LayGroup(g, w, h, display == T.SeparateGroupsHorizontal)
+            FlowContainer_AddObject(raid, g)
+        end
+        for _, f in ipairs(g.members) do
+            if not separate then
+                f:SetParent(raid)
+                f:SetSize(w, h)
+                f:SetShown(used)
+                if used then FlowContainer_AddObject(raid, f) end
+            else
+                f:SetParent(g)
+                f:Show()
+            end
+        end
+    end
+    FlowContainer_ResumeUpdates(raid)
+    raid:ClearAllPoints()
+    raid:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+    return true
+end
+
+local function PracticeRaidShown() return raidShown end
+
+local function SetPracticeRaid(on)
+    if InCombatLockdown() then ns.Print("can't change the practice raid in combat.") return end
+    if on and not raid then
+        raid = CreateFrame("Frame", nil, UIParent)
+        FlowContainer_Initialize(raid)
+        raid.groups = {}
+        for g = 1, 8 do raid.groups[g] = Group(raid, GROUP .. " " .. g, (g - 1) * 5 + 1) end
+    end
+    if on and not PlaceRaid() then ns.Print("couldn't read your raid frame layout.") on = false end
+    raidShown = on
+    if raid then raid:SetShown(on) end
+    if on then UpdateHealth(); Refresh() end
+end
+
+local function SetRaidSize(size)
+    raidSize = size
+    if raidShown and not InCombatLockdown() then PlaceRaid(); Refresh() end
+end
+
+-- Follow Edit Mode changes while they're showing.
 ns.On("EDIT_MODE_LAYOUTS_UPDATED", function()
-    if partyShown and not InCombatLockdown() then C_Timer.After(0, PlaceParty) end
+    if InCombatLockdown() then return end
+    C_Timer.After(0, function()
+        if partyShown then PlaceParty() end
+        if raidShown then PlaceRaid() end
+    end)
 end)
 
 ------------------------------------------------------------------------
@@ -401,23 +475,28 @@ ns.AddCommand("healpad", function(arg)
     arg = strtrim(arg or ""):lower()
     if arg == "macros" then MakeMacros()
     elseif arg == "bind" then OpenMacros()
+    elseif arg == "heals" then ns.OpenHealMacros()
     elseif arg == "party" then
         SetPracticeParty(not PracticePartyShown())
         ns.Print("practice party " .. (PracticePartyShown() and "on" or "off") .. ".")
-    elseif arg == "practice" then
-        SetPractice(not PracticeShown())
-        ns.Print("practice grid " .. (PracticeShown() and "on" or "off") .. ".")
+    elseif arg == "practice" or arg == "raid" then
+        SetPracticeRaid(not PracticeRaidShown())
+        ns.Print("practice raid " .. (PracticeRaidShown() and "on" or "off") .. ".")
     else
         ns.Print("/deckkit healpad macros: make the four d-pad macros. /deckkit healpad bind: open "
             .. "the Macros window to put them on your crossbar. Heal with [@focus], e.g. "
             .. "/cast [@focus,help,nodead][] Flash Heal")
     end
-end, "d-pad cursor on the raid frames: macros, bind, practice, party")
+end, "d-pad cursor on the raid frames: macros, heals, bind, party, raid")
 
 ns.AddSettings({
     { type = "section", tab = "Healing", label = "HealPad", order = 1 },
     { type = "action", label = "Make the d-pad macros", run = MakeMacros,
       hint = "Makes HealPad Up / Down / Left / Right. Put them on your healing page's d-pad." },
+    { type = "action", label = "Make heal macros",
+      hint = "One macro per helpful spell you know (and Resurrection), cast on your focus: for your healing "
+          .. "page's face buttons. Pick which in the list.",
+      run = function() ns.OpenHealMacros() end },
     { type = "action", label = "Open Macros to bind them",
       hint = "WoW's Macros window: pick a HealPad macro, press {X} (Bind to Action Bar), then the d-pad button.",
       run = OpenMacros },
@@ -425,8 +504,11 @@ ns.AddSettings({
       hint = "Five frames where your party frames would be (your Edit Mode party layout), to see it and try "
           .. "the cursor while solo. Every one is you. Off again after a /reload.",
       get = PracticePartyShown, set = SetPracticeParty },
-    { type = "toggle", label = "Practice grid",
-      hint = "20 fake raid frames to try the cursor solo. Every one is you. Off again after a /reload.",
-      get = PracticeShown, set = SetPractice },
+    { type = "toggle", label = "Practice raid",
+      hint = "Raid frames where yours would be (your Edit Mode raid layout), to see it and try the cursor "
+          .. "while solo. Every one is you. Off again after a /reload.",
+      get = PracticeRaidShown, set = SetPracticeRaid },
+    { type = "choice", label = "Practice raid size", values = { { 10, "10" }, { 25, "25" }, { 40, "40" } },
+      get = function() return raidSize end, set = SetRaidSize },
     { type = "info", label = "Heal macros aim at the selection with [@focus]." },
 })
