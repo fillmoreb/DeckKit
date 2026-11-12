@@ -171,21 +171,27 @@ local function Apply()
         local band, hb = m.ReputationColor, m.HealthBarsContainer
         -- Sizes are for the small frame (0.75); with "Use Larger Frame" (1.0) they shrink to match on screen.
         local k = 0.75 / (f:GetScale() > 0 and f:GetScale() or 0.75)
+        -- On every focus change Blizzard resets the bar (CheckClassification): its holder's size and
+        -- position, its fill texture's atlas and its mask. The holder and the bar are protected frames,
+        -- so their size and anchors can only be set out of combat (after a fight, if the focus changed
+        -- during one). The fill and the mask are plain texture regions, never protected: those are
+        -- put back right away, in combat too, so the bar keeps its look.
         if InCombatLockdown() then
             pending = true
         else
             hb:SetSize(COMPACT_W * k, COMPACT_HEALTH_H * k)
-            -- Blizzard's bar art has transparent padding, so stretched it stays thin: a flat fill instead.
-            if hb.HealthBar then
-                hb.HealthBar:ClearAllPoints(); hb.HealthBar:SetAllPoints(hb)
-                hb.HealthBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-                hb.HealthBar:SetStatusBarColor(0.1, 0.8, 0.1) -- the old art was green by itself
-            end
-            -- The bar is clipped by a mask with the same padded shape: a plain rectangle instead.
-            if hb.HealthBarMask then
-                hb.HealthBarMask:SetTexture("Interface\\Buttons\\WHITE8X8", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-                hb.HealthBarMask:ClearAllPoints(); hb.HealthBarMask:SetAllPoints(hb)
-            end
+            if hb.HealthBar then hb.HealthBar:ClearAllPoints(); hb.HealthBar:SetAllPoints(hb) end
+            if hb.HealthBarMask then hb.HealthBarMask:ClearAllPoints(); hb.HealthBarMask:SetAllPoints(hb) end
+        end
+        -- Blizzard's bar art has transparent padding, so stretched it stays thin: a flat green fill.
+        local fill = hb.HealthBar and (hb.HealthBar.HealthBarTexture or hb.HealthBar:GetStatusBarTexture())
+        if fill then
+            fill:SetTexture("Interface\\TargetingFrame\\UI-StatusBar")
+            fill:SetVertexColor(0.1, 0.8, 0.1) -- the old art was green by itself
+        end
+        -- The bar is clipped by a mask with the same padded shape: a plain rectangle instead.
+        if hb.HealthBarMask then
+            hb.HealthBarMask:SetTexture("Interface\\Buttons\\WHITE8X8", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
         end
         -- Under the name: our own strip, the minimap title's black (Minimap.lua), in place of Blizzard's
         -- band, which it recolours by reputation on every update.
