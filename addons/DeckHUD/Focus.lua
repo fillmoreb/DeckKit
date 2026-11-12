@@ -58,6 +58,7 @@ end
 -- The name: a player's first name in their class colour; an NPC's whole name ("Lazy Peon", not
 -- "Lazy") in the usual reaction colour (red hostile, yellow neutral, green friendly). Shrunk to fit
 -- if it's long. Re-run after every Blizzard update.
+local defaults -- Blizzard's own name font (Apply keeps it)
 local naming = false
 local function Name()
     local f, _, m = Parts()
@@ -88,9 +89,42 @@ local function Name()
     naming = false
 end
 
-local defaults -- Blizzard's own name font, kept to go back to
-local pending = false -- sizes to set once combat ends
 local strip -- the dark strip under the name
+
+-- Status icons, for "Name and health". The raid marker moves to the left of the name strip, buffs and
+-- debuffs under the health bar (Blizzard re-anchors that row to its border art on every update, in
+-- AnchorAuraContainer, so it's moved again right after). Quest, boss, leader, PvP and similar
+-- badges are hidden: clutter on a healer's focus frame.
+local CLUTTER = { "QuestIcon", "BossIcon", "LeaderIcon", "PvpIcon", "PvpBackgroundIcon", "GuideIcon", "PetBattleIcon" }
+
+local function Context(f)
+    return f.TargetFrameContent and f.TargetFrameContent.TargetFrameContentContextual
+end
+
+local function AnchorAuras()
+    local f, _, m = Parts()
+    if not f or Style() ~= "compact" then return end
+    local auras = f.GetAuraContainer and f:GetAuraContainer() or (Context(f) and Context(f).Auras)
+    if not auras then return end
+    auras:ClearAllPoints()
+    auras:SetPoint("TOPLEFT", m.HealthBarsContainer, "BOTTOMLEFT", 0, -4)
+end
+
+local function Icons(compact)
+    local f, _, m = Parts()
+    local ctx = f and Context(f)
+    if not ctx then return end
+    for _, key in ipairs(CLUTTER) do Alpha(ctx[key], compact) end
+    local mark = ctx.RaidTargetIcon
+    if compact and mark and strip then
+        mark:ClearAllPoints()
+        mark:SetSize(NAME_H + 4, NAME_H + 4)
+        mark:SetPoint("RIGHT", strip, "LEFT", -5, -(COMPACT_HEALTH_H / 2))
+    end
+    if compact then AnchorAuras() end
+end
+
+local pending = false -- sizes to set once combat ends
 local applying = false
 local function Apply()
     local f, c, m = Parts()
@@ -171,6 +205,7 @@ local function Apply()
         b:SetPoint("BOTTOMRIGHT", hb, "BOTTOMRIGHT", 2, -2)
         b:Show()
     end
+    Icons(compact)
     applying = false
     Name()
 end
@@ -188,6 +223,7 @@ ns.On("PLAYER_LOGIN", function()
     local f = Parts()
     if not f then return end
     if f.CheckClassification then hooksecurefunc(f, "CheckClassification", Apply) end
+    if f.AnchorAuraContainer then hooksecurefunc(f, "AnchorAuraContainer", AnchorAuras) end
     if UnitFrame_Update then
         hooksecurefunc("UnitFrame_Update", function(frame) if frame == FocusFrame then Name() end end)
     end
