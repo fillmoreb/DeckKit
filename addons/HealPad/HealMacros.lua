@@ -5,7 +5,8 @@
 --   /cast [@focus,help,dead] Resurrection         only on a dead focus
 --
 -- Which spells: from your spellbook, the ones that are helpful and have a range (so they can be cast
--- on someone else; self-only spells like Inner Fire are left out), plus your resurrection spells.
+-- on someone else; self-only spells like Inner Fire are left out), plus your resurrection spells,
+-- with a few corrections by hand (ALWAYS / NEVER below).
 -- A window lists them, all ticked; untick what you don't want, then make them. Ranks fold into one
 -- macro per spell name (/cast picks your highest rank). They're character macros: WoW allows 18.
 local ADDON, ns = ...
@@ -16,18 +17,30 @@ local MAX_CHARACTER = 18
 -- Resurrection, Redemption, Ancestral Spirit, Rebirth, and Forever's druid Revive (out of combat).
 local RESURRECT = { 2006, 7328, 2008, 20484, 437138 }
 
-local function ResurrectNames()
+-- Corrections to "helpful with a range", checked against every healer's full Forever spell list
+-- (wago.tools' tables, then the same test in game; 2026-11-11):
+-- spells that heal or damage aren't flagged helpful, so they're added by hand...
+local ALWAYS = { 402289, 20473 } -- Penance, Holy Shock
+-- ...and these are flagged helpful but aren't focus spells: cast on the ground (Healing Rain,
+-- Efflorescence), triggered by something else (Lightwell Renew, Living Seed, Ancestral Fortitude),
+-- or not aimed at an ally at all (Fire Nova, Decoy Totem, Mind Vision, Far Sight).
+local NEVER = { 415236, 417148, 7001, 414683, 16177, 408341, 425874, 2096, 6196 }
+
+-- Spell names from a list of IDs (any rank's ID names every rank, in any language).
+local function NamesOf(ids)
     local names = {}
-    for _, id in ipairs(RESURRECT) do
+    for _, id in ipairs(ids) do
         local name = C_Spell.GetSpellName(id)
         if name then names[name] = true end
     end
     return names
 end
+local function ResurrectNames() return NamesOf(RESURRECT) end
 
 -- The spells a heal macro makes sense for: { name, icon, resurrect }, in spellbook order.
 local function Spells()
     local list, seen, rez = {}, {}, ResurrectNames()
+    local always, never = NamesOf(ALWAYS), NamesOf(NEVER)
     local bank = Enum.SpellBookSpellBank.Player
     for line = 1, C_SpellBook.GetNumSpellBookSkillLines() do
         local info = C_SpellBook.GetSpellBookSkillLineInfo(line)
@@ -37,7 +50,8 @@ local function Spells()
                 and not seen[item.name] then
                 local id = item.spellID
                 local isRez = rez[item.name]
-                if isRez or (C_Spell.IsSpellHelpful(id) and C_Spell.SpellHasRange(id)) then
+                if isRez or always[item.name]
+                    or (not never[item.name] and C_Spell.IsSpellHelpful(id) and C_Spell.SpellHasRange(id)) then
                     seen[item.name] = true
                     table.insert(list, { name = item.name, icon = C_Spell.GetSpellTexture(id), resurrect = isRez })
                 end
