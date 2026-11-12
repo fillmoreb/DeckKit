@@ -254,7 +254,7 @@ function Layout.FocusCentre()
     if not focus then return false, "this client has no focus frame in Edit Mode" end
     local _, pRight, pBottom, pTop = Rect(Art(PlayerFrame, "PlayerFrameContainer"))
     local tLeft = Rect(Art(TargetFrame, "TargetFrameContainer"))
-    local aLeft, aRight, aBottom, aTop = Rect(Art(FocusFrame, "TargetFrameContainer"))
+    local aLeft, aRight, aBottom, aTop = Rect(ns.FocusVisual and ns.FocusVisual() or Art(FocusFrame, "TargetFrameContainer"))
     local fLeft, fRight, fBottom, fTop = Rect(FocusFrame)
     if not (pRight and tLeft and aLeft and fLeft) then return false, "couldn't find the unit frames" end
     -- Where the focus frame's centre goes so that its border's centre lands mid-gap, level with
