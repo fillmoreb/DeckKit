@@ -23,8 +23,9 @@ local RESURRECT = { 2006, 7328, 2008, 20484, 437138 }
 local ALWAYS = { 402289, 20473 } -- Penance, Holy Shock
 -- ...and these are flagged helpful but aren't focus spells: cast on the ground (Healing Rain,
 -- Efflorescence), triggered by something else (Lightwell Renew, Living Seed, Ancestral Fortitude),
--- or not aimed at an ally at all (Fire Nova, Decoy Totem, Mind Vision, Far Sight).
-local NEVER = { 415236, 417148, 7001, 414683, 16177, 408341, 425874, 2096, 6196 }
+-- not aimed at an ally at all (Fire Nova, Decoy Totem, Mind Vision, Far Sight), or not for healing
+-- (Water Walking, Water Breathing).
+local NEVER = { 415236, 417148, 7001, 414683, 16177, 408341, 425874, 2096, 6196, 546, 131 }
 
 -- Spell names from a list of IDs (any rank's ID names every rank, in any language).
 local function NamesOf(ids)
