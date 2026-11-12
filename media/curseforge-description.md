@@ -49,9 +49,9 @@ Install, then open the menu (Menu twice). Controls › Paddles shows which grip 
 
 DeckKit grows out of actually playing on the Deck. Features get added and polished whenever I run into something I need, so expect regular updates. Suggestions and bug reports are welcome on GitHub.
 
-## Built with AI
+## Artificial Intelligence?
 
-DeckKit is largely written with an AI coding assistant (Claude Code) from my descriptions, then reviewed and tested in game on a Steam Deck.
+AI did the typing. I did the Stack Overflow searching. Old habits. Seriously, of course AI helped. A lot. I still got to do all the testing on a flesh and blood Steam Deck, though.
 
 ## Credits and license
 
