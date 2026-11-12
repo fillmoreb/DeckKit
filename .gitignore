@@ -2,3 +2,4 @@
 ._*
 deploy.local
 dist/
+__pycache__/
