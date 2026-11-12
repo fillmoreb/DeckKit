@@ -59,73 +59,18 @@ end
 -- "Lazy") in the usual reaction colour (red hostile, yellow neutral, green friendly). Shrunk to fit
 -- if it's long. Re-run after every Blizzard update.
 ------------------------------------------------------------------------
--- Our own aura row, for "Name and health": the small focus frame Blizzard uses shows no buffs at
--- all (FocusFrameMixin:SetSmallSize: maxBuffs = 0), so we draw them, and the debuffs, ourselves,
--- under the health bar: buffs first, then debuffs with a red edge, with a cooldown sweep and a stack
--- count. Display only, so it works in combat. Forever can hand addons secret values: anything that
--- can't be read just isn't shown (each icon is filled in under pcall), rather than erroring.
--- (Our own row is also where filtering out auras you don't care about would go, later.)
+-- Buffs and debuffs: Blizzard's own row, never ours. Reading auras from addon code (C_UnitAuras)
+-- hands back the same aura tables Blizzard's frames use, now marked as DeckHUD's; Blizzard's buff
+-- frame then read them and the taint spread to the gamepad bar ("DeckHUD called
+-- SetPreferredGamepadInteractTarget", after looting; found with deckctl taint, 2026-11-12). So we
+-- don't read auras at all. Blizzard anchors its row to the frame's border art (TargetFrameMixin:
+-- AnchorAuraContainer: TOPLEFT to the art's BOTTOMLEFT, +5, +9), which this look hides: we move that
+-- invisible art under the health bar (a plain texture, so no Blizzard code runs), and Blizzard puts
+-- the row there itself. Buffs only show with Edit Mode's "Use Larger Frame" (the small focus frame
+-- shows debuffs only); Layout.lua's "Centre the focus frame" turns it on for this look.
 ------------------------------------------------------------------------
 
-local AURA_SIZE, AURA_GAP, AURA_MAX = 20, 2, 8 -- frame units (the focus frame is drawn at 0.75)
-local auraIcons = {}
-
-local function AuraIcon(i, parent)
-    local b = auraIcons[i]
-    if b then return b end
-    b = CreateFrame("Frame", nil, parent)
-    b:SetSize(AURA_SIZE, AURA_SIZE)
-    b.edge = b:CreateTexture(nil, "BACKGROUND")
-    b.edge:SetPoint("TOPLEFT", -1, 1)
-    b.edge:SetPoint("BOTTOMRIGHT", 1, -1)
-    b.icon = b:CreateTexture(nil, "ARTWORK")
-    b.icon:SetAllPoints()
-    b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    b.cd = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
-    b.cd:SetAllPoints()
-    b.cd:SetReverse(true)
-    b.cd:SetHideCountdownNumbers(true)
-    b.count = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
-    b.count:SetPoint("BOTTOMRIGHT", 2, -2)
-    auraIcons[i] = b
-    return b
-end
-
-local function FillIcon(b, aura, harmful)
-    b.icon:SetTexture(aura.icon)
-    if harmful then b.edge:SetColorTexture(0.8, 0.1, 0.1, 1) else b.edge:SetColorTexture(0, 0, 0, 0.8) end
-    b.count:SetText((aura.applications or 0) > 1 and aura.applications or "")
-    if (aura.duration or 0) > 0 then
-        b.cd:SetCooldown(aura.expirationTime - aura.duration, aura.duration)
-        b.cd:Show()
-    else
-        b.cd:Hide()
-    end
-end
-
-local function Auras()
-    local f, _, m = Parts()
-    if not f then return end
-    local show = Style() == "compact" and UnitExists("focus")
-    local n = 0
-    if show then
-        for _, filter in ipairs({ "HELPFUL", "HARMFUL" }) do
-            for i = 1, 40 do
-                if n >= AURA_MAX then break end
-                local aura = C_UnitAuras.GetAuraDataByIndex("focus", i, filter)
-                if not aura then break end
-                local b = AuraIcon(n + 1, f)
-                if pcall(FillIcon, b, aura, filter == "HARMFUL") then
-                    n = n + 1
-                    b:ClearAllPoints()
-                    b:SetPoint("TOPLEFT", m.HealthBarsContainer, "BOTTOMLEFT", (n - 1) * (AURA_SIZE + AURA_GAP) + 1, -4)
-                    b:Show()
-                end
-            end
-        end
-    end
-    for i = n + 1, #auraIcons do auraIcons[i]:Hide() end
-end
+local AURA_X, AURA_Y, AURA_GAP = 5, 9, 4 -- Blizzard's offsets from the art (TargetFrame.lua), our gap
 
 local defaults -- Blizzard's own name font (Apply keeps it)
 local naming = false
@@ -148,10 +93,12 @@ local function Name()
     m.Name:SetText(full)
     m.Name:SetTextColor(r, g, b)
     -- Shrink a long name until it fits the strip, down to a floor.
-    local size = NAME_SIZE
+    if not defaults then defaults = { m.Name:GetFont() } end
+    local k = 0.75 / (f:GetScale() > 0 and f:GetScale() or 0.75) -- same on screen at either frame size
+    local size = math.floor(NAME_SIZE * k + 0.5)
     m.Name:SetFont(defaults[1], size, "OUTLINE")
     local room = m.Name:GetWidth()
-    while size > 10 and room and room > 0 and m.Name:GetUnboundedStringWidth() > room do
+    while size > 8 and room and room > 0 and m.Name:GetUnboundedStringWidth() > room do
         size = size - 1
         m.Name:SetFont(defaults[1], size, "OUTLINE")
     end
@@ -160,23 +107,13 @@ end
 
 local strip -- the dark strip under the name
 
--- Status icons, for "Name and health". The raid marker moves to the left of the name strip, buffs and
--- debuffs under the health bar (Blizzard re-anchors that row to its border art on every update, in
--- AnchorAuraContainer, so it's moved again right after). Quest, boss, leader, PvP and similar
--- badges are hidden: clutter on a healer's focus frame.
+-- Status icons, for "Name and health". The raid marker moves to the left of the name strip; quest,
+-- boss, leader, PvP and similar badges are hidden (clutter on a healer's focus frame). Buffs and
+-- debuffs: our own row (below).
 local CLUTTER = { "QuestIcon", "BossIcon", "LeaderIcon", "PvpIcon", "PvpBackgroundIcon", "GuideIcon", "PetBattleIcon" }
 
 local function Context(f)
     return f.TargetFrameContent and f.TargetFrameContent.TargetFrameContentContextual
-end
-
-local function AnchorAuras()
-    local f, _, m = Parts()
-    if not f or Style() ~= "compact" then return end
-    local auras = f.GetAuraContainer and f:GetAuraContainer() or (Context(f) and Context(f).Auras)
-    if not auras then return end
-    auras:ClearAllPoints()
-    auras:SetPoint("TOPLEFT", m.HealthBarsContainer, "BOTTOMLEFT", 0, -4)
 end
 
 local function Icons(compact)
@@ -190,9 +127,11 @@ local function Icons(compact)
         mark:SetSize(NAME_H + 4, NAME_H + 4)
         mark:SetPoint("RIGHT", strip, "LEFT", -5, -(COMPACT_HEALTH_H / 2))
     end
-    if compact then AnchorAuras() end
-    local auras = f.GetAuraContainer and f:GetAuraContainer()
-    Alpha(auras, compact) -- ours replaces it
+    -- Blizzard's aura row: hidden by alpha only, never moved. Moving it from addon code makes Blizzard
+    -- lay it out right then, inside our call, and its aura buttons come out tainted: that spread to
+    -- secret-value checks in BuffFrame.lua and blocked the gamepad bar's SetPreferredGamepadInteractTarget
+    -- (found with deckctl taint, 2026-11-12). Our own row replaces it.
+    -- (Blizzard's aura row stays as it is: see "Buffs and debuffs" above.)
 end
 
 local pending = false -- sizes to set once combat ends
@@ -235,10 +174,12 @@ local function Apply()
         -- it can be resized, out of combat, but not anchored to the name band, a plain texture). The
         -- name band then sits on top of it, the same width.
         local band, hb = m.ReputationColor, m.HealthBarsContainer
+        -- Sizes are for the small frame (0.75); with "Use Larger Frame" (1.0) they shrink to match on screen.
+        local k = 0.75 / (f:GetScale() > 0 and f:GetScale() or 0.75)
         if InCombatLockdown() then
             pending = true
         else
-            hb:SetSize(COMPACT_W, COMPACT_HEALTH_H)
+            hb:SetSize(COMPACT_W * k, COMPACT_HEALTH_H * k)
             -- Blizzard's bar art has transparent padding, so stretched it stays thin: a flat fill instead.
             if hb.HealthBar then
                 hb.HealthBar:ClearAllPoints(); hb.HealthBar:SetAllPoints(hb)
@@ -261,7 +202,7 @@ local function Apply()
         strip:ClearAllPoints()
         strip:SetPoint("BOTTOMLEFT", hb, "TOPLEFT", 0, 1)
         strip:SetPoint("BOTTOMRIGHT", hb, "TOPRIGHT", 0, 1)
-        strip:SetHeight(NAME_H)
+        strip:SetHeight(NAME_H * k)
         strip:Show()
         band = strip
         m.Name:ClearAllPoints()
@@ -269,17 +210,20 @@ local function Apply()
             m.Name:SetPoint("LEFT", band, "LEFT", 4, 0)
             m.Name:SetPoint("RIGHT", band, "RIGHT", -4, 0)
         end
-        m.Name:SetFont(defaults[1], NAME_SIZE, "OUTLINE")
+        m.Name:SetFont(defaults[1], NAME_SIZE * k, "OUTLINE")
         local b = Border(f, m)
         b:ClearAllPoints()
         b:SetPoint("TOPLEFT", band or hb, "TOPLEFT", -2, 2)
         b:SetPoint("BOTTOMRIGHT", hb, "BOTTOMRIGHT", 2, -2)
         b:Show()
+        -- Steer Blizzard's aura row: its anchor, the (hidden) border art, goes just under the health bar.
+        local art = c.FrameTexture
+        art:ClearAllPoints()
+        art:SetPoint("BOTTOMLEFT", hb, "BOTTOMLEFT", -AURA_X, -(AURA_Y + AURA_GAP))
     end
     Icons(compact)
     applying = false
     Name()
-    Auras()
 end
 ns.FocusFrameApply = Apply
 
@@ -295,7 +239,6 @@ ns.On("PLAYER_LOGIN", function()
     local f = Parts()
     if not f then return end
     if f.CheckClassification then hooksecurefunc(f, "CheckClassification", Apply) end
-    if f.AnchorAuraContainer then hooksecurefunc(f, "AnchorAuraContainer", AnchorAuras) end
     -- Below 20% health Blizzard pulses a player's portrait (its alpha) as a warning: keep it hidden.
     if f.HealthUpdate then
         hooksecurefunc(f, "HealthUpdate", function(self)
@@ -312,7 +255,6 @@ end)
 ns.On("PLAYER_FOCUS_CHANGED", function() C_Timer.After(0, Apply) end)
 ns.On("PLAYER_REGEN_ENABLED", function() if pending then pending = false; Apply() end end)
 ns.On("UNIT_NAME_UPDATE", function(unit) if unit == "focus" then Name() end end)
-ns.On("UNIT_AURA", function(unit) if unit == "focus" then Auras() end end)
 
 ns.AddSettings({
     { type = "section", tab = "Screen", label = "Unit frames", order = 4 },

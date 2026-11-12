@@ -263,9 +263,19 @@ function Layout.FocusCentre()
     local cy = (pBottom + pTop) / 2 - ((aBottom + aTop) / 2 - (fBottom + fTop) / 2)
     -- Edit Mode stores offsets in screen (UIParent) units and divides by the frame's own scale when
     -- it places it (the focus frame is drawn at 0.75), so these are plain screen positions.
-    local ok, err = Layout.SetAnchor(SYSTEMS.UnitFrame, focus, { point = "CENTER", relativeTo = "UIParent",
-        relativePoint = "BOTTOMLEFT", offsetX = math.floor(cx + 0.5), offsetY = math.floor(cy + 0.5) })
-    if not ok then return false, err end
+    local info, layout = Layout.Active()
+    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
+    local sys = FindSystem(layout, SYSTEMS.UnitFrame, focus)
+    if not sys then return false, "the focus frame isn't in your layout" end
+    if not Backup(layout) then return false, "couldn't back up the layout first" end
+    local a = sys.anchorInfo
+    a.point, a.relativeTo, a.relativePoint = "CENTER", "UIParent", "BOTTOMLEFT"
+    a.offsetX, a.offsetY = math.floor(cx + 0.5), math.floor(cy + 0.5)
+    sys.isInDefaultPosition = false
+    -- Focus.lua's "Name and health" look needs the larger frame: the small one shows no buffs.
+    -- (Focus.lua keeps the look the same size on screen either way.)
+    if ns.db.focusStyle == "compact" and UF.UseLargerFrame then SetSetting(sys, UF.UseLargerFrame, 1) end
+    C_EditMode.SaveLayouts(info)
     return true
 end
 
@@ -322,7 +332,8 @@ ns.AddSettings({
       end },
     { type = "action", label = "Centre the focus frame", keepOpen = true,
       hint = "The focus frame in the middle of the gap between your frame and the target frame, at their "
-          .. "height. Backs up your Edit Mode layout, then reloads.",
+          .. "height (with the Name and health look, it also turns on Use Larger Frame, which the focus's "
+          .. "buffs need). Backs up your Edit Mode layout, then reloads.",
       run = function()
           local ok, info = Layout.FocusCentre()
           if ok then ReloadSoon("Focus frame centred.") else ns.Print("Not changed: " .. info .. ".") end
