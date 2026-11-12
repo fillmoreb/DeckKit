@@ -145,7 +145,7 @@ local function Apply()
     Alpha(m.LevelBackgroundCircle, slim)
     Alpha(m.HighLevelTexture, slim)
     Alpha(m.ManaBar, compact)
-    Alpha(f.spellbar, compact) -- the cast bar: not what a healer's focus frame is for
+    Alpha(f.spellbar, compact) -- the cast bar: not what a healer's focus frame is for (and see the hook below)
     Alpha(c.FrameTexture, compact)
     if border then border:SetShown(compact) end
     if strip then strip:SetShown(compact) end
@@ -235,6 +235,17 @@ ns.On("PLAYER_LOGIN", function()
     local f = Parts()
     if not f then return end
     if f.CheckClassification then hooksecurefunc(f, "CheckClassification", Apply) end
+    -- The cast bar fades itself in on every cast (it sets its own alpha as it animates), so hiding it
+    -- once isn't enough: after each of its updates, set it back to invisible. A script hook runs after
+    -- Blizzard's handler, without changing it.
+    if f.spellbar then
+        f.spellbar:HookScript("OnUpdate", function(self)
+            if Style() == "compact" and self:GetAlpha() > 0 then self:SetAlpha(0) end
+        end)
+        f.spellbar:HookScript("OnShow", function(self)
+            if Style() == "compact" then self:SetAlpha(0) end
+        end)
+    end
     -- Below 20% health Blizzard pulses a player's portrait (its alpha) as a warning: keep it hidden.
     if f.HealthUpdate then
         hooksecurefunc(f, "HealthUpdate", function(self)
