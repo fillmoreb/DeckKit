@@ -131,17 +131,14 @@ local function Build()
         local msg = string.format("heal macros: %d new, %d updated", made, updated)
         if skipped > 0 then msg = msg .. string.format(", %d skipped (WoW's %d character macros are full)", skipped, MAX_CHARACTER) end
         ns.Print(msg .. ".")
-        summary:SetText(msg .. ". Open Macros to place them.")
+        summary:SetText(msg .. ".")
     end })
     makeButton:SetPoint("BOTTOMLEFT", 12, 12)
-    -- Straight on to the Macros window's Character tab, where they are, to place them.
-    local openButton = UI.Button(panel, 220, { label = "Open Macros", run = function()
-        screen:Hide()
-        ns.OpenMacros(true)
-    end })
-    openButton:SetPoint("LEFT", makeButton, "RIGHT", 12, 0)
-    summary = UI.Description(panel, "", WIDTH - 52)
-    summary:SetPoint("BOTTOMLEFT", makeButton, "TOPLEFT", 0, 8)
+    -- Where to place them: the game's own Macros window (see PLACE_HINT in HealPad.lua for why not ours).
+    local how = UI.Description(panel, ns.Window.Glyphs(ns.PLACE_HINT .. " They're on its Character tab."), WIDTH - 52)
+    how:SetPoint("BOTTOMLEFT", makeButton, "TOPLEFT", 0, 8)
+    summary = UI.Description(panel, "", WIDTH - 52 - 232)
+    summary:SetPoint("LEFT", makeButton, "RIGHT", 12, 0)
 end
 
 function ns.OpenHealMacros()

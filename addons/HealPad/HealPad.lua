@@ -456,28 +456,16 @@ local function MakeMacros()
         .. "Put them on your healing page's d-pad.", made, have, MACRO_PREFIX))
 end
 
--- WoW's Macros window. With the gamepad UI, {X} on a macro there is "Bind to Action Bar": the same
--- "press the button combination" screen the spellbook uses. Binding is left to that window: started
--- from our menu, the bind screen trips a protected call (SetPreferredGamepadInteractTarget) and the
--- game shows an "addon blocked" popup.
--- characterTab: open on the Character tab (the window always opens on the account one).
-local function OpenMacros(characterTab)
-    if InCombatLockdown() then ns.Print("can't open the Macros window in combat.") return end
-    if ShowMacroFrame then
-        ShowMacroFrame()
-    else
-        local load = C_AddOns and C_AddOns.LoadAddOn or LoadAddOn
-        if load then load("Blizzard_MacroUI") end
-        if MacroFrame_Show then MacroFrame_Show() end
-    end
-    if characterTab and MacroFrame and MacroFrame.ChangeTab then MacroFrame:ChangeTab(2) end
-end
-ns.OpenMacros = OpenMacros
+-- Placing the macros is left to WoW's own Macros window, opened from the game menu (Esc > Macros):
+-- {X} on a macro there is "Bind to Action Bar". We never open that window ourselves: opened by an
+-- addon, its bind screen needs a protected call (SetPreferredGamepadInteractTarget) and the game
+-- blocks it ("Interface action failed because of an AddOn").
+local PLACE_HINT = "To put them on your crossbar: game menu (Esc) > Macros, pick one, {X} Bind to Action Bar."
+ns.PLACE_HINT = PLACE_HINT
 
 ns.AddCommand("healpad", function(arg)
     arg = strtrim(arg or ""):lower()
     if arg == "macros" then MakeMacros()
-    elseif arg == "bind" then OpenMacros()
     elseif arg == "heals" then ns.OpenHealMacros()
     elseif arg == "party" then
         SetPracticeParty(not PracticePartyShown())
@@ -486,11 +474,10 @@ ns.AddCommand("healpad", function(arg)
         SetPracticeRaid(not PracticeRaidShown())
         ns.Print("practice raid " .. (PracticeRaidShown() and "on" or "off") .. ".")
     else
-        ns.Print("/deckkit healpad macros: make the four d-pad macros. /deckkit healpad bind: open "
-            .. "the Macros window to put them on your crossbar. Heal with [@focus], e.g. "
-            .. "/cast [@focus,help,nodead][] Flash Heal")
+        ns.Print("/deckkit healpad macros: make the four d-pad macros. /deckkit healpad heals: heal "
+            .. "macros. " .. PLACE_HINT:gsub("{X}", "X"))
     end
-end, "d-pad cursor on the raid frames: macros, heals, bind, party, raid")
+end, "d-pad cursor on the raid frames: macros, heals, party, raid")
 
 ns.AddSettings({
     { type = "section", tab = "Healing", label = "HealPad", order = 1 },
@@ -500,9 +487,7 @@ ns.AddSettings({
       hint = "One macro per helpful spell you know (and Resurrection), cast on your focus: for your healing "
           .. "page's face buttons. Pick which in the list.",
       run = function() ns.OpenHealMacros() end },
-    { type = "action", label = "Open Macros to bind them",
-      hint = "WoW's Macros window: pick a HealPad macro, press {X} (Bind to Action Bar), then the d-pad button.",
-      run = function() OpenMacros() end },
+    { type = "info", label = ns.Window.Glyphs(PLACE_HINT) },
     { type = "toggle", label = "Practice party",
       hint = "Five frames where your party frames would be (your Edit Mode party layout), to see it and try "
           .. "the cursor while solo. Every one is you. Off again after a /reload.",
