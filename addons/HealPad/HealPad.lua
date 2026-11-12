@@ -460,7 +460,8 @@ end
 -- "press the button combination" screen the spellbook uses. Binding is left to that window: started
 -- from our menu, the bind screen trips a protected call (SetPreferredGamepadInteractTarget) and the
 -- game shows an "addon blocked" popup.
-local function OpenMacros()
+-- characterTab: open on the Character tab (the window always opens on the account one).
+local function OpenMacros(characterTab)
     if InCombatLockdown() then ns.Print("can't open the Macros window in combat.") return end
     if ShowMacroFrame then
         ShowMacroFrame()
@@ -469,7 +470,9 @@ local function OpenMacros()
         if load then load("Blizzard_MacroUI") end
         if MacroFrame_Show then MacroFrame_Show() end
     end
+    if characterTab and MacroFrame and MacroFrame.ChangeTab then MacroFrame:ChangeTab(2) end
 end
+ns.OpenMacros = OpenMacros
 
 ns.AddCommand("healpad", function(arg)
     arg = strtrim(arg or ""):lower()
@@ -499,7 +502,7 @@ ns.AddSettings({
       run = function() ns.OpenHealMacros() end },
     { type = "action", label = "Open Macros to bind them",
       hint = "WoW's Macros window: pick a HealPad macro, press {X} (Bind to Action Bar), then the d-pad button.",
-      run = OpenMacros },
+      run = function() OpenMacros() end },
     { type = "toggle", label = "Practice party",
       hint = "Five frames where your party frames would be (your Edit Mode party layout), to see it and try "
           .. "the cursor while solo. Every one is you. Off again after a /reload.",
