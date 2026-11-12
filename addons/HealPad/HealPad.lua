@@ -21,9 +21,11 @@ local header = CreateFrame("Frame", "HealPadHeader", UIParent, "SecureHandlerBas
 header:SetAttribute("count", 0)
 
 -- The cursor. A protected frame the snippet lays over the selected raid frame (so it can move in
--- combat); on it, Forever's own gamepad selection chevron, at the frame's left edge pointing in,
--- like in the game's gamepad windows. The chevron sits on a plain child, so we can hide it when
--- its raid frame goes away (a protected frame can't be hidden from our code in combat).
+-- combat); on it, Forever's own gamepad cursor chevron on both sides of the frame, pointing in, in
+-- the game's cursor yellow, bobbing a little, faster than the game's pointer (SmartNavigationPointerTemplate),
+-- and a border in the same yellow. The
+-- chevrons sit on a plain child, so we can hide them when their raid frame goes away (a protected
+-- frame can't be hidden from our code in combat).
 local cursor = CreateFrame("Frame", "HealPadCursor", UIParent, "SecureHandlerBaseTemplate")
 cursor:SetFrameStrata("DIALOG")
 cursor:SetSize(1, 1)
@@ -32,12 +34,54 @@ header:SetFrameRef("cursor", cursor)
 
 local look = CreateFrame("Frame", nil, cursor)
 look:SetAllPoints()
-local chevron = look:CreateTexture(nil, "OVERLAY")
-if not chevron:SetAtlas("gamepad-largecursor-white") then
-    chevron:SetColorTexture(1, 1, 1, 1) -- no atlas: a plain marker, still visible
-end
-chevron:SetPoint("RIGHT", look, "LEFT", 6, 0)
 local CHEVRON_RATIO = 42 / 70 -- the atlas's width / height
+local YELLOW = GAMEPAD_SMARTNAV_CURSOR_COLOR -- the game's cursor tint (#ffe600)
+local INSET = 10    -- how far each chevron reaches in over the frame's edge, on average
+local BOB = 1       -- it bobs this far either side of INSET...
+local BOB_TIME = 0.4 -- ...taking this long each way (the game's pointer: 4 px, 1 s)
+
+-- side "left": on the frame's left edge, pointing right (the atlas as it is); "right": mirrored.
+local function Chevron(side)
+    local holder = CreateFrame("Frame", nil, look)
+    local tex = holder:CreateTexture(nil, "OVERLAY")
+    tex:SetAllPoints()
+    if tex:SetAtlas("gamepad-largecursor-white") then
+        if side == "right" then tex:SetTexCoord(1, 0, 0, 1) end
+        if YELLOW then tex:SetVertexColor(YELLOW:GetRGBA()) end
+    else
+        tex:SetColorTexture(1, 0.9, 0, 1) -- no atlas: a plain marker, still visible
+    end
+    -- Starts BOB further out than INSET and travels 2 * BOB in and back, so it's centred on INSET.
+    if side == "left" then
+        holder:SetPoint("RIGHT", look, "LEFT", INSET - BOB, 0)
+    else
+        holder:SetPoint("LEFT", look, "RIGHT", -(INSET - BOB), 0)
+    end
+    local inward = (side == "left" and 1 or -1) * 2 * BOB
+    local bob = holder:CreateAnimationGroup()
+    bob:SetLooping("REPEAT")
+    local go = bob:CreateAnimation("Translation")
+    go:SetOffset(inward, 0); go:SetDuration(BOB_TIME); go:SetOrder(1); go:SetSmoothing("IN_OUT")
+    local back = bob:CreateAnimation("Translation")
+    back:SetOffset(-inward, 0); back:SetDuration(BOB_TIME); back:SetOrder(2); back:SetSmoothing("IN_OUT")
+    bob:Play()
+    return holder
+end
+local chevrons = { Chevron("left"), Chevron("right") }
+
+-- A border in the same yellow, just inside the selected frame's edges.
+local BORDER = 2
+local function Edge(p1, p2, horizontal)
+    local t = look:CreateTexture(nil, "OVERLAY", nil, -1) -- under the chevrons
+    if YELLOW then t:SetColorTexture(YELLOW:GetRGBA()) else t:SetColorTexture(1, 0.9, 0, 1) end
+    t:SetPoint(p1)
+    t:SetPoint(p2)
+    if horizontal then t:SetHeight(BORDER) else t:SetWidth(BORDER) end
+end
+Edge("TOPLEFT", "TOPRIGHT", true)
+Edge("BOTTOMLEFT", "BOTTOMRIGHT", true)
+Edge("TOPLEFT", "BOTTOMLEFT", false)
+Edge("TOPRIGHT", "BOTTOMRIGHT", false)
 
 look:SetScript("OnUpdate", function()
     local _, anchor = cursor:GetPoint(1)
@@ -45,7 +89,7 @@ look:SetScript("OnUpdate", function()
     look:SetAlpha(on and 1 or 0)
     if on then
         local h = math.max(16, math.min(40, anchor:GetHeight() * 0.9))
-        chevron:SetSize(h * CHEVRON_RATIO, h)
+        for _, c in ipairs(chevrons) do c:SetSize(h * CHEVRON_RATIO, h) end
     end
 end)
 
@@ -89,9 +133,30 @@ local MOVE = [[
             if score and (not bestScore or score < bestScore) then best, bestScore = i, score end
         end
     end
+    -- At the edge: wrap around to the far end of the same row (left / right) or column (up / down).
+    if not best and from then
+        for i = 1, n do
+            local f = owner:GetFrameRef("f" .. i)
+            if i ~= cur and f and f:IsVisible() and f:GetAttribute("unit") then
+                local l, b, fw, fh = f:GetRect()
+                local dx, dy = l + fw / 2 - fx, b + fh / 2 - fy
+                local along, across, size, line
+                if dir == "Right" then along, across, size, line = dx, dy, w, h
+                elseif dir == "Left" then along, across, size, line = -dx, dy, w, h
+                elseif dir == "Up" then along, across, size, line = dy, dx, h, w
+                else along, across, size, line = -dy, dx, h, w end
+                if across < 0 then across = -across end
+                -- behind us and in our line; the furthest back wins
+                if along < -size * 0.25 and across <= line * 0.5 then
+                    local score = along + 3 * across
+                    if not bestScore or score < bestScore then best, bestScore = i, score end
+                end
+            end
+        end
+    end
     if not best then
         if from then
-            self:SetAttribute("unit", from:GetAttribute("unit")) -- at the edge: stay, refocus
+            self:SetAttribute("unit", from:GetAttribute("unit")) -- alone in its line: stay, refocus
             return
         end
         return false
@@ -130,6 +195,7 @@ local function Candidates()
     end
     for i = 1, 40 do table.insert(names, "CompactRaidFrame" .. i) end
     for i = 1, 40 do table.insert(names, "HealPadPractice" .. i) end -- the practice grid, below
+    for i = 1, 5 do table.insert(names, "HealPadPracticeParty" .. i) end -- the practice party, below
     return names
 end
 
@@ -197,6 +263,101 @@ end
 local function PracticeShown() return practice ~= nil and practice:IsShown() end
 
 ------------------------------------------------------------------------
+-- Practice party: five frames exactly where your raid-style party frames would be (your Edit Mode
+-- party position, size and direction), to see the layout and try the cursor while solo. Every frame
+-- is you. They look like Blizzard's raid frames: class-coloured health, name, dark background.
+------------------------------------------------------------------------
+
+local PARTY_TITLE_H = 14 -- the group's "Party" title above the first member, if it can't be measured
+local party -- the frames, made on first use
+
+local function PartyLayout()
+    local S = Enum.EditModeUnitFrameSetting
+    local p = PartyFrame
+    local w, h = p:GetSettingValue(S.FrameWidth), p:GetSettingValue(S.FrameHeight)
+    local horizontal = p:GetSettingValueBool(S.UseHorizontalGroups)
+    local l, b, pw, ph = p:GetRect()
+    if not l or w == 0 or h == 0 then return end
+    -- Members start right of PartyFrame's padding and under the group title (CompactRaidGroup's layout).
+    local pad = p.leftPadding or 2
+    local title = CompactPartyFrame and CompactPartyFrame.title and CompactPartyFrame.title:GetHeight() or PARTY_TITLE_H
+    return l + pad, b + ph - title, w, h, horizontal
+end
+
+local function UpdatePartyHealth()
+    if not party then return end
+    local max = UnitHealthMax("player")
+    for _, f in ipairs(party) do
+        f.health:SetMinMaxValues(0, max > 0 and max or 1)
+        f.health:SetValue(UnitHealth("player"))
+    end
+end
+
+local function MakeParty()
+    party = {}
+    local _, class = UnitClass("player")
+    local c = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]) or { r = 0.1, g = 0.8, b = 0.1 }
+    for i = 1, 5 do
+        local f = CreateFrame("Button", "HealPadPracticeParty" .. i, UIParent, "SecureUnitButtonTemplate")
+        f:SetAttribute("unit", "player")
+        f:SetAttribute("*type1", "target")
+        f:RegisterForClicks("AnyUp")
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints()
+        bg:SetColorTexture(0.1, 0.1, 0.1, 0.9)
+        f.health = CreateFrame("StatusBar", nil, f)
+        f.health:SetPoint("TOPLEFT", 1, -1)
+        f.health:SetPoint("BOTTOMRIGHT", -1, 1)
+        f.health:SetStatusBarTexture("Interface\\RaidFrame\\Raid-Bar-Hp-Fill")
+        f.health:SetStatusBarColor(c.r, c.g, c.b)
+        local name = f.health:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        name:SetPoint("TOPLEFT", 3, -3)
+        name:SetPoint("RIGHT", -3, 0)
+        name:SetJustifyH("LEFT")
+        name:SetWordWrap(false)
+        name:SetText(UnitName("player"))
+        f:Hide()
+        party[i] = f
+    end
+    local events = CreateFrame("Frame", nil, party[1])
+    events:RegisterUnitEvent("UNIT_HEALTH", "player")
+    events:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
+    events:SetScript("OnEvent", UpdatePartyHealth)
+end
+
+local function PlaceParty()
+    local x, top, w, h, horizontal = PartyLayout()
+    if not x then return false end
+    for i, f in ipairs(party) do
+        f:ClearAllPoints()
+        f:SetSize(w, h)
+        if horizontal then
+            f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x + (i - 1) * w, top)
+        else
+            f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, top - (i - 1) * h)
+        end
+    end
+    return true
+end
+
+local partyShown = false
+local function PracticePartyShown() return partyShown end
+
+local function SetPracticeParty(on)
+    if InCombatLockdown() then ns.Print("can't change the practice party in combat.") return end
+    if on and not party then MakeParty() end
+    if on and not PlaceParty() then ns.Print("couldn't read your party frame layout.") on = false end
+    partyShown = on
+    for _, f in ipairs(party or {}) do f:SetShown(on) end
+    if on then UpdatePartyHealth(); Refresh() end
+end
+
+-- Follow Edit Mode changes while it's showing.
+ns.On("EDIT_MODE_LAYOUTS_UPDATED", function()
+    if partyShown and not InCombatLockdown() then C_Timer.After(0, PlaceParty) end
+end)
+
+------------------------------------------------------------------------
 -- The macros
 ------------------------------------------------------------------------
 
@@ -240,6 +401,9 @@ ns.AddCommand("healpad", function(arg)
     arg = strtrim(arg or ""):lower()
     if arg == "macros" then MakeMacros()
     elseif arg == "bind" then OpenMacros()
+    elseif arg == "party" then
+        SetPracticeParty(not PracticePartyShown())
+        ns.Print("practice party " .. (PracticePartyShown() and "on" or "off") .. ".")
     elseif arg == "practice" then
         SetPractice(not PracticeShown())
         ns.Print("practice grid " .. (PracticeShown() and "on" or "off") .. ".")
@@ -248,7 +412,7 @@ ns.AddCommand("healpad", function(arg)
             .. "the Macros window to put them on your crossbar. Heal with [@focus], e.g. "
             .. "/cast [@focus,help,nodead][] Flash Heal")
     end
-end, "d-pad cursor on the raid frames: macros, bind, practice")
+end, "d-pad cursor on the raid frames: macros, bind, practice, party")
 
 ns.AddSettings({
     { type = "section", tab = "Healing", label = "HealPad", order = 1 },
@@ -257,6 +421,10 @@ ns.AddSettings({
     { type = "action", label = "Open Macros to bind them",
       hint = "WoW's Macros window: pick a HealPad macro, press {X} (Bind to Action Bar), then the d-pad button.",
       run = OpenMacros },
+    { type = "toggle", label = "Practice party",
+      hint = "Five frames where your party frames would be (your Edit Mode party layout), to see it and try "
+          .. "the cursor while solo. Every one is you. Off again after a /reload.",
+      get = PracticePartyShown, set = SetPracticeParty },
     { type = "toggle", label = "Practice grid",
       hint = "20 fake raid frames to try the cursor solo. Every one is you. Off again after a /reload.",
       get = PracticeShown, set = SetPractice },
