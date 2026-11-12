@@ -67,8 +67,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   this). Addons can't call `RunBinding`, so a binding with no offer can't go in a slot. Spells
   (`SPELL:<id>`) and action bar buttons work without offers. Module code that sets its own override
   on a key skips keys where `DeckKit.Chords.Owns(key)`. Glyphs: `ns.Chords.Glyph(chord, gesture)`,
-  from `media/chords.tga` (`deck-setup/make-chord-glyphs.py`). Decktation still starts dictation on
-  any chord containing L4+R4.
+  from `media/chords.tga` (`deck-setup/make-chord-glyphs.py`). Decktation (push-to-talk on
+  L4+R4) needs "Exact binding only" (`exactBindingMs`, 150) so bigger chords containing L4+R4 don't
+  start dictation: `patches/decktation/exact-binding.patch` until it's released upstream.
 - Module bindings go in the DeckKit section of Key Bindings: `category="BINDING_HEADER_DECKKIT"` in
   `Bindings.xml`, with the module's own `header`.
 - Gamepad input: secure actions (casting, using items) need SecureActionButtons and override
