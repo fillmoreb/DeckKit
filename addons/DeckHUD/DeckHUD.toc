@@ -9,4 +9,5 @@
 Minimap.lua
 Chat.lua
 Layout.lua
+Focus.lua
 Suggested.lua

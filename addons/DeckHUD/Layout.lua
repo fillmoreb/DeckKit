@@ -243,6 +243,32 @@ function Layout.RaidTopLeft()
     return true, top
 end
 
+------------------------------------------------------------------------
+-- The focus frame centred in the gap between your frame and the target frame, at their height.
+-- Measured from what's visible: the focus frame's border (Focus.lua's portrait-less one, or
+-- Blizzard's), and the two frames' art, wherever they are when you ask.
+------------------------------------------------------------------------
+
+function Layout.FocusCentre()
+    local focus = Enum.EditModeUnitFrameSystemIndices and Enum.EditModeUnitFrameSystemIndices.Focus
+    if not focus then return false, "this client has no focus frame in Edit Mode" end
+    local _, pRight, pBottom, pTop = Rect(Art(PlayerFrame, "PlayerFrameContainer"))
+    local tLeft = Rect(Art(TargetFrame, "TargetFrameContainer"))
+    local aLeft, aRight, aBottom, aTop = Rect(Art(FocusFrame, "TargetFrameContainer"))
+    local fLeft, fRight, fBottom, fTop = Rect(FocusFrame)
+    if not (pRight and tLeft and aLeft and fLeft) then return false, "couldn't find the unit frames" end
+    -- Where the focus frame's centre goes so that its border's centre lands mid-gap, level with
+    -- the middle of your frame's art.
+    local cx = (pRight + tLeft) / 2 - ((aLeft + aRight) / 2 - (fLeft + fRight) / 2)
+    local cy = (pBottom + pTop) / 2 - ((aBottom + aTop) / 2 - (fBottom + fTop) / 2)
+    -- Edit Mode stores offsets in screen (UIParent) units and divides by the frame's own scale when
+    -- it places it (the focus frame is drawn at 0.75), so these are plain screen positions.
+    local ok, err = Layout.SetAnchor(SYSTEMS.UnitFrame, focus, { point = "CENTER", relativeTo = "UIParent",
+        relativePoint = "BOTTOMLEFT", offsetX = math.floor(cx + 0.5), offsetY = math.floor(cy + 0.5) })
+    if not ok then return false, err end
+    return true
+end
+
 local function ReloadSoon(what)
     ns.Print(what .. " Reloading the interface...")
     ReloadUI()
@@ -265,6 +291,9 @@ ns.AddCommand("layout", function(arg)
         local ok, err = Layout.SetAnchor(SYSTEMS.UnitFrame, raid, { point = "TOPLEFT", relativeTo = "UIParent",
             relativePoint = "TOPLEFT", offsetX = tonumber(x), offsetY = -tonumber(y) })
         ns.Print(ok and ("Raid frames moved to " .. x .. ", " .. y .. " (layout backed up). /reload to see it.") or ("Not changed: " .. err .. "."))
+    elseif cmd == "focus" then
+        local ok, info = Layout.FocusCentre()
+        if ok then ReloadSoon("Focus frame centred (layout backed up).") else ns.Print("Not changed: " .. info .. ".") end
     elseif cmd == "party" then
         local ok, info = Layout.PartyRow()
         if ok then ReloadSoon("Party frames lined up (" .. info .. " px wide each, layout backed up).")
@@ -277,12 +306,12 @@ ns.AddCommand("layout", function(arg)
         if #list == 0 then return ns.Print("No layout backups yet.") end
         for i, b in ipairs(list) do ns.Print(i .. ". " .. b.when .. "  " .. tostring(b.name)) end
     else
-        ns.Print("/deckkit layout suggested  |  party  |  raid <left> <top>  |  crossbar <px from bottom>  |  restore  |  backups")
+        ns.Print("/deckkit layout suggested  |  party  |  focus  |  raid <left> <top>  |  crossbar <px from bottom>  |  restore  |  backups")
     end
-end, "Edit Mode layout: suggested, party, raid <left> <top>, crossbar <height>, restore, backups")
+end, "Edit Mode layout: suggested, party, focus, raid <left> <top>, crossbar <height>, restore, backups")
 
 ns.AddSettings({
-    { type = "section", tab = "Healing", label = "Party and raid frames", order = 2 },
+    { type = "section", tab = "Healing", label = "Party, raid and focus frames", order = 2 },
     { type = "action", label = "Line up party frames", keepOpen = true,
       hint = "Raid-style party frames in a row, filling the gap between your frame and the target frame, just "
           .. "under them. Backs up your Edit Mode layout, then reloads. \"Undo the last layout change\" "
@@ -290,6 +319,13 @@ ns.AddSettings({
       run = function()
           local ok, info = Layout.PartyRow()
           if ok then ReloadSoon("Party frames lined up.") else ns.Print("Not changed: " .. info .. ".") end
+      end },
+    { type = "action", label = "Centre the focus frame", keepOpen = true,
+      hint = "The focus frame in the middle of the gap between your frame and the target frame, at their "
+          .. "height. Backs up your Edit Mode layout, then reloads.",
+      run = function()
+          local ok, info = Layout.FocusCentre()
+          if ok then ReloadSoon("Focus frame centred.") else ns.Print("Not changed: " .. info .. ".") end
       end },
     { type = "action", label = "Line up raid frames", keepOpen = true,
       hint = "Raid frames in the top left corner: just off the screen's edge and just under the XP and "
