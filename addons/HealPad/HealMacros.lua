@@ -13,7 +13,8 @@ local UI = DeckKit.UI
 
 local MAX_CHARACTER = 18
 -- Resurrection spells (rank 1 IDs; matched by name, so every rank and language counts).
-local RESURRECT = { 2006, 7328, 2008, 20484 } -- Resurrection, Redemption, Ancestral Spirit, Rebirth
+-- Resurrection, Redemption, Ancestral Spirit, Rebirth, and Forever's druid Revive (out of combat).
+local RESURRECT = { 2006, 7328, 2008, 20484, 437138 }
 
 local function ResurrectNames()
     local names = {}
