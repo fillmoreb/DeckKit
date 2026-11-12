@@ -4,7 +4,7 @@
 --   2. the quest whose area you're standing in: the real shape the map draws for it, not a
 --      distance from its centre. An invisible quest-area frame (QuestPOIFrame) draws the areas of
 --      every quest that has an item, then answers "which area is this point in?" for your position.
--- The key bound to QUESTPAD_USE (Controls > Bindings) clicks the button. Items need a secure click,
+-- A paddle chord slot (Controls > Paddles, R5 at first) or any key bound to QUESTPAD_USE uses it. Items need a secure click,
 -- so the item, the button and its key only change out of combat; in combat it keeps what it had.
 -- It steps aside while the game shows its own Extra Action Button.
 local ADDON, ns = ...
@@ -13,6 +13,8 @@ DeckKit.NewModule(ns, ADDON, "|cffffd060QuestPad|r")
 
 BINDING_HEADER_QUESTPAD = "QuestPad"
 BINDING_NAME_QUESTPAD_USE = "Use the quest item"
+-- As a paddle chord slot: the grip button takes this button's item as it fires (secure).
+DeckKit.Chords.Offer("QUESTPAD_USE", { label = "Quest item", mirror = "QuestPadButton" })
 
 local DEFAULTS = { enabled = true, byTarget = true, y = -190 }
 local ART = "Interface\\ExtraButton\\Default"
@@ -122,7 +124,10 @@ local function Bind()
     ClearOverrideBindings(button)
     if not button:IsShown() then return end
     for _, key in ipairs({ GetBindingKey("QUESTPAD_USE") }) do
-        SetOverrideBindingClick(button, true, key, button:GetName(), "LeftButton")
+        -- A grip key belongs to DeckKit's paddle chords, which run this button from a slot instead.
+        if not DeckKit.Chords.Owns(key) then
+            SetOverrideBindingClick(button, true, key, button:GetName(), "LeftButton")
+        end
     end
 end
 
@@ -300,5 +305,4 @@ ns.AddSettings({
     { type = "action", label = "Show the button for a moment", verb = "Show", keepOpen = true,
       hint = "Shows it with a sample icon for a few seconds, so you can see where it sits.",
       run = function() Preview() end },
-    { type = "binding", action = "QUESTPAD_USE", tab = "Controls", section = "Bindings", sectionOrder = 9 },
 })

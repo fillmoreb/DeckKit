@@ -241,13 +241,13 @@ ns.On("LOOT_CLOSED", function()
 end)
 
 function DisenchantDeck_Toggle() List.Toggle() end
+DeckKit.Chords.OfferPress("DISENCHANTDECK_TOGGLE", DisenchantDeck_Toggle, "Disenchant list")
 SLASH_DISENCHANTDECK1 = "/dd"
 SLASH_DISENCHANTDECK2 = "/disenchantdeck"
 SlashCmdList.DISENCHANTDECK = function() List.Toggle() end
 
 ns.AddSettings({
     { type = "section", tab = "Tools", label = "Disenchanting", order = 2 },
-    { type = "binding", action = "DISENCHANTDECK_TOGGLE", tab = "Controls", section = "Bindings", sectionOrder = 9 },
     { type = "action", label = "Open the disenchant list", run = List.Open },
     { type = "toggle", label = "Open it when you pick Disenchant",
       hint = "Choosing Disenchant from the spellbook, professions or an action button opens this list instead of the pick-an-item cursor.",

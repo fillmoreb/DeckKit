@@ -203,6 +203,15 @@ local function Build()
     iy = iy - 26
     local r1, r2, r3 = UI.Status(info, 360), UI.Status(info, 360), UI.Status(info, 360)
     for _, r in ipairs({ r1, r2, r3 }) do r:SetPoint("TOPLEFT", 12, iy); iy = iy - 22 end
+    iy = iy - 16
+    local h3 = UI.Heading(info, "Paddle chord glyphs")
+    h3:SetPoint("TOPLEFT", 12, iy)
+    iy = iy - 30
+    -- ns.Chords.Glyph(chord, gesture, size): inline markup for any text. Held grips lit, a bar for a hold.
+    local samples = UI.Description(info, ns.Chords.Glyph("L4") .. " L4    " .. ns.Chords.Glyph("L4", "hold")
+        .. " L4 held    " .. ns.Chords.Glyph("L4+L5") .. " L4+L5    " .. ns.Chords.Glyph("R4+L5+R5", "hold")
+        .. " R4+L5+R5 held    " .. ns.Chords.Glyph("L4+R4+L5+R5") .. " all four", W - 24)
+    samples:SetPoint("TOPLEFT", 12, iy)
     t3.onShow = function()
         r1:Set("Frames found", GetNumGroupMembers() > 0 and GetNumGroupMembers() or "None (solo)", UI.Color.gold)
         r2:Set("Focus", UnitExists("focus") and UnitName("focus") or "None", UnitExists("focus") and UI.Color.good or UI.Color.dim)

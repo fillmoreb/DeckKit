@@ -15,4 +15,5 @@ Override.lua
 Settings.lua
 Menu.lua
 Sample.lua
+Chords.lua
 Paddles.lua

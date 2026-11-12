@@ -6,7 +6,8 @@
 --   Override.lua  shared pad button overrides, e.g. X for wand shoot and fishing (DeckKit.Override)
 --   Settings.lua  the settings registry modules add their options to (ns.AddSettings)
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
---   Paddles.lua   paddle chords: the two peek buttons held, held together (dictation) or double-tapped
+--   Chords.lua    paddle chords: the four back grips, alone or together, pressed or held (secure slots)
+--   Paddles.lua   what the paddle actions do: peeks, the dictation indicator, hiding a side
 --   Debug.lua     ns.Debug / ns.Logger: forward to DeckDev (the dev addon) when it's installed
 --
 -- Each feature addon lists "## Dependencies: DeckKit" and starts with
@@ -88,6 +89,7 @@ function ns.NewModule(addonNS, name, title)
     addonNS.Window = ns.Window
     addonNS.Override = ns.Override
     addonNS.Paddles = ns.Paddles
+    addonNS.Chords = ns.Chords
     addonNS.Debug = ns.Logger(name)
     addonNS.Notice = function(...) if ns.Notice then ns.Notice(...) end end
     addonNS.AddCommand = ns.AddCommand

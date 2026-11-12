@@ -14,6 +14,8 @@ local _, ns = ...
 -- Key bindings (Bindings.xml)
 function WayPad_ToggleEditor() ns.Editor.Toggle() end
 function WayPad_ToggleManager() ns.Manager.Toggle() end
+DeckKit.Chords.OfferPress("WAYPAD_ADD", WayPad_ToggleEditor, "Add waypoint")
+DeckKit.Chords.OfferPress("WAYPAD_MANAGE", WayPad_ToggleManager, "Waypoint list")
 -- For MapDeck (and later the DeckKit suite): the live waypoint list and which one is active.
 function WayPad_GetPoints() return ns.points, ns.active end
 
@@ -202,6 +204,4 @@ ns.AddSettings({
       run = function() ns.Manager.Toggle() end },
     { type = "action", label = "Reset the arrow position", hint = "Puts the arrow back at the top of the screen.",
       run = function() ns.Arrow.Reset(); ns.Print("Arrow moved back to the top of the screen.") end },
-    { type = "binding", action = "WAYPAD_ADD", tab = "Controls", section = "Bindings", sectionOrder = 9 },
-    { type = "binding", action = "WAYPAD_MANAGE", tab = "Controls", section = "Bindings", sectionOrder = 9 },
 })

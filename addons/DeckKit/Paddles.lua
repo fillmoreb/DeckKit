@@ -1,27 +1,25 @@
--- Paddle chords: what the two peek buttons (on the Deck's top back grips) do together.
+-- Paddle actions: the peeks, the dictation indicator and hiding a side. Which grip or chord does
+-- what is up to Chords.lua (slots); this file is what those actions do.
 --
---   Left  = ChatDeck's peek binding, right = MapDeck's peek binding (Key Bindings > DeckKit).
---   Hold one     after a short delay, that side's peek (chat / map) until you let go. The delay
---                leaves room to press the other one first.
---   Hold both    no peeks: dictation (set Decktation's push-to-talk to the same two grips). A
---                "Listening" indicator shows mid-screen; when you let go it says "Transcribing"
---                until your next chat message arrives (or a timeout). With Decktation's status
---                hook set up (deck-setup/decktation-hook.sh), it follows Decktation's real state
---                instead: signal keys (INSERT recording, HOME transcribing, END done, DELETE
---                error) bound to DeckKit's dictation-signal bindings.
---   Double-tap   hide / show that side's interface: whatever sits along that screen edge, from any
---                addon (see "Hiding a side" below), plus anything a module adds.
+--   Peeks        ChatDeck's / MapDeck's peek bindings show that peek while held.
+--   Dictation    DECKKIT_DICTATION (a chord slot, L4+R4 at first, Decktation's push-to-talk): a
+--                "Listening" indicator mid-screen while held; when you let go it says "Transcribing"
+--                until your next chat message arrives (or a timeout). With Decktation's status hook
+--                set up (deck-setup/decktation-hook.sh), it follows Decktation's real state instead:
+--                signal keys (INSERT recording, HOME transcribing, END done, DELETE error) bound to
+--                DeckKit's dictation-signal bindings.
+--   Hiding a side  DECKKIT_HIDE_LEFT / _RIGHT: whatever sits along that screen edge, from any addon
+--                (see "Hiding a side" below), plus anything a module adds.
 --
--- Modules: ns.Paddles.SetPeek(side, fn(on)), ns.Paddles.AddSideToggle(side, fn(hidden)),
--- and their peek bindings call ns.Paddles.Press(side, down). With chords off in the menu, each
--- button is just its peek again.
+-- Modules: ns.Paddles.SetPeek(side, fn(on)), ns.Paddles.AddSideToggle(side, fn(hidden)), and their
+-- peek bindings call ns.Paddles.Press(side, down).
 local _, ns = ...
 
 local Paddles = {}
 ns.Paddles = Paddles
 
 local TRANSCRIBE_TIMEOUT = 12 -- seconds "Transcribing" can show without a chat message arriving
-local DEFAULTS = { paddleChords = true, peekDelay = 0.12, doubleTap = 0.35, dictationIndicator = true }
+local DEFAULTS = { dictationIndicator = true }
 
 local function Setting(key)
     local v = ns.db[key]
@@ -29,10 +27,7 @@ local function Setting(key)
     return v
 end
 
-local sides = { left = {}, right = {} }
 local peeks, toggles = {}, { left = {}, right = {} }
-local chord = false -- both were held: no peeks or taps until both are up again
-local OTHER = { left = "right", right = "left" }
 local SIDE_NAME = { left = "Left side", right = "Right side" }
 
 function Paddles.SetPeek(side, fn) peeks[side] = fn end
@@ -104,29 +99,22 @@ local function HideBox()
 end
 
 ------------------------------------------------------------------------
--- Chords, holds and taps
+-- Dictation, from the paddles (when Decktation's status hook isn't sending its real state)
 ------------------------------------------------------------------------
 
 local signalled = false -- Decktation has sent a real status: follow those, not the paddles
 
-local function StartChord()
-    chord = true
-    for _, s in pairs(sides) do
-        if s.timer then s.timer:Cancel(); s.timer = nil end
-        s.lastTap = nil
+local function Dictation(down)
+    if signalled or not Setting("dictationIndicator") then return end
+    if down then
+        transcribing = false
+        Show("Listening", 1, 0.3, 0.3, "Red")
+    elseif not transcribing then
+        transcribing = true
+        Show("Transcribing", 1, 0.82, 0, "Yellow", TRANSCRIBE_TIMEOUT)
     end
-    for side, s in pairs(sides) do
-        if s.peeking then s.peeking = false; Peek(side, false) end
-    end
-    transcribing = false
-    if Setting("dictationIndicator") and not signalled then Show("Listening", 1, 0.3, 0.3, "Red") end
 end
-
-local function ChordLetGo() -- the first grip released: dictation stops, transcription starts
-    if transcribing or signalled or not Setting("dictationIndicator") then return end
-    transcribing = true
-    Show("Transcribing", 1, 0.82, 0, "Yellow", TRANSCRIBE_TIMEOUT)
-end
+ns.Chords.Offer("DECKKIT_DICTATION", { label = "Dictation", run = Dictation })
 
 ------------------------------------------------------------------------
 -- Hiding a side
@@ -203,52 +191,15 @@ function Paddles.ToggleSide(side)
     Show(SIDE_NAME[side] .. (ns.db.hidden[side] and " hidden" or " shown"), 1, 1, 1, false, 1.2)
 end
 
-function Paddles.Press(side, down)
-    local s, other = sides[side], sides[OTHER[side]]
-    if not Setting("paddleChords") then
-        Peek(side, down)
-        return
-    end
-    if down then
-        if s.down then return end -- a held key repeats "down"
-        s.down = true
-        if other.down or chord then
-            if not chord then StartChord() end
-            return
-        end
-        if s.timer then s.timer:Cancel() end
-        s.timer = C_Timer.NewTimer(Setting("peekDelay"), function()
-            s.timer = nil
-            if s.down and not chord then
-                s.peeking = true
-                Peek(side, true)
-            end
-        end)
-        return
-    end
+-- A peek binding went down / up.
+function Paddles.Press(side, down) Peek(side, down) end
 
-    if not s.down then return end
-    s.down = false
-    if s.timer then s.timer:Cancel(); s.timer = nil end
-    if chord then
-        ChordLetGo()
-        if not other.down then chord = false end
-        return
-    end
-    if s.peeking then
-        s.peeking = false
-        Peek(side, false)
-        return
-    end
-    -- Let go before the peek showed: a tap. Two quick ones toggle the side.
-    local now = GetTime()
-    if s.lastTap and now - s.lastTap <= Setting("doubleTap") then
-        s.lastTap = nil
-        Paddles.ToggleSide(side)
-    else
-        s.lastTap = now
-    end
-end
+function DeckKit_HideSide(side) Paddles.ToggleSide(side) end
+ns.Chords.OfferPress("DECKKIT_HIDE_LEFT", function() Paddles.ToggleSide("left") end, "Hide left side")
+ns.Chords.OfferPress("DECKKIT_HIDE_RIGHT", function() Paddles.ToggleSide("right") end, "Hide right side")
+ns.Chords.OfferPress("DECKKIT_RELOAD", ReloadUI, "Reload UI")
+BINDING_NAME_DECKKIT_HIDE_LEFT = "Hide / show the left side"
+BINDING_NAME_DECKKIT_HIDE_RIGHT = "Hide / show the right side"
 
 -- Decktation's status, sent as key presses by its status hook (see the top of this file).
 function Paddles.Signal(event)
@@ -324,23 +275,8 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ns.Settings.Add("DeckKit", ns.TITLE, {
-    { type = "section", tab = "Controls", label = "Paddles", order = 3 },
-    { type = "toggle", label = "Paddle chords",
-      hint = "Peek buttons: hold for the peek, hold both for dictation, double-tap to hide that side.",
-      get = function() return Setting("paddleChords") end,
-      set = function(on) ns.db.paddleChords = on end },
-    { type = "range", label = "Peek delay", min = 0, max = 0.3, step = 0.02,
-      format = function(v) return string.format("%d ms", math.floor(v * 1000 + 0.5)) end,
-      hint = "How long a peek button is held before the peek shows (room to press both for dictation).",
-      get = function() return Setting("peekDelay") end,
-      set = function(v) ns.db.peekDelay = v end },
-    { type = "range", label = "Double-tap window", min = 0.2, max = 0.6, step = 0.05,
-      format = function(v) return string.format("%d ms", math.floor(v * 1000 + 0.5)) end,
-      get = function() return Setting("doubleTap") end,
-      set = function(v) ns.db.doubleTap = v end },
     { type = "toggle", label = "Dictation indicator", tab = "Screen", section = "Dictation", sectionOrder = 4,
-      hint = "\"Listening\" while both peek buttons are held, then \"Transcribing\".",
+      hint = "\"Listening\" while the dictation chord is held, then \"Transcribing\".",
       get = function() return Setting("dictationIndicator") end,
       set = function(on) ns.db.dictationIndicator = on end },
-    { type = "info", label = "Left: chat peek binding. Right: map peek binding." },
 })

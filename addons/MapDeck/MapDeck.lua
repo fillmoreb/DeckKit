@@ -577,6 +577,7 @@ DeckKit.Paddles.SetPeek("right", Peek)
 
 BINDING_HEADER_MAPDECK = "MapDeck"
 BINDING_NAME_MAPDECK_PEEK = "Peek at the map (hold)"
+DeckKit.Chords.Offer("MAPDECK_PEEK", { label = "Map peek", run = function(down) Peek(down) end })
 
 SLASH_MAPDECK1 = "/mapdeck"
 SlashCmdList.MAPDECK = function()
@@ -593,8 +594,7 @@ end)
 
 ns.AddSettings({
     { type = "section", tab = "Map & travel", label = "Map", order = 2 },
-    { type = "info", label = "Hold your peek button for the map; right stick up zooms out." },
-    { type = "binding", action = "MAPDECK_PEEK", tab = "Controls", section = "Bindings", sectionOrder = 9 },
+    { type = "info", label = "Hold the map peek's paddle (Controls > Paddles, R4 at first) for the map; right stick up zooms out." },
 })
 
 

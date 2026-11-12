@@ -1062,6 +1062,10 @@ UI.ScrollOf = ScrollOf
 -- List popup (a selector's choices)
 ------------------------------------------------------------------------
 
+-- Up to LIST_MAX choices drop down under the selector; a longer list becomes a scrolling one in the
+-- middle of the window.
+local LIST_MAX = 12
+
 function Screen:OpenList(owner, values, current, choose)
     local pop = self.popup
     if not pop then
@@ -1069,28 +1073,46 @@ function Screen:OpenList(owner, values, current, choose)
         pop:SetFrameStrata("FULLSCREEN")
         Fill(pop, 0.035, 0.035, 0.045, 0.98, 2)
         Border(pop, "SimplePanelTemplate")
-        pop.rows = {}
+        pop.rows, pop.longRows = {}, {}
         self.popup = pop
     end
-    local width = math.max(owner.box and owner.box:GetWidth() or 160, 160)
-    pop:SetSize(width + 16, #values * ROW_H + 16)
+    local long = #values > LIST_MAX
+    local width = math.max(owner.box and owner.box:GetWidth() or 160, long and 320 or 160)
     pop:ClearAllPoints()
-    pop:SetPoint("TOPRIGHT", owner.box or owner, "BOTTOMRIGHT", 8, -2)
+    local parent, pool = pop, pop.rows
+    if long then
+        if not pop.scroll then
+            pop.scroll = UI.ScrollList(pop, width, LIST_MAX * ROW_H)
+            pop.scroll:SetPoint("TOPLEFT", 8, -8)
+            pop.scrollWidth = width
+        end
+        parent, pool = pop.scroll.content, pop.longRows
+        width = pop.scrollWidth
+        pop:SetSize(width + 16, LIST_MAX * ROW_H + 16)
+        pop:SetPoint("CENTER", self.win)
+        pop.scroll:SetContentHeight(#values * ROW_H)
+        pop.scroll:Show()
+    else
+        pop:SetSize(width + 16, #values * ROW_H + 16)
+        pop:SetPoint("TOPRIGHT", owner.box or owner, "BOTTOMRIGHT", 8, -2)
+        if pop.scroll then pop.scroll:Hide() end
+    end
+    local rowW = long and (width - 18) or width
     pop.items = {}
     local focus
     for i, c in ipairs(values) do
-        local r = pop.rows[i]
+        local r = pool[i]
         if not r then
-            r = Row(pop, width, "")
+            r = Row(parent, rowW, "")
             r:EnableMouse(false)
             r.check = r:CreateTexture(nil, "OVERLAY")
             r.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
             r.check:SetSize(20, 20)
             r.check:SetPoint("RIGHT", -6, 0)
-            pop.rows[i] = r
+            pool[i] = r
         end
         r:ClearAllPoints()
-        r:SetPoint("TOPLEFT", 8, -8 - (i - 1) * ROW_H)
+        if long then r:SetPoint("TOPLEFT", 0, -(i - 1) * ROW_H) else r:SetPoint("TOPLEFT", 8, -8 - (i - 1) * ROW_H) end
         r.label:SetText(c[2])
         r.check:SetShown(c[1] == current)
         r.dk = {
@@ -1105,7 +1127,9 @@ function Screen:OpenList(owner, values, current, choose)
         pop.items[i] = r
         if c[1] == current then focus = r end
     end
-    for i = #values + 1, #pop.rows do pop.rows[i]:Hide() end
+    for i = #values + 1, #pool do pool[i]:Hide() end
+    local other = long and pop.rows or pop.longRows
+    for _, r in ipairs(other) do r:Hide() end
     pop.owner = owner
     pop:Show()
     self:SetFocus(focus or pop.items[1])

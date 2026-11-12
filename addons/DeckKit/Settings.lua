@@ -7,7 +7,7 @@
 --       { type = "choice", label = "Idle reminder", values = { { false, "Off" }, { 60, "1 min" } }, get, set },
 --       { type = "range",  label = "Font size", min = 12, max = 40, step = 2, format = fn(v) -> text, get, set },
 --       { type = "action", label = "Add a waypoint", verb = "Add", run = function() ... end },
---       { type = "binding", action = "WAYPAD_ADD" },          -- a key binding (Controls > Bindings)
+--       { type = "binding", action = "WAYPAD_ADD" },          -- a back-grip binding (unused: the grips are paddle chords now)
 --       { type = "status", label = "Dictation signals", get = function() return text, color end },
 --       { type = "info",   label = "Plain text that explains something." },
 --   })

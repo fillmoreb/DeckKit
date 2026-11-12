@@ -135,6 +135,7 @@ DeckKit.Paddles.SetPeek("left", Peek)
 
 BINDING_HEADER_CHATDECK = "ChatDeck"
 BINDING_NAME_CHATDECK_PEEK = "Peek at chat (hold)"
+DeckKit.Chords.Offer("CHATDECK_PEEK", { label = "Chat peek", run = function(down) Peek(down) end })
 
 SLASH_CHATDECK1 = "/chatdeck"
 SlashCmdList.CHATDECK = function(msg)
@@ -146,7 +147,7 @@ SlashCmdList.CHATDECK = function(msg)
     elseif cmd == "" then
         if frame and frame:IsShown() then Hide() else Show() end
     else
-        Print("bind \"Peek at chat (hold)\" under Key Bindings > AddOns.  /chatdeck size <12-40>  ·  /chatdeck to show/hide")
+        Print("chat peek: a paddle chord slot (DeckKit menu, Controls > Paddles).  /chatdeck size <12-40>  ·  /chatdeck to show/hide")
     end
 end
 
@@ -174,6 +175,5 @@ ns.AddSettings({
           db.size = v
           if text then text:SetFont(STANDARD_TEXT_FONT, v, "") end
       end },
-    { type = "info", label = "Hold your peek button to read chat; the right stick scrolls." },
-    { type = "binding", action = "CHATDECK_PEEK", tab = "Controls", section = "Bindings", sectionOrder = 9 },
+    { type = "info", label = "Hold the chat peek's paddle (Controls > Paddles, L4 at first) to read chat; the right stick scrolls." },
 })
