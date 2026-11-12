@@ -1,8 +1,15 @@
 -- Heal macros: one macro per helpful spell, aimed at your focus (the cursor's pick), for the face
 -- buttons of your healing page. Resurrection spells aim at a dead focus instead.
 --
---   /cast [@focus,help,nodead][] Flash Heal       heals, shields, buffs, dispels: focus, else as usual
+--   /cast [@focus,help,nodead][] Flash Heal       heals, shields, dispels: focus, else as usual
 --   /cast [@focus,help,dead] Resurrection         only on a dead focus
+--   /castsequence [@focus,help,nodead][] reset=8 Power Word: Fortitude, Divine Spirit, Shadow Protection
+--                                                 buffs: one press per buff, so a whole set takes
+--                                                 one macro; 8 s idle starts it over (next person)
+--
+-- Paladin blessings don't go in a sequence (only one of your blessings fits on a person at a time);
+-- each is its own macro, unticked to start, so you choose the ones you use. A cure you've learned a
+-- better version of (Cure Disease once you have Abolish Disease...) isn't offered.
 --
 -- Which spells: from your spellbook, the ones that are helpful and have a range (so they can be cast
 -- on someone else; self-only spells like Inner Fire are left out), plus your resurrection spells,
@@ -24,8 +31,22 @@ local ALWAYS = { 402289, 20473 } -- Penance, Holy Shock
 -- ...and these are flagged helpful but aren't focus spells: cast on the ground (Healing Rain,
 -- Efflorescence), triggered by something else (Lightwell Renew, Living Seed, Ancestral Fortitude),
 -- not aimed at an ally at all (Fire Nova, Decoy Totem, Mind Vision, Far Sight), or not for healing
--- (Water Walking, Water Breathing).
-local NEVER = { 415236, 417148, 7001, 414683, 16177, 408341, 425874, 2096, 6196, 546, 131 }
+-- (Water Walking, Water Breathing, Spirit of the Alpha: a threat buff).
+local NEVER = { 415236, 417148, 7001, 414683, 16177, 408341, 425874, 2096, 6196, 546, 131, 408696 }
+
+-- Buffs, folded into sequence macros: one for single targets, one for group versions.
+local BUFFS = {
+    { name = "Buffs", ids = { 1243, 14752, 976, 1126, 467 } },
+    -- Power Word: Fortitude, Divine Spirit, Shadow Protection, Mark of the Wild, Thorns
+    { name = "Group buffs", ids = { 21562, 27681, 27683, 21849 } },
+    -- Prayer of Fortitude, Prayer of Spirit, Prayer of Shadow Protection, Gift of the Wild
+}
+-- Offered unticked: paladin blessings, one at a time on a person, so you pick yours.
+local UNTICKED = { 19740, 19742, 20217, 25782, 25894, 25898 } -- Blessing / Greater Blessing of Might, Wisdom, Kings
+-- A cure and the better one that replaces it: the old one isn't offered once you know the new one.
+local REPLACED_BY = { [528] = 552, [526] = 2893, [1152] = 4987 } -- Cure Disease, Cure Poison, Purify
+-- Heals outgrown by a better one: still offered (for downranking), but unticked once you know it.
+local OUTGROWN_BY = { [2050] = 2060, [2054] = 2060 } -- Lesser Heal, Heal: by Greater Heal
 
 -- Spell names from a list of IDs (any rank's ID names every rank, in any language).
 local function NamesOf(ids)
@@ -38,10 +59,17 @@ local function NamesOf(ids)
 end
 local function ResurrectNames() return NamesOf(RESURRECT) end
 
--- The spells a heal macro makes sense for: { name, icon, resurrect }, in spellbook order.
+-- The entries a heal macro makes sense for, in spellbook order: { name, icon, resurrect, unticked },
+-- then the buff sequences: { name, icon, sequence = { spell names } }.
 local function Spells()
     local list, seen, rez = {}, {}, ResurrectNames()
-    local always, never = NamesOf(ALWAYS), NamesOf(NEVER)
+    local always, never, unticked = NamesOf(ALWAYS), NamesOf(NEVER), NamesOf(UNTICKED)
+    local buffOf = {} -- spell name -> its sequence
+    for _, b in ipairs(BUFFS) do
+        for name in pairs(NamesOf(b.ids)) do buffOf[name] = b end
+    end
+    local known = {}
+    local sequences = {}
     local bank = Enum.SpellBookSpellBank.Player
     for line = 1, C_SpellBook.GetNumSpellBookSkillLines() do
         local info = C_SpellBook.GetSpellBookSkillLineInfo(line)
@@ -51,18 +79,55 @@ local function Spells()
                 and not seen[item.name] then
                 local id = item.spellID
                 local isRez = rez[item.name]
-                if isRez or always[item.name]
+                known[item.name] = true
+                local b = buffOf[item.name]
+                if b then
+                    seen[item.name] = true
+                    sequences[b] = sequences[b] or { name = b.name, icon = C_Spell.GetSpellTexture(id), sequence = {} }
+                    table.insert(sequences[b].sequence, item.name)
+                elseif isRez or always[item.name]
                     or (not never[item.name] and C_Spell.IsSpellHelpful(id) and C_Spell.SpellHasRange(id)) then
                     seen[item.name] = true
-                    table.insert(list, { name = item.name, icon = C_Spell.GetSpellTexture(id), resurrect = isRez })
+                    table.insert(list, { name = item.name, icon = C_Spell.GetSpellTexture(id), resurrect = isRez,
+                        unticked = unticked[item.name] })
                 end
             end
+        end
+    end
+    -- Drop a cure when its better version is known too.
+    local dropped = {}
+    for old, new in pairs(REPLACED_BY) do
+        local oldName, newName = C_Spell.GetSpellName(old), C_Spell.GetSpellName(new)
+        if oldName and newName and known[newName] then dropped[oldName] = true end
+    end
+    for i = #list, 1, -1 do if dropped[list[i].name] then table.remove(list, i) end end
+    for old, new in pairs(OUTGROWN_BY) do
+        local oldName, newName = C_Spell.GetSpellName(old), C_Spell.GetSpellName(new)
+        if oldName and newName and known[newName] then
+            for _, e in ipairs(list) do if e.name == oldName then e.unticked = true end end
+        end
+    end
+    -- Each sequence casts in BUFFS' order (most wanted first), not spellbook order.
+    for _, b in ipairs(BUFFS) do
+        local seq = sequences[b]
+        if seq then
+            local inBook = {}
+            for _, name in ipairs(seq.sequence) do inBook[name] = true end
+            seq.sequence = {}
+            for _, id in ipairs(b.ids) do
+                local name = C_Spell.GetSpellName(id)
+                if name and inBook[name] then table.insert(seq.sequence, name) end
+            end
+            table.insert(list, seq)
         end
     end
     return list
 end
 
 local function Body(spell)
+    if spell.sequence then
+        return "#showtooltip\n/castsequence [@focus,help,nodead][] reset=8 " .. table.concat(spell.sequence, ", ")
+    end
     local cast = spell.resurrect and "/cast [@focus,help,dead] " or "/cast [@focus,help,nodead][] "
     return "#showtooltip " .. spell.name .. "\n" .. cast .. spell.name
 end
@@ -110,7 +175,7 @@ local function Fill()
     for _, r in ipairs(rows) do r:Hide() end
     local W = WIDTH - 28 - 24 - 22
     for i, spell in ipairs(spells) do
-        if chosen[spell.name] == nil then chosen[spell.name] = true end
+        if chosen[spell.name] == nil then chosen[spell.name] = not spell.unticked end
         local r = rows[i]
         if not r then
             r = UI.Checkbox(list.content, W, {
@@ -120,8 +185,10 @@ local function Fill()
             })
             rows[i] = r
         end
+        local note = spell.resurrect and "on a dead focus"
+            or spell.sequence and table.concat(spell.sequence, ", ") .. ": one press each"
         local label = "|T" .. (spell.icon or 134400) .. ":18:18|t  " .. spell.name
-            .. (spell.resurrect and "  |cff9d9d9d(on a dead focus)|r" or "")
+            .. (note and ("  |cff9d9d9d(" .. note .. ")|r") or "")
         if r.label then r.label:SetText(label) end
         r:ClearAllPoints()
         r:SetPoint("TOPLEFT", 0, -(i - 1) * (UI.ROW_H + 2))
