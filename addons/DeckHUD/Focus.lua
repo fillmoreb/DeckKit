@@ -224,6 +224,14 @@ ns.On("PLAYER_LOGIN", function()
     if not f then return end
     if f.CheckClassification then hooksecurefunc(f, "CheckClassification", Apply) end
     if f.AnchorAuraContainer then hooksecurefunc(f, "AnchorAuraContainer", AnchorAuras) end
+    -- Below 20% health Blizzard pulses a player's portrait (its alpha) as a warning: keep it hidden.
+    if f.HealthUpdate then
+        hooksecurefunc(f, "HealthUpdate", function(self)
+            if Style() ~= "blizzard" and self.TargetFrameContainer.Portrait then
+                self.TargetFrameContainer.Portrait:SetAlpha(0)
+            end
+        end)
+    end
     if UnitFrame_Update then
         hooksecurefunc("UnitFrame_Update", function(frame) if frame == FocusFrame then Name() end end)
     end
