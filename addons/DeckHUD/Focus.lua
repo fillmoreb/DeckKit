@@ -55,18 +55,18 @@ local function Border(f, m)
     return border
 end
 
--- The name: the first word only, for everyone; a player's in their class colour, an NPC's in the
--- usual reaction colour (red hostile, yellow neutral, green friendly), shrunk to fit if it's long.
--- Re-run after every Blizzard update.
+-- The name: a player's first name in their class colour; an NPC's whole name ("Lazy Peon", not
+-- "Lazy") in the usual reaction colour (red hostile, yellow neutral, green friendly). Shrunk to fit
+-- if it's long. Re-run after every Blizzard update.
 local naming = false
 local function Name()
     local f, _, m = Parts()
     if not f or naming or Style() ~= "compact" or not UnitExists("focus") then return end
     naming = true
     local full = GetUnitName("focus", false) or ""
-    full = full:match("^(%S+)") or full
     local r, g, b = 1, 0.82, 0
     if UnitIsPlayer("focus") then
+        full = full:match("^(%S+)") or full
         local _, class = UnitClass("focus")
         local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
         if c then r, g, b = c.r, c.g, c.b end
