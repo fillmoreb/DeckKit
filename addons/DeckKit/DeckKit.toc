@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: DeckKit
-## Notes: Shared core for the DeckKit controller addons (WayPad, DisenchantDeck, ChatDeck, MapDeck, DeckAngler, DeckSundries). /deckkit
+## Notes: Shared core for the DeckKit controller addons: the DeckKit menu, controller input, paddle chords. /deckkit
 ## Version: 1.0.0
 ## Author: Ben Fillmore
 ## SavedVariables: DeckKitDB
