@@ -2,7 +2,7 @@
 --   Blizzard's     as the game draws it
 --   No portrait    a thin border around the name and bars: no portrait, no level badge
 --   Name and health  just a big first name in the player's class colour over a tall health bar,
---                  a little wider than Blizzard's, in a thin border of our own
+--                  a little wider than Blizzard's, in a thin border of our own; no cast bar
 -- Forever's Edit Mode has no "hide portrait" for the focus frame and no portrait-less target art,
 -- so "No portrait" uses the player frame's portrait-less art ("UI-HUD-UnitFrame-Player-PortraitOff"),
 -- mirrored and centred on the bars. Blizzard redraws the frame's art when the focus changes
@@ -145,6 +145,7 @@ local function Apply()
     Alpha(m.LevelBackgroundCircle, slim)
     Alpha(m.HighLevelTexture, slim)
     Alpha(m.ManaBar, compact)
+    Alpha(f.spellbar, compact) -- the cast bar: not what a healer's focus frame is for
     Alpha(c.FrameTexture, compact)
     if border then border:SetShown(compact) end
     if strip then strip:SetShown(compact) end
