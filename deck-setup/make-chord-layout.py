@@ -12,8 +12,10 @@
 #
 # Usage:
 #   make-chord-layout.py IN.vdf OUT.vdf [--hold-ms 400] [--hold-ms-L4 500 ...]
-#   make-chord-layout.py --install [--hold-ms ...]     on the Deck, as deck, while Steam is NOT running:
-#                                                      rewrites the "wow forever" layout, with a backup
+#   make-chord-layout.py --install [--game NAME | --layout PATH] [--hold-ms ...]
+#       on the Deck, while Steam is NOT running (Desktop Mode, Steam exited): finds your WoW: Forever
+#       controller layout and rewrites it, keeping a backup next to it. With several candidates it
+#       lists them; pick one with --game (the layout folder's name) or --layout (the file).
 # The long-press time is in milliseconds (400 by default); shorter holds are snappier but turn more
 # quick squeezes into holds.
 import argparse, os, shutil, sys
@@ -25,8 +27,21 @@ GRIPS = [  # (name, Steam input, key while held, key after the long press)
     ("R5", "button_back_right", "F11", "F4"),
 ]
 DEFAULT_HOLD_MS = 400
-LAYOUT = ("/home/deck/.local/share/Steam/steamapps/common/Steam Controller Configs/70511644/config/"
-          "wow forever/controller_neptune.vdf")
+# Steam keeps one layout per game (or non-Steam shortcut) here: <account id>/config/<game>/controller_neptune.vdf
+CONFIGS = os.path.expanduser("~/.local/share/Steam/steamapps/common/Steam Controller Configs")
+
+
+def find_layouts(game=None):
+    """Deck layouts for games whose layout folder mentions "forever" (or is named `game`)."""
+    found = []
+    for account in sorted(os.listdir(CONFIGS)) if os.path.isdir(CONFIGS) else []:
+        base = os.path.join(CONFIGS, account, "config")
+        for folder in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+            path = os.path.join(base, folder, "controller_neptune.vdf")
+            wanted = folder.lower() == game.lower() if game else "forever" in folder.lower()
+            if wanted and os.path.isfile(path):
+                found.append(path)
+    return found
 
 
 # --- A small reader/writer for Steam's text VDF -------------------------------------------------------
@@ -186,7 +201,9 @@ def main():
     ap.add_argument("infile", nargs="?")
     ap.add_argument("outfile", nargs="?")
     ap.add_argument("--install", action="store_true",
-                    help="rewrite the 'wow forever' layout on this Deck (Steam must not be running)")
+                    help="rewrite your WoW: Forever layout on this Deck (Steam must not be running)")
+    ap.add_argument("--game", help="with --install: the layout folder's name, if more than one matches")
+    ap.add_argument("--layout", help="with --install: the controller_neptune.vdf to rewrite")
     ap.add_argument("--hold-ms", type=int, default=DEFAULT_HOLD_MS, help="long-press time for every grip")
     for name, *_ in GRIPS:
         ap.add_argument("--hold-ms-" + name, type=int, help="long-press time for " + name)
@@ -204,10 +221,23 @@ def main():
             ap.error("--install takes no file names")
         if os.system("pgrep -x steam >/dev/null") == 0:
             sys.exit("Steam is running: stop it first (it rewrites the layout when it exits)")
-        src = dst = LAYOUT
-        backup = LAYOUT + ".bak-before-chords"
+        if a.layout:
+            layouts = [a.layout] if os.path.isfile(a.layout) else []
+        else:
+            layouts = find_layouts(a.game)
+        if len(layouts) != 1:
+            if not layouts:
+                print("No WoW: Forever controller layout found under", CONFIGS)
+                print("Open the game's controller settings in Steam once (so it has a layout), or")
+                print("name it: --game \"<layout folder>\" or --layout <path to controller_neptune.vdf>")
+            else:
+                print("More than one layout matches; pick one with --layout:")
+                for path in layouts: print("  " + path)
+            sys.exit(1)
+        src = dst = layouts[0]
+        backup = dst + ".bak-before-chords"
         if not os.path.exists(backup):
-            shutil.copy2(LAYOUT, backup)
+            shutil.copy2(dst, backup)
             print("backup:", backup)
     else:
         if not (a.infile and a.outfile):

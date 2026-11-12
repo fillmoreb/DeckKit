@@ -154,6 +154,25 @@ class Tests(unittest.TestCase):
         once = mcl.apply(SAMPLE, HOLD)
         self.assertEqual(mcl.apply(once, HOLD), once)
 
+    def test_finds_forever_layouts_only(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as root:
+            def layout(account, game):
+                d = os.path.join(root, account, "config", game)
+                os.makedirs(d)
+                open(os.path.join(d, "controller_neptune.vdf"), "w").write(SAMPLE)
+            layout("111", "wow forever")
+            layout("111", "some other game")
+            layout("222", "WoW Forever (Lutris)")
+            old, mcl.CONFIGS = mcl.CONFIGS, root
+            try:
+                found = mcl.find_layouts()
+                self.assertEqual(len(found), 2)
+                self.assertTrue(all("orever" in f for f in found))
+                self.assertEqual(len(mcl.find_layouts("some other game")), 1)
+            finally:
+                mcl.CONFIGS = old
+
     def test_rejects_other_files(self):
         with self.assertRaises(ValueError):
             mcl.apply('"something"\n{\n}\n', HOLD)

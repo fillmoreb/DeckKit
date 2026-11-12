@@ -6,34 +6,44 @@ DeckKit is a suite of addons for playing **WoW: Forever** with a controller, bui
 
 ## The DeckKit menu
 
-Press the **Menu (☰) button twice quickly**, or type `/deckkit`, to open one settings window covering every module. D-pad up/down picks a setting, left/right changes it, A toggles or runs it, LB/RB switches modules, and B closes it. Button prompts use the game's own controller icons.
+Press the **Menu (☰) button twice quickly**, or type `/deckkit`, to open one settings window for everything. It's organised by topic: **Controls, Screen, Map & travel, Healing, Tools** (LB/RB). D-pad moves, A toggles or runs, B closes, and the footer always shows what each button does. Button prompts use the game's own controller icons.
+
+## Paddle chords
+
+The Deck's four back grips (L4, R4, L5, R5) become **30 slots**: each grip alone, any two, three or all four together, each **pressed** or **held**. Put anything in a slot from **Controls › Paddles**: a peek, a waypoint, your quest item, any spell or action bar button. Slots run in secure code, so **spells cast in combat**. Pictures of the grips show which slot is which.
+
+Chords need DeckKit's Steam controller layout for WoW: Forever, which makes each grip send two plain keys (one while held, one after a short hold). Setup instructions are on GitHub (link below).
 
 ## What's included
 
-**WayPad** – Waypoints without a keyboard. Dial in coordinates digit by digit with the d-pad, then follow a floating arrow to the active waypoint. Waypoints show on the world map and minimap. A list window lets you make one active, edit it or remove it. Supports TomTom-style `/way 45.2 62.8` too. If you use a TomTom-compatible waypoint addon, WayPad can hand your waypoints to it instead and act as its controller front end (one waypoint system at a time; set in the menu).
+**HealPad** – Healing with a controller. The d-pad moves a yellow cursor over your party or raid frames and makes that player your **focus**; your heal macros cast on them. HealPad makes those macros from your spellbook (heals, cures, resurrection on a dead focus, and your buffs folded into one-button sequences). **Practice party** and **practice raid** frames, laid out exactly like your real ones, let you try it solo.
 
-**MapDeck** – Hold a button to see the map full-screen, even in combat. While it's held, the right stick zooms out from the zone to the continent and back in. Shows you, your party, quest markers and WayPad waypoints.
+**QuestPad** – A big button for the quest item you need right now: the quest whose **actual area** you're standing in, or the quest your target belongs to.
 
-**ChatDeck** – Hold a button to read chat full-screen in a large font. While it's held, the right stick scrolls back through the history. New messages appear live.
+**MapDeck** – Hold its paddle slot to see the map full-screen, even in combat. The right stick zooms out to the continent. It shows you, your party or raid (in class colours), quest markers, waypoints, flight masters, the spot a guard pointed you to, your spirit healer when you're dead, and zone names on the continent.
 
-**DeckAngler** – Controller fishing. With a fishing pole equipped, **X casts Fishing** (out of combat); once the line is out, X goes back to interacting, so it clicks the bobber. Includes a per-session catch tally panel, an optional chime when a cast times out with no bite, and an optional reminder if you've had the pole out a while without casting.
+**ChatDeck** – Hold its paddle slot to read chat full-screen in a large font; the right stick scrolls back.
 
-**DisenchantDeck** – A controller list of everything in your bags you can disenchant. A disenchants the selected item, Y hides items you want to keep, and LB/RB shows the hidden ones.
+**WayPad** – Waypoints without a keyboard. Dial in coordinates with the d-pad, then follow a floating arrow. Waypoints show on the map and minimap, and a list lets you pick, edit or remove them. Supports `/way 45.2 62.8`. With a TomTom-compatible waypoint addon installed, WayPad can hand waypoints to it instead.
 
-**DeckHUD** – Interface tweaks for a handheld screen. Each is on by default and can be switched off in the menu:
-- a **square minimap** in the top-right corner, as wide as the quest tracker, without the buttons around its edge (zoom and size are in the menu instead), optionally leaving room for the Steam performance overlay's battery readout
-- a **thin chat frame** tucked into the bottom-left corner, without the Combat Log tab
-- Edit Mode layout tools (`/deckkit layout`), which back up your layout before changing it
+**DisenchantDeck** – A controller list of everything in your bags you can disenchant. It opens by itself when you pick Disenchant. A disenchants, Y hides items you want to keep.
 
-**DeckSundries** – Small extras. **Wand shoot:** with a wand equipped and a living enemy targeted, X fires your wand instead of a melee swing; anything else still interacts normally. **Friends reply:** Y on a friend in the friends list makes them your reply target, so /r (or dictating "reply ...") whispers them.
+**DeckAngler** – Controller fishing. With a pole equipped, **X casts**; once the line is out, X clicks the bobber. Includes a catch tally, a chime when a cast times out, and an optional reminder.
+
+**DeckHUD** – Interface tweaks for a handheld screen, each one switchable in the menu:
+- a **square minimap** in the top-right corner, with the zone name on top and a choice of borders
+- a **thin chat frame** tucked into the bottom-left corner
+- one-press Edit Mode layouts that back up your layout first: a suggested layout, **party frames lined up** under your frame and your target's, **raid frames** tucked into the top-left corner
+
+**DeckSundries** – Small extras. **Wand shoot:** with a wand equipped and an enemy targeted, X fires your wand. **Friends reply:** Y on a friend makes them your reply target.
 
 **MenuReload** – Adds a Reload UI button to the game menu.
 
-**DeckKit** (the core) – Shared controller input and windows for the modules above, the settings menu, and a **DeckKit section in Key Bindings**. It sets **Reload UI to F6** once, only if F6 is unbound; you can rebind or clear it.
+**DeckKit** (the core) – Shared controller input, windows and menu for all of the above, and the paddle chords. It sets **Reload UI to F6** once, only if F6 is unbound.
 
 ## Setup
 
-Install, then assign the hold-to-peek buttons (map, chat) and WayPad's buttons under **Key Bindings › DeckKit**. The Steam Deck's back grips work well for the peeks. Most modules need the DeckKit core, which is included.
+Install, then open the menu (Menu twice). Controls › Paddles shows which grip does what; your existing grip bindings become the first slots. For healing, see Healing › HealPad.
 
 ## Active development
 
@@ -49,4 +59,4 @@ MIT License. Controller input is adapted from **BagPad** (MIT, © 2026 Chris); t
 
 ---
 
-Source, issues and changelog: https://github.com/fillmoreb/DeckKit
+Source, issues, setup and changelog: https://github.com/fillmoreb/DeckKit
