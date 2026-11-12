@@ -7,6 +7,7 @@
 --
 --   /deckkit layout crossbar <height>   the gamepad action bar's bottom, in pixels from the bottom
 --   /deckkit layout party               raid-style party frames in a row under your frame and the target's
+--   /deckkit layout raid <left> <top>   the raid frames' top left corner, in pixels from the screen's
 --   /deckkit layout restore             the newest backup, back into the active layout
 --   /deckkit layout backups             list them
 --
@@ -217,6 +218,31 @@ end
 -- Forever only lets an addon reload from a key press or a typed command, never from a timer: so
 -- this runs in the press's own call (menu actions that use it are keepOpen, which runs them
 -- straight from the press).
+------------------------------------------------------------------------
+-- Raid frames in the top left corner: EDGE from the screen's left edge, and EDGE under any status
+-- bars (XP, reputation...) showing along the top of the screen when you ask.
+------------------------------------------------------------------------
+
+local RAID_EDGE = 4
+
+function Layout.RaidTopLeft()
+    local raid = Enum.EditModeUnitFrameSystemIndices and Enum.EditModeUnitFrameSystemIndices.Raid
+    if not raid then return false, "this client has no raid frames in Edit Mode" end
+    local screenTop = UIParent:GetTop()
+    local below = 0 -- how far down from the top the bars reach
+    for _, name in ipairs({ "MainStatusTrackingBarContainer", "SecondaryStatusTrackingBarContainer" }) do
+        local bar = _G[name]
+        if bar and bar:IsVisible() and bar:GetTop() and screenTop - bar:GetTop() < 2 + below then
+            below = math.max(below, screenTop - bar:GetBottom())
+        end
+    end
+    local top = math.floor(below + RAID_EDGE + 0.5)
+    local ok, err = Layout.SetAnchor(SYSTEMS.UnitFrame, raid, { point = "TOPLEFT", relativeTo = "UIParent",
+        relativePoint = "TOPLEFT", offsetX = RAID_EDGE, offsetY = -top })
+    if not ok then return false, err end
+    return true, top
+end
+
 local function ReloadSoon(what)
     ns.Print(what .. " Reloading the interface...")
     ReloadUI()
@@ -232,6 +258,13 @@ ns.AddCommand("layout", function(arg)
         local ok, info = Layout.ApplySuggested()
         if ok then ReloadSoon("Suggested layout applied (" .. info .. " frames, layout backed up).")
         else ns.Print("Not changed: " .. info .. ".") end
+    elseif cmd == "raid" then
+        local x, y = rest:match("^(%-?%d+)%s+(%-?%d+)$")
+        local raid = Enum.EditModeUnitFrameSystemIndices and Enum.EditModeUnitFrameSystemIndices.Raid
+        if not (x and raid) then return ns.Print("/deckkit layout raid <px from the left> <px from the top>") end
+        local ok, err = Layout.SetAnchor(SYSTEMS.UnitFrame, raid, { point = "TOPLEFT", relativeTo = "UIParent",
+            relativePoint = "TOPLEFT", offsetX = tonumber(x), offsetY = -tonumber(y) })
+        ns.Print(ok and ("Raid frames moved to " .. x .. ", " .. y .. " (layout backed up). /reload to see it.") or ("Not changed: " .. err .. "."))
     elseif cmd == "party" then
         local ok, info = Layout.PartyRow()
         if ok then ReloadSoon("Party frames lined up (" .. info .. " px wide each, layout backed up).")
@@ -244,12 +277,12 @@ ns.AddCommand("layout", function(arg)
         if #list == 0 then return ns.Print("No layout backups yet.") end
         for i, b in ipairs(list) do ns.Print(i .. ". " .. b.when .. "  " .. tostring(b.name)) end
     else
-        ns.Print("/deckkit layout suggested  |  party  |  crossbar <px from bottom>  |  restore  |  backups")
+        ns.Print("/deckkit layout suggested  |  party  |  raid <left> <top>  |  crossbar <px from bottom>  |  restore  |  backups")
     end
-end, "Edit Mode layout: suggested, party, crossbar <height>, restore, backups")
+end, "Edit Mode layout: suggested, party, raid <left> <top>, crossbar <height>, restore, backups")
 
 ns.AddSettings({
-    { type = "section", tab = "Healing", label = "Party frames", order = 2 },
+    { type = "section", tab = "Healing", label = "Party and raid frames", order = 2 },
     { type = "action", label = "Line up party frames", keepOpen = true,
       hint = "Raid-style party frames in a row, filling the gap between your frame and the target frame, just "
           .. "under them. Backs up your Edit Mode layout, then reloads. \"Undo the last layout change\" "
@@ -257,6 +290,13 @@ ns.AddSettings({
       run = function()
           local ok, info = Layout.PartyRow()
           if ok then ReloadSoon("Party frames lined up.") else ns.Print("Not changed: " .. info .. ".") end
+      end },
+    { type = "action", label = "Line up raid frames", keepOpen = true,
+      hint = "Raid frames in the top left corner: just off the screen's edge and just under the XP and "
+          .. "reputation bars showing now. Backs up your Edit Mode layout, then reloads.",
+      run = function()
+          local ok, info = Layout.RaidTopLeft()
+          if ok then ReloadSoon("Raid frames lined up.") else ns.Print("Not changed: " .. info .. ".") end
       end },
 })
 
