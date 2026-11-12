@@ -58,6 +58,75 @@ end
 -- The name: a player's first name in their class colour; an NPC's whole name ("Lazy Peon", not
 -- "Lazy") in the usual reaction colour (red hostile, yellow neutral, green friendly). Shrunk to fit
 -- if it's long. Re-run after every Blizzard update.
+------------------------------------------------------------------------
+-- Our own aura row, for "Name and health": the small focus frame Blizzard uses shows no buffs at
+-- all (FocusFrameMixin:SetSmallSize: maxBuffs = 0), so we draw them, and the debuffs, ourselves,
+-- under the health bar: buffs first, then debuffs with a red edge, with a cooldown sweep and a stack
+-- count. Display only, so it works in combat. Forever can hand addons secret values: anything that
+-- can't be read just isn't shown (each icon is filled in under pcall), rather than erroring.
+-- (Our own row is also where filtering out auras you don't care about would go, later.)
+------------------------------------------------------------------------
+
+local AURA_SIZE, AURA_GAP, AURA_MAX = 20, 2, 8 -- frame units (the focus frame is drawn at 0.75)
+local auraIcons = {}
+
+local function AuraIcon(i, parent)
+    local b = auraIcons[i]
+    if b then return b end
+    b = CreateFrame("Frame", nil, parent)
+    b:SetSize(AURA_SIZE, AURA_SIZE)
+    b.edge = b:CreateTexture(nil, "BACKGROUND")
+    b.edge:SetPoint("TOPLEFT", -1, 1)
+    b.edge:SetPoint("BOTTOMRIGHT", 1, -1)
+    b.icon = b:CreateTexture(nil, "ARTWORK")
+    b.icon:SetAllPoints()
+    b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    b.cd = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
+    b.cd:SetAllPoints()
+    b.cd:SetReverse(true)
+    b.cd:SetHideCountdownNumbers(true)
+    b.count = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+    b.count:SetPoint("BOTTOMRIGHT", 2, -2)
+    auraIcons[i] = b
+    return b
+end
+
+local function FillIcon(b, aura, harmful)
+    b.icon:SetTexture(aura.icon)
+    if harmful then b.edge:SetColorTexture(0.8, 0.1, 0.1, 1) else b.edge:SetColorTexture(0, 0, 0, 0.8) end
+    b.count:SetText((aura.applications or 0) > 1 and aura.applications or "")
+    if (aura.duration or 0) > 0 then
+        b.cd:SetCooldown(aura.expirationTime - aura.duration, aura.duration)
+        b.cd:Show()
+    else
+        b.cd:Hide()
+    end
+end
+
+local function Auras()
+    local f, _, m = Parts()
+    if not f then return end
+    local show = Style() == "compact" and UnitExists("focus")
+    local n = 0
+    if show then
+        for _, filter in ipairs({ "HELPFUL", "HARMFUL" }) do
+            for i = 1, 40 do
+                if n >= AURA_MAX then break end
+                local aura = C_UnitAuras.GetAuraDataByIndex("focus", i, filter)
+                if not aura then break end
+                local b = AuraIcon(n + 1, f)
+                if pcall(FillIcon, b, aura, filter == "HARMFUL") then
+                    n = n + 1
+                    b:ClearAllPoints()
+                    b:SetPoint("TOPLEFT", m.HealthBarsContainer, "BOTTOMLEFT", (n - 1) * (AURA_SIZE + AURA_GAP) + 1, -4)
+                    b:Show()
+                end
+            end
+        end
+    end
+    for i = n + 1, #auraIcons do auraIcons[i]:Hide() end
+end
+
 local defaults -- Blizzard's own name font (Apply keeps it)
 local naming = false
 local function Name()
@@ -122,6 +191,8 @@ local function Icons(compact)
         mark:SetPoint("RIGHT", strip, "LEFT", -5, -(COMPACT_HEALTH_H / 2))
     end
     if compact then AnchorAuras() end
+    local auras = f.GetAuraContainer and f:GetAuraContainer()
+    Alpha(auras, compact) -- ours replaces it
 end
 
 local pending = false -- sizes to set once combat ends
@@ -208,6 +279,7 @@ local function Apply()
     Icons(compact)
     applying = false
     Name()
+    Auras()
 end
 ns.FocusFrameApply = Apply
 
@@ -240,6 +312,7 @@ end)
 ns.On("PLAYER_FOCUS_CHANGED", function() C_Timer.After(0, Apply) end)
 ns.On("PLAYER_REGEN_ENABLED", function() if pending then pending = false; Apply() end end)
 ns.On("UNIT_NAME_UPDATE", function(unit) if unit == "focus" then Name() end end)
+ns.On("UNIT_AURA", function(unit) if unit == "focus" then Auras() end end)
 
 ns.AddSettings({
     { type = "section", tab = "Screen", label = "Unit frames", order = 4 },
