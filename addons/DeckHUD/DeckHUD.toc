@@ -9,5 +9,7 @@
 Minimap.lua
 Chat.lua
 Layout.lua
+FocusAuraSpells.lua
+FocusAuras.lua
 Focus.lua
 Suggested.lua

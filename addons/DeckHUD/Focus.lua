@@ -59,18 +59,13 @@ end
 -- "Lazy") in the usual reaction colour (red hostile, yellow neutral, green friendly). Shrunk to fit
 -- if it's long. Re-run after every Blizzard update.
 ------------------------------------------------------------------------
--- Buffs and debuffs: Blizzard's own row, never ours. Reading auras from addon code (C_UnitAuras)
--- hands back the same aura tables Blizzard's frames use, now marked as DeckHUD's; Blizzard's buff
--- frame then read them and the taint spread to the gamepad bar ("DeckHUD called
--- SetPreferredGamepadInteractTarget", after looting; found with deckctl taint, 2026-11-12). So we
--- don't read auras at all. Blizzard anchors its row to the frame's border art (TargetFrameMixin:
--- AnchorAuraContainer: TOPLEFT to the art's BOTTOMLEFT, +5, +9), which this look hides: we move that
--- invisible art under the health bar (a plain texture, so no Blizzard code runs), and Blizzard puts
--- the row there itself. Buffs only show with Edit Mode's "Use Larger Frame" (the small focus frame
--- shows debuffs only); Layout.lua's "Centre the focus frame" turns it on for this look.
+-- Buffs and debuffs. Never read auras from addon code (C_UnitAuras): that hands back the aura tables
+-- Blizzard's frames share, marked as DeckHUD's; Blizzard's buff frame then spread the taint to the
+-- gamepad bar ("DeckHUD called SetPreferredGamepadInteractTarget" after looting; found with deckctl
+-- taint, 2026-11-12). And never move Blizzard's aura row: moving it makes Blizzard lay it out inside
+-- our call, which taints its buttons the same way. In the Name and health look, FocusAuras.lua shows
+-- the game's own filtered aura container instead, and Blizzard's row is hidden by alpha.
 ------------------------------------------------------------------------
-
-local AURA_X, AURA_Y, AURA_GAP = 5, 9, 4 -- Blizzard's offsets from the art (TargetFrame.lua), our gap
 
 local defaults -- Blizzard's own name font (Apply keeps it)
 local naming = false
@@ -131,7 +126,6 @@ local function Icons(compact)
     -- lay it out right then, inside our call, and its aura buttons come out tainted: that spread to
     -- secret-value checks in BuffFrame.lua and blocked the gamepad bar's SetPreferredGamepadInteractTarget
     -- (found with deckctl taint, 2026-11-12). Our own row replaces it.
-    -- (Blizzard's aura row stays as it is: see "Buffs and debuffs" above.)
 end
 
 local pending = false -- sizes to set once combat ends
@@ -216,11 +210,12 @@ local function Apply()
         b:SetPoint("TOPLEFT", band or hb, "TOPLEFT", -2, 2)
         b:SetPoint("BOTTOMRIGHT", hb, "BOTTOMRIGHT", 2, -2)
         b:Show()
-        -- Steer Blizzard's aura row: its anchor, the (hidden) border art, goes just under the health bar.
-        local art = c.FrameTexture
-        art:ClearAllPoints()
-        art:SetPoint("BOTTOMLEFT", hb, "BOTTOMLEFT", -AURA_X, -(AURA_Y + AURA_GAP))
     end
+    -- Auras: our own row (FocusAuras.lua) in this look; Blizzard's is hidden by alpha only (never moved:
+    -- see "Buffs and debuffs" above).
+    local ours = ns.FocusAurasPlace and ns.FocusAurasPlace(compact, m.HealthBarsContainer)
+    local blizzard = f.GetAuraContainer and f:GetAuraContainer()
+    Alpha(blizzard, ours)
     Icons(compact)
     applying = false
     Name()
@@ -258,6 +253,10 @@ ns.On("UNIT_NAME_UPDATE", function(unit) if unit == "focus" then Name() end end)
 
 ns.AddSettings({
     { type = "section", tab = "Screen", label = "Unit frames", order = 4 },
+    { type = "action", label = "Focus auras", verb = "Choose",
+      hint = "With the Name and health look: which buffs show under the focus frame, your own debuffs "
+          .. "(a priest's Weakened Soul), and debuffs you can dispel.",
+      run = function() ns.OpenFocusAuras() end },
     { type = "choice", label = "Focus frame",
       values = { { "blizzard", "Blizzard's" }, { "noportrait", "No portrait" }, { "compact", "Name and health" } },
       hint = "No portrait: a thin border around the focus's name and bars. Name and health: just a big first "
