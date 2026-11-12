@@ -6,6 +6,7 @@
 -- DeckHUDDB.layoutBackups; /deckkit layout restore puts the newest one back.
 --
 --   /deckkit layout crossbar <height>   the gamepad action bar's bottom, in pixels from the bottom
+--   /deckkit layout party               raid-style party frames in a row under your frame and the target's
 --   /deckkit layout restore             the newest backup, back into the active layout
 --   /deckkit layout backups             list them
 --
@@ -144,9 +145,81 @@ function Layout.ApplySuggested()
     return true, n
 end
 
+------------------------------------------------------------------------
+-- Party frames in a row: raid-style, side by side, filling the gap between the inner edges of
+-- your frame and the target frame, just under them. Measured from where those frames are when you
+-- ask (the target frame has its place even with no target), so it follows any layout.
+------------------------------------------------------------------------
+
+local UF = Enum and Enum.EditModeUnitFrameSetting or {}
+local PARTY = Enum and Enum.EditModeUnitFrameSystemIndices and Enum.EditModeUnitFrameSystemIndices.Party
+local PARTY_SIZE = 5            -- raid-style party frames include you
+local MIN_W, MAX_W, STEP = 72, 144, 2  -- Edit Mode's frame width slider (stored as pixels above 72)
+local GAP = 4                   -- between the bottom of the two frames and the row
+local PAD_X = 2                 -- PartyFrame's left padding before the raid-style group (no border)
+local TITLE_H = 14              -- the group's title, above the first member, when it can't be measured
+
+-- A region's rectangle in UIParent's units: left, right, bottom, top.
+local function Rect(region)
+    local l, b, w, h = region:GetRect()
+    if not l then return end
+    local k = region:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    return l * k, (l + w) * k, b * k, (b + h) * k
+end
+
+-- The visible art of a unit frame (its frame has invisible padding around it), else the frame.
+local function Art(frame, container)
+    local c = frame[container]
+    return (c and c.FrameTexture) or frame
+end
+
+local function SetSetting(sys, setting, value)
+    for _, st in ipairs(sys.settings) do
+        if st.setting == setting then st.value = value; return end
+    end
+    table.insert(sys.settings, { setting = setting, value = value })
+end
+
+function Layout.PartyRow()
+    if InCombatLockdown() then return false, "not in combat" end
+    if not (PARTY and UF.FrameWidth) then return false, "this client has no party frames in Edit Mode" end
+    local _, pRight, pBottom = Rect(Art(PlayerFrame, "PlayerFrameContainer"))
+    local tLeft, _, tBottom = Rect(Art(TargetFrame, "TargetFrameContainer"))
+    if not (pRight and tLeft) then return false, "couldn't find your frame and the target frame" end
+    local span = tLeft - pRight
+    if span < PARTY_SIZE * MIN_W then
+        return false, string.format("only %d px between your frame and the target frame (%d needed)", span, PARTY_SIZE * MIN_W)
+    end
+    local width = math.min(MAX_W, math.floor(span / PARTY_SIZE / STEP) * STEP)
+    local spare = span - PARTY_SIZE * width -- split evenly on both sides
+    local titleH = (CompactPartyFrame and CompactPartyFrame.title and CompactPartyFrame.title:GetHeight()) or TITLE_H
+    local top = math.min(pBottom, tBottom) - GAP
+
+    local info, layout = Layout.Active()
+    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
+    local sys = FindSystem(layout, SYSTEMS.UnitFrame, PARTY)
+    if not sys then return false, "party frames aren't in your layout" end
+    if not Backup(layout) then return false, "couldn't back up the layout first" end
+    SetSetting(sys, UF.UseRaidStylePartyFrames, 1)
+    SetSetting(sys, UF.UseHorizontalGroups, 1)
+    SetSetting(sys, UF.FrameWidth, width - MIN_W)
+    -- The first member sits PAD_X right of PartyFrame's left edge and the title's height below its top.
+    local a = sys.anchorInfo
+    a.point, a.relativeTo, a.relativePoint = "TOPLEFT", "UIParent", "BOTTOMLEFT"
+    a.offsetX = math.floor(pRight + spare / 2 - PAD_X + 0.5)
+    a.offsetY = math.floor(top + titleH + 0.5)
+    sys.isInDefaultPosition = false
+    C_EditMode.SaveLayouts(info)
+    ns.Debug("party row", "span", span, "width", width, "x", a.offsetX, "y", a.offsetY, "title", titleH)
+    return true, width
+end
+
+-- Forever only lets an addon reload from a key press or a typed command, never from a timer: so
+-- this runs in the press's own call (menu actions that use it are keepOpen, which runs them
+-- straight from the press).
 local function ReloadSoon(what)
     ns.Print(what .. " Reloading the interface...")
-    C_Timer.After(1, function() if not pcall(ReloadUI) then ns.Print("Reload (F6 or /reload) to see it.") end end)
+    ReloadUI()
 end
 
 ns.AddCommand("layout", function(arg)
@@ -159,6 +232,10 @@ ns.AddCommand("layout", function(arg)
         local ok, info = Layout.ApplySuggested()
         if ok then ReloadSoon("Suggested layout applied (" .. info .. " frames, layout backed up).")
         else ns.Print("Not changed: " .. info .. ".") end
+    elseif cmd == "party" then
+        local ok, info = Layout.PartyRow()
+        if ok then ReloadSoon("Party frames lined up (" .. info .. " px wide each, layout backed up).")
+        else ns.Print("Not changed: " .. info .. ".") end
     elseif cmd == "restore" then
         local ok, info = Layout.Restore()
         ns.Print(ok and ("Restored the layout backup from " .. info .. ". /reload to see it.") or ("Not restored: " .. info .. "."))
@@ -167,19 +244,31 @@ ns.AddCommand("layout", function(arg)
         if #list == 0 then return ns.Print("No layout backups yet.") end
         for i, b in ipairs(list) do ns.Print(i .. ". " .. b.when .. "  " .. tostring(b.name)) end
     else
-        ns.Print("/deckkit layout suggested  |  crossbar <px from bottom>  |  restore  |  backups")
+        ns.Print("/deckkit layout suggested  |  party  |  crossbar <px from bottom>  |  restore  |  backups")
     end
-end, "Edit Mode layout: suggested, crossbar <height>, restore, backups")
+end, "Edit Mode layout: suggested, party, crossbar <height>, restore, backups")
+
+ns.AddSettings({
+    { type = "section", tab = "Healing", label = "Party frames", order = 2 },
+    { type = "action", label = "Line up party frames", keepOpen = true,
+      hint = "Raid-style party frames in a row, filling the gap between your frame and the target frame, just "
+          .. "under them. Backs up your Edit Mode layout, then reloads. \"Undo the last layout change\" "
+          .. "(Screen tab) puts it back.",
+      run = function()
+          local ok, info = Layout.PartyRow()
+          if ok then ReloadSoon("Party frames lined up.") else ns.Print("Not changed: " .. info .. ".") end
+      end },
+})
 
 -- On the Suggested settings page (Suggested.lua makes the page; these go after its rows).
 Layout.MenuItems = {
-    { type = "action", label = "Apply suggested layout",
+    { type = "action", label = "Apply suggested layout", keepOpen = true,
       hint = "XP bar along the top, crossbar near the bottom. Backs up your Edit Mode layout, then reloads.",
       run = function()
           local ok, info = Layout.ApplySuggested()
           if ok then ReloadSoon("Suggested layout applied.") else ns.Print("Not changed: " .. info .. ".") end
       end },
-    { type = "action", label = "Undo the last layout change",
+    { type = "action", label = "Undo the last layout change", keepOpen = true,
       hint = "Puts back your Edit Mode layout from before DeckKit's last change, then reloads.",
       run = function()
           local ok, info = Layout.Restore()
