@@ -12,4 +12,5 @@ Layout.lua
 FocusAuraSpells.lua
 FocusAuras.lua
 Focus.lua
+ActionBars.lua
 Suggested.lua
