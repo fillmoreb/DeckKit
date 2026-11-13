@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.1.1-beta1 - 2026-11-13
+
+### New
+- **Chat history survives reloads.** The last 200 lines of each chat tab are kept per character and
+  put back when the UI loads, under a gray "earlier chat" line; the chat peek shows them too.
+  Chat › "Keep chat across reloads" (on by default) and "Clear saved chat".
+- **Range dots that follow your focus.** On crossbar buttons holding a `[@focus]` macro, the range
+  dot checks your focus instead of your target: white in range, red out of range. With no focus,
+  the game's own dot is back.
+- **No target menu in combat.** With no trigger held, Y opens your target's menu, which takes over
+  the pad until you press B. During a fight that's now ignored; with a trigger held, Y works as
+  usual. Controls › Buttons (on by default).
+- **Hide macro names** on the crossbar and action bars, so a macro shows just its icon.
+  Screen › Action bars (off by default).
+
+### Changed
+- **A Chat tab in the menu** with the chat window look, the chat peek, chat history and dictation.
+- **Focus auras sit above the focus frame's name**, each on a dark tile, so they read against the
+  world and stay clear of the party frames.
+- **Dictation popups** use DeckKit's window look and the game's voice chat icons. A new Indicator
+  opacity slider (Chat › Dictation) sets how solid they are.
+- **The "LB" prompt under party and raid frames is hidden** (LB still works). Healing › Party, raid
+  and focus frames.
+- **Map peek:** party and raid members are round dots in their class color, like on Blizzard's
+  map, instead of light-blue squares that vanished against quest areas.
+
 ## 1.1.0 - 2026-11-13
 
 ### New
