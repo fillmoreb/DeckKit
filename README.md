@@ -61,8 +61,8 @@ Turn it on and pick its spot in **Controls › Cheat sheet**, and untick any slo
 reminding of. It can also go on a chord slot ("Cheat sheet"), or `/deckkit sheet`.
 
 If you use Decktation with push-to-talk on L4+R4, every chord containing L4+R4 starts dictation too.
-An "Exact binding only" setting that fixes this is proposed to Decktation; until it's released, avoid
-chords that include L4+R4 (or apply `patches/decktation/exact-binding.patch`).
+Decktation 0.3.24 and later fix this: turn on **Advanced settings › Sending › Exact binding only**.
+(Older versions: apply `patches/decktation/exact-binding.patch`, or avoid chords that include L4+R4.)
 
 ## Suggested WoW settings
 
@@ -91,9 +91,9 @@ the bar you're using). DeckHUD can move the crossbar for you: `/deckkit layout c
 - `decktation/status-hooks.patch` – adds a `statusHookCommand` setting to Decktation 0.3.22: a command run
   on record_start / record_stop / transcription_done / error (`DECKTATION_EVENT`). With
   `deck-setup/decktation-hook.sh` as that command, DeckKit's dictation indicator follows Decktation's real
-  state (signal keys INSERT / HOME / END / DELETE). Re-apply after a Decktation update until it's upstream.
+  state (signal keys INSERT / HOME / END / DELETE). Built into Decktation 0.3.24 and later: only needed for older versions.
 - `decktation/exact-binding.patch` – "Exact binding only" (`exactBindingMs`): push-to-talk doesn't start
-  when another button joins the binding, so bigger paddle chords stay free. Upstream as a pull request.
+  when another button joins the binding, so bigger paddle chords stay free. Built into Decktation 0.3.24 and later.
 
 ## License
 
