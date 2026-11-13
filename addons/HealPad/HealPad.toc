@@ -7,3 +7,4 @@
 
 HealPad.lua
 HealMacros.lua
+Range.lua
