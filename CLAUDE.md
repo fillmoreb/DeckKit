@@ -63,7 +63,10 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 - Never bind a pad button directly from a module. Claim it with
   `ns.Override.Set(key, id, { when = "[macro conditions]", priority = n, macro = "..." })`; the core
   picks the winner per press, in secure code. X (PAD3) today: wand shoot (20, `[harm,nodead]`), fishing
-  (10, `[nocombat,nochanneling]`).
+  (10, `[nocombat,nochanneling]`). Y (PAD4): no target menu (10, `[combat]`, an empty macro). With
+  LT/RT held, a claimed key clicks that layer's crossbar button (`CROSSBAR` in `Override.lua`).
+  To stop one of Blizzard's crossbar actions, claim its key like this rather than hooking or closing
+  what it opens: closing a menu from addon code taints the gamepad bar.
 - **The back grips are DeckKit's grip chords** (`DeckKit/Chords.lua`). Steam sends 8 plain keys
   and nothing else (`deck-setup/make-chord-layout.py` writes the layout; never hand-edit it): each
   grip's own key while held (L4 F8, R4 F9, L5 F10, R5 F11) and a second key 400 ms in, Steam's long
