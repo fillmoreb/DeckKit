@@ -75,8 +75,10 @@ end
 local function Update()
     local haveFocus = FocusUsable()
     for _, button in ipairs(buttons) do
-        local spell = haveFocus and FocusSpell(button.action)
-        local inRange = spell and C_Spell.IsSpellInRange(spell, "focus")
+        -- nil, not false, when there's nothing to check: false means "out of range" (a red dot).
+        local spell = haveFocus and FocusSpell(button.action) or nil
+        local inRange = nil
+        if spell then inRange = C_Spell.IsSpellInRange(spell, "focus") end
         if inRange ~= nil and not (issecretvalue and issecretvalue(inRange)) then
             local d = Dot(button)
             d:SetTextColor(unpack(inRange and IN_RANGE or OUT_OF_RANGE))
