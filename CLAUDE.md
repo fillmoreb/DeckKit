@@ -58,7 +58,8 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   and nothing else (`deck-setup/make-chord-layout.py` writes the layout; never hand-edit it): each
   grip's own key while held (L4 F8, R4 F9, L5 F10, R5 F11) and a second key 400 ms in, Steam's long
   press (F1 F2 F3 F4). Secure code turns those into 15 chords x press / hold = 30 slots, set in
-  Controls > Paddles. A chord's press fires on the first release (or on press if nothing bigger or
+  Controls > Paddles (`DeckKit/CheatSheet.lua` shows the picked slots on screen; it follows slot changes
+  through `ns.Chords.OnChange`). A chord's press fires on the first release (or on press if nothing bigger or
   held could follow); its hold fires when the last-pressed grip's long key arrives. Restricted code
   has no clock, so there's no double-tap. Don't bind the 8 keys from a module: offer the action with
   `ns.Chords.Offer(BINDING_NAME, { label, run = fn(down) })` (insecure, fine in combat for DeckKit's

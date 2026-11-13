@@ -99,12 +99,23 @@ end
 
 local Apply -- below
 
+-- Called after any slot changes, or chords are turned on or off (the cheat sheet follows them).
+local listeners = {}
+function Chords.OnChange(fn) listeners[#listeners + 1] = fn end
+local function Changed()
+    for _, fn in ipairs(listeners) do
+        local ok, err = pcall(fn)
+        if not ok then geterrorhandler()(err) end
+    end
+end
+
 function Chords.Set(chord, gesture, id)
     ns.db.chords = ns.db.chords or {}
     local c = ns.db.chords[chord] or {}
     c[gesture] = id
     ns.db.chords[chord] = next(c) and c or nil
     Apply()
+    Changed()
 end
 
 function Chords.Enabled() return not ns.db.chordsOff end
@@ -395,7 +406,7 @@ local rows = {
       hint = "The back grips, alone or together, pressed or held: each one a slot below. Needs DeckKit's "
           .. "Steam layout (deck-setup/make-chord-layout.py).",
       get = function() return Chords.Enabled() end,
-      set = function(on) ns.db.chordsOff = not on or nil; Apply() end },
+      set = function(on) ns.db.chordsOff = not on or nil; Apply(); Changed() end },
 }
 local GROUPS = { { 1, "Paddles: one grip" }, { 2, "Paddles: two grips" }, { 3, "Paddles: three or four grips" } }
 -- One list for every slot row, filled in at login once the modules have made their offers.

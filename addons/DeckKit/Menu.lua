@@ -56,7 +56,9 @@ local function BuildTab(tabName, sections)
     dFrom:SetPoint("BOTTOMLEFT", 14, 12)
 
     local function Details(item, label)
-        dHead:SetText(ns.Window.Glyphs(label or item.label or ""))
+        label = label or item.label
+        if type(label) == "function" then label = label() end
+        dHead:SetText(ns.Window.Glyphs(label or ""))
         dText:SetText(ns.Window.Glyphs(item.hint or DEFAULT_HINT[item.type] or ""))
         dFrom:SetText(item.from and ("From " .. item.from) or "")
     end

@@ -17,3 +17,4 @@ Menu.lua
 Sample.lua
 Chords.lua
 Paddles.lua
+CheatSheet.lua

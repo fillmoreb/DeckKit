@@ -594,12 +594,15 @@ local function Row(parent, width, label)
     f.press:Hide()
     f.label = Text(f, UI.Font.body)
     f.label:SetPoint("LEFT", 10, 0)
-    f.label:SetText(ns.Window.Glyphs(label or ""))
+    -- A label can be a function, for a row that names something that changes (re-read on refresh).
+    if type(label) == "function" then f.labelFn = label end
+    f.label:SetText(ns.Window.Glyphs(f.labelFn and f.labelFn() or label or ""))
     return f
 end
 
 local function RowEnabled(f)
     local off = IsDisabled(f)
+    if f.labelFn then f.label:SetText(ns.Window.Glyphs(f.labelFn() or "")) end
     f.label:SetFontObject(off and UI.Font.dim or UI.Font.body)
     return not off
 end

@@ -56,6 +56,10 @@ Your existing grip bindings become the first slots.
    `--hold-ms 300` makes holds quicker (default 400).
 4. Back to Game Mode, start the game, and set up slots in **Controls › Paddles**.
 
+**Cheat sheet:** a small list on screen of what your paddles do (each chord's glyph and its action).
+Turn it on and pick its spot in **Controls › Cheat sheet**, and untick any slot you don't need
+reminding of. It can also go on a chord slot ("Cheat sheet"), or `/deckkit sheet`.
+
 If you use Decktation with push-to-talk on L4+R4, every chord containing L4+R4 starts dictation too.
 An "Exact binding only" setting that fixes this is proposed to Decktation; until it's released, avoid
 chords that include L4+R4 (or apply `patches/decktation/exact-binding.patch`).
