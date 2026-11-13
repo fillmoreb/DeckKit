@@ -154,8 +154,11 @@ Releases go out through the BigWigs packager (`.github/workflows/release.yml`, `
 when Ben asks for a release; pushing a tag publishes to CurseForge.
 
 1. Add the release's section to `CHANGELOG.md` (newest first; it's uploaded as the changelog).
-2. Commit, then tag and push: `git tag 1.2.0 && git push origin 1.2.0`. A tag with "beta" in it
-   (`1.2.0-beta1`) goes up as a Beta, with "alpha" as an Alpha, anything else as a Release.
+2. Commit, then tag and push: `git tag 1.2.0-beta1 && git push origin 1.2.0-beta1`. A tag with
+   "beta" in it goes up as a Beta, with "alpha" as an Alpha, anything else as a Release. **For now
+   every release is a beta** (Ben, 2026-11-13: "We will work through betas"): tag `X.Y.Z-betaN`,
+   and only a plain `X.Y.Z` when Ben says a version is ready. Small fixes bump the patch
+   (`1.1.1-beta1`), a new feature the minor (`1.2.0-beta1`). The changelog heading matches the tag.
 3. The workflow builds the zip, uploads it to CurseForge (project 1795170, `X-Curse-Project-ID` in
    `addons/DeckKit/DeckKit.toc`, token in the `CF_API_TOKEN` secret) and makes a GitHub Release.
    CurseForge holds new files for moderation before they show.
