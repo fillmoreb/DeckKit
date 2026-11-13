@@ -17,7 +17,7 @@
 -- Claims can only be added, changed or removed out of combat (Set queues them until it ends).
 -- While one of Forever's gamepad windows has the pad, no button is taken.
 --
--- Square (PAD3) with L2 / R2 held is that crossbar layer's button. The secure button clicks the
+-- Square (PAD3) or Triangle (PAD4) with L2 / R2 held is that crossbar layer's button. The secure button clicks the
 -- game's crossbar button for that layer then, so the bars keep working.
 --
 -- Adapted from Improved Forever's Override.lua and WandShoot.lua
@@ -28,8 +28,12 @@ local Override = {}
 ns.Override = Override
 
 -- The game's crossbar button for a pad key, per layer: top (no trigger), left (L2), right (R2),
--- bottom (both). Only Square's is known so far: the first button of the right face group.
-local CROSSBAR = { PAD3 = { group = "Right", button = "ActionButton1" } }
+-- bottom (both). The right face group's buttons: Square (PAD3) is its first, Triangle (PAD4) its
+-- second.
+local CROSSBAR = {
+    PAD3 = { group = "Right", button = "ActionButton1" },
+    PAD4 = { group = "Right", button = "ActionButton2" },
+}
 local BARS = { LT = "leftBar", RT = "rightBar", LTRT = "bottomBar" }
 
 local function CrossbarClick(key, layer)
