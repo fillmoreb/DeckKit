@@ -58,17 +58,6 @@ ns.On("ADDON_LOADED", function(name)
     ns.db = DeckKitDB
 end)
 
--- Reload UI starts out on F6 (if F6 is free), once: rebinding or clearing it sticks.
--- It lets tools outside the game reload it with a key press.
-ns.On("PLAYER_LOGIN", function()
-    if ns.db.reloadKeySet then return end
-    ns.db.reloadKeySet = true
-    if not GetBindingKey("DECKKIT_RELOAD") and (GetBindingAction("F6") or "") == "" then
-        SetBinding("F6", "DECKKIT_RELOAD")
-        SaveBindings(GetCurrentBindingSet())
-    end
-end)
-
 function ns.Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(ns.TITLE .. ": " .. msg)
 end

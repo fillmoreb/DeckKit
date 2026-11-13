@@ -285,6 +285,6 @@ ns.AddSettings({
           ns.db.focusStyle = v
           ns.db.focusNoPortrait = nil
           Apply()
-          if v == "blizzard" then ns.Print("Reload (F6) to get Blizzard's focus frame back.") end
+          if v == "blizzard" then ns.Print("Reload the UI to get Blizzard's focus frame back.") end
       end },
 })
