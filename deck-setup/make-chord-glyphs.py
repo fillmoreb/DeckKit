@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates DeckKit's paddle chord glyphs: addons/DeckKit/media/chords.tga.
+"""Generates DeckKit's grip chord glyphs: addons/DeckKit/media/chords.tga.
 
 One 512 x 256 texture of 64 x 64 cells, 8 across and 4 down. Cell n (0-31, left to right, top to
 bottom): n % 16 is the set of grips held (bit 1 L4, 2 R4, 4 L5, 8 R5, the same order as Chords.lua's

@@ -5,8 +5,9 @@
 -- arrow that turns with you), your party, quests (? / ! / in progress), the tracked quest's
 -- areas, WayPad's waypoints, the game's map pin, where a guard pointed you, flight masters, dungeon
 -- entrances, your raid, zone names on a continent, your corpse and (while dead) the spirit healer.
--- While it's up the frame takes the gamepad sticks, like ChatDeck: the right stick zooms out
--- (up: zone -> continent) and back in (down). The camera stays still; auto-run keeps going.
+-- It shows the map you're standing in and leaves both sticks alone, so you keep full control of
+-- your character while it's up. (It used to take the sticks for a right-stick zoom out to the
+-- continent; moving freely mattered more, so the zoom went.)
 --
 -- /mapdeck   show / hide (for testing at a desk)
 local ADDON, ns = ...
@@ -15,14 +16,12 @@ DeckKit.NewModule(ns, ADDON, "|cff8fd16fMapDeck|r")
 
 local MARGIN, HEADER = 24, 44
 local TILE = 256
-local DEADZONE, STEP = 0.6, 0.35 -- zoom: push past 60%, at most one step per 0.35 s
 
-local frame, canvas, art, marks, blob, title, coords, hint
+local frame, canvas, art, marks, blob, title, coords
 local tiles, overlays, dots, backs = {}, {}, {}, {}
 local playerArrow
 local mapID, homeMap -- shown map; the map you're standing in
 local layerW, layerH = 1, 1
-local stickY, cooldown = 0, 0
 
 local function Readable(v)
     return v ~= nil and not (issecretvalue and issecretvalue(v))
@@ -410,7 +409,7 @@ local function DrawBlobs()
     end
 end
 
--- Zone names when zoomed out to a continent, at the middle of each zone.
+-- Zone names when the map shown is a continent, at the middle of each zone.
 local zoneLabels = {}
 local function DrawZoneNames(info)
     local n = 0
@@ -442,31 +441,6 @@ local function Render()
     DrawMarkers()
     DrawPlayer()
     DrawZoneNames(info)
-    local parent = info and info.parentMapID
-    local canOut = parent and parent ~= 0 and MapInfo(parent) and (MapInfo(parent).mapType or 0) >= 2
-    local parts = {}
-    if canOut then table.insert(parts, "Right stick up: zoom out") end
-    if mapID ~= homeMap then table.insert(parts, "down: back to your zone") end
-    hint:SetText(table.concat(parts, "   "))
-end
-
-local function ZoomOut()
-    local info = MapInfo(mapID)
-    local parent = info and info.parentMapID
-    local pinfo = parent and parent ~= 0 and MapInfo(parent)
-    if pinfo and (pinfo.mapType or 0) >= 2 then -- stop at the continent (no world/cosmic)
-        mapID = parent
-        Render()
-        PlaySound(SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 856)
-    end
-end
-
-local function ZoomIn()
-    if mapID ~= homeMap then
-        mapID = homeMap
-        Render()
-        PlaySound(SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF or 857)
-    end
 end
 
 ------------------------------------------------------------------------
@@ -514,11 +488,6 @@ local function Create()
     title:SetPoint("TOP", 0, -16)
     coords = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     coords:SetPoint("TOPRIGHT", -MARGIN, -20)
-    hint = frame:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    hint:SetPoint("TOPLEFT", MARGIN, -22)
-
-    -- Take the sticks while shown (camera stays still); the right stick zooms.
-    DeckKit.TakeSticks(frame, function(y) stickY = y end)
 
     local markerClock = 0
     frame:SetScript("OnUpdate", function(_, elapsed)
@@ -527,18 +496,6 @@ local function Create()
         if markerClock > 0.5 then -- party and waypoints move less often
             markerClock = 0
             DrawMarkers()
-        end
-        cooldown = math.max(0, cooldown - elapsed)
-        if cooldown == 0 then
-            if stickY > DEADZONE then
-                ZoomOut()
-                cooldown = STEP
-            elseif stickY < -DEADZONE then
-                ZoomIn()
-                cooldown = STEP
-            end
-        elseif math.abs(stickY) < 0.2 then
-            cooldown = 0 -- let go: the next push zooms at once
         end
     end)
     frame:SetScript("OnSizeChanged", function() if frame:IsShown() then Render() end end)
@@ -553,14 +510,12 @@ local function Show()
     local here = C_Map.GetBestMapForUnit("player")
     if not Readable(here) then return end
     homeMap, mapID = here, here
-    stickY, cooldown = 0, 0
     frame:Show()
     Render()
 end
 
 local function Hide()
     if frame then frame:Hide() end
-    stickY = 0
 end
 
 -- keystate: "down" on press, "up" on release (runOnUp). Repeats of "down" just keep it up.
@@ -569,11 +524,11 @@ local function Peek(on)
     elseif not (frame and frame:IsShown()) then Show() end
 end
 
--- The peek binding is the right paddle of DeckKit's paddle chords (hold, both held, double-tap).
+-- The old peek binding (runOnUp) still works: it goes through DeckKit's grip actions.
 function MapDeck_Peek(keystate)
-    DeckKit.Paddles.Press("right", keystate ~= "up")
+    DeckKit.Grips.Press("right", keystate ~= "up")
 end
-DeckKit.Paddles.SetPeek("right", Peek)
+DeckKit.Grips.SetPeek("right", Peek)
 
 BINDING_HEADER_MAPDECK = "MapDeck"
 BINDING_NAME_MAPDECK_PEEK = "Peek at the map (hold)"
@@ -584,7 +539,7 @@ SlashCmdList.MAPDECK = function()
     if frame and frame:IsShown() then Hide() else Show() end
 end
 
--- Built at login, out of combat, so taking the sticks is allowed even if the first peek is mid-fight.
+-- Built at login, out of combat, so it's ready even if the first peek is mid-fight.
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("PLAYER_LOGIN")
 loader:SetScript("OnEvent", function(self)
@@ -594,7 +549,7 @@ end)
 
 ns.AddSettings({
     { type = "section", tab = "Map & travel", label = "Map", order = 2 },
-    { type = "info", label = "Hold the map peek's paddle (Controls > Paddles, R4 at first) for the map; right stick up zooms out." },
+    { type = "info", label = "Hold the map peek's grip slot (Controls > Grips, R4 at first) for the map. Both sticks stay yours: you can keep running while it's up." },
 })
 
 

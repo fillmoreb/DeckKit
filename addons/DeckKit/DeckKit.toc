@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: DeckKit
-## Notes: Shared core for the DeckKit controller addons: the DeckKit menu, controller input, paddle chords. /deckkit
+## Notes: Shared core for the DeckKit controller addons: the DeckKit menu, controller input, grip chords. /deckkit
 ## Version: 1.0.0
 ## Author: Ben Fillmore
 ## SavedVariables: DeckKitDB
@@ -16,5 +16,5 @@ Settings.lua
 Menu.lua
 Sample.lua
 Chords.lua
-Paddles.lua
+Grips.lua
 CheatSheet.lua

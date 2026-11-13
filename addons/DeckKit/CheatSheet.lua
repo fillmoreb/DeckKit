@@ -1,4 +1,4 @@
--- Paddle cheat sheet: a small list on screen of what the paddle chords do, each row a chord glyph
+-- Grip cheat sheet: a small list on screen of what the grip chords do, each row a chord glyph
 -- (the Deck's back, held grips lit, a bar for a hold) and its action. Which slots it shows is picked
 -- in the menu (Controls > Cheat sheet); everything assigned shows until it's unticked, so a newly
 -- filled slot turns up by itself. It takes no input, and hides with its side (Hide left / right side).
@@ -119,7 +119,7 @@ end
 -- Things that change what it shows, or where.
 Chords.OnChange(Sheet.Refresh)
 for _, side in ipairs({ "left", "right" }) do
-    ns.Paddles.AddSideToggle(side, function(hidden)
+    ns.Grips.AddSideToggle(side, function(hidden)
         sideHidden[side] = hidden
         Sheet.Refresh()
     end)
@@ -131,11 +131,11 @@ pcall(ns.On, "QUEST_WATCH_LIST_CHANGED", function()
 end)
 
 Chords.OfferPress("DECKKIT_CHEATSHEET", Sheet.Toggle, "Cheat sheet")
-BINDING_NAME_DECKKIT_CHEATSHEET = "Show / hide the paddle cheat sheet"
+BINDING_NAME_DECKKIT_CHEATSHEET = "Show / hide the grip cheat sheet"
 ns.AddCommand("sheet", function()
     Sheet.Toggle()
     ns.Print("cheat sheet " .. (DB().on and "on" or "off"))
-end, "show or hide the paddle cheat sheet")
+end, "show or hide the grip cheat sheet")
 
 ------------------------------------------------------------------------
 -- Settings: Controls > Cheat sheet
@@ -144,7 +144,7 @@ end, "show or hide the paddle cheat sheet")
 local items = {
     { type = "section", tab = "Controls", label = "Cheat sheet", order = 3.4 },
     { type = "toggle", label = "Show cheat sheet",
-      hint = "A small list on screen of what your paddles do. Tick the slots it shows below. Also on a "
+      hint = "A small list on screen of what your grips do. Tick the slots it shows below. Also on a "
           .. "chord slot (\"Cheat sheet\") or /deckkit sheet.",
       get = function() return DB().on end,
       set = function(on) DB().on = on; Sheet.Refresh() end },

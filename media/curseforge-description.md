@@ -12,9 +12,9 @@ DeckKit isn't ready for prime time yet. It's what I play with every day on my ow
 
 Press the **Menu (☰) button twice quickly**, or type `/deckkit`, to open one settings window for everything. It's organized by topic: **Controls, Screen, Map & travel, Healing, Tools** (LB/RB). D-pad moves, A toggles or runs, B closes, and the footer always shows what each button does. Button prompts use the game's own controller icons.
 
-## Paddle chords
+## Grip chords
 
-The Deck's four back grips (L4, R4, L5, R5) become **30 slots**: each grip alone, any two, three or all four together, each **pressed** or **held**. Put anything in a slot from **Controls › Paddles**: a peek, a waypoint, your quest item, any spell or action bar button. Slots run in secure code, so **spells cast in combat**. Pictures of the grips show which slot is which.
+The Deck's four back grip buttons (L4, R4, L5, R5) become **30 slots**: each grip alone, any two, three or all four together, each **pressed** or **held**. Put anything in a slot from **Controls › Grips**: a peek, a waypoint, your quest item, any spell or action bar button. Slots run in secure code, so **spells cast in combat**. Pictures of the grips show which slot is which.
 
 Chords need DeckKit's Steam controller layout for WoW: Forever, which makes each grip send two plain keys (one while held, one after a short hold). Setup instructions are on GitHub (link below).
 
@@ -24,9 +24,9 @@ Chords need DeckKit's Steam controller layout for WoW: Forever, which makes each
 
 **QuestPad** – A big button for the quest item you need right now: the quest whose **actual area** you're standing in, or the quest your target belongs to.
 
-**MapDeck** – Hold its paddle slot to see the map full-screen, even in combat. The right stick zooms out to the continent. It shows you, your party or raid (in class colors), quest markers, waypoints, flight masters, the spot a guard pointed you to, your spirit healer when you're dead, and zone names on the continent.
+**MapDeck** – Hold its grip slot to see the map full-screen, even in combat, and keep running while you look. It shows you, your party or raid (in class colors), quest markers, waypoints, flight masters, the spot a guard pointed you to, and your spirit healer when you're dead.
 
-**ChatDeck** – Hold its paddle slot to read chat full-screen in a large font; the right stick scrolls back.
+**ChatDeck** – Hold its grip slot to read chat full-screen in a large font, and keep running while you read.
 
 **WayPad** – Waypoints without a keyboard. Dial in coordinates with the d-pad, then follow a floating arrow. Waypoints show on the map and minimap, and a list lets you pick, edit or remove them. Supports `/way 45.2 62.8`. With a TomTom-compatible waypoint addon installed, WayPad can hand waypoints to it instead.
 
@@ -43,15 +43,15 @@ Chords need DeckKit's Steam controller layout for WoW: Forever, which makes each
 
 **MenuReload** – Adds a Reload UI button to the game menu.
 
-**DeckKit** (the core) – Shared controller input, windows and menu for all of the above, and the paddle chords. It sets **Reload UI to F6** once, only if F6 is unbound.
+**DeckKit** (the core) – Shared controller input, windows and menu for all of the above, and the grip chords. It sets **Reload UI to F6** once, only if F6 is unbound.
 
 ## Voice chat with Decktation (optional)
 
-DeckKit doesn't turn speech into text itself. For voice chat, install **Decktation** (0.3.24 or later), a separate plugin for **Decky Loader**: hold a button combination, talk, and it types what you said into chat. Set its binding to **L4 + R4** and turn on its **Exact binding only** setting, so your bigger paddle chords stay free. DeckKit then shows **Listening** and **Transcribing** on screen while you dictate. Setup steps, including an optional hook that keeps the indicator exactly in step with Decktation, are on GitHub (link below).
+DeckKit doesn't turn speech into text itself. For voice chat, install **Decktation** (0.3.24 or later), a separate plugin for **Decky Loader**: hold a button combination, talk, and it types what you said into chat. Set its binding to **L4 + R4** and turn on its **Exact binding only** setting, so your bigger grip chords stay free. DeckKit then shows **Listening** and **Transcribing** on screen while you dictate. Setup steps, including an optional hook that keeps the indicator exactly in step with Decktation, are on GitHub (link below).
 
 ## Setup
 
-Install, then open the menu (Menu twice). Controls › Paddles shows which grip does what; your existing grip bindings become the first slots. For healing, see Healing › HealPad.
+Install, then open the menu (Menu twice). Controls › Grips shows which grip does what; your existing grip bindings become the first slots. For healing, see Healing › HealPad.
 
 ## Artificial Intelligence?
 

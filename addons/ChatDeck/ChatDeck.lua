@@ -1,9 +1,9 @@
 -- ChatDeck: hold a button to read chat full-screen in a big font. Not for typing.
 --
 -- The keybinding (Bindings.xml, runOnUp) shows the peek on press and hides it on release.
--- It shows the chat tab you have selected, its history plus anything new while you look.
--- While it's up the frame takes the gamepad sticks (DeckKit.TakeSticks, as ImprovedForever's
--- panel does), so the camera stays still and the right stick scrolls: up = older.
+-- It shows the chat tab you have selected: its latest lines, plus anything new while you look.
+-- It leaves both sticks alone, so you keep full control of your character while it's up. (It used
+-- to take the sticks for a right-stick scroll; moving freely mattered more, so scrolling went.)
 --
 -- /chatdeck size <12-40>   font size        /chatdeck   show / hide (for testing at a desk)
 local ADDON, ns = ...
@@ -13,13 +13,10 @@ local Print = ns.Print
 
 local DEFAULTS = { size = 22, lines = 300 }
 local MARGIN = 60
-local DEADZONE = 0.2
 
 local db
-local frame, text, hint, more
+local frame, text
 local source -- the chat frame being shown
-local stickY = 0
-local carry = 0
 
 local function SourceFrame()
     return SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME or ChatFrame1
@@ -42,11 +39,6 @@ local function Fill()
     text:ScrollToBottom()
 end
 
-local function UpdateMore()
-    local offset = text:GetScrollOffset() or 0
-    more:SetShown(offset > 0)
-end
-
 local function Create()
     frame = CreateFrame("Frame", "ChatDeckPeek", UIParent, "BackdropTemplate")
     frame:SetAllPoints(UIParent)
@@ -65,42 +57,12 @@ local function Create()
     text:SetMaxLines(db.lines)
     if text.SetIndentedWordWrap then text:SetIndentedWordWrap(true) end
 
-    hint = frame:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    hint:SetPoint("BOTTOM", 0, 18)
-    hint:SetText("Right stick: scroll")
-
-    more = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    more:SetPoint("BOTTOMRIGHT", -MARGIN, 18)
-    more:SetText("newer messages below")
-
-    -- Take the sticks while shown: the camera and character stay still, the right stick scrolls.
-    DeckKit.TakeSticks(frame, function(y) stickY = y end)
-
-    frame:SetScript("OnUpdate", function(_, elapsed)
-        local y = stickY
-        if math.abs(y) < DEADZONE then
-            carry = 0
-            return
-        end
-        -- Lines per second grows with how far the stick is pushed.
-        local speed = 3 + 40 * ((math.abs(y) - DEADZONE) / (1 - DEADZONE)) ^ 2
-        carry = carry + speed * elapsed
-        while carry >= 1 do
-            carry = carry - 1
-            if y > 0 then text:ScrollUp() else text:ScrollDown() end
-        end
-        UpdateMore()
-    end)
-
     -- New lines arrive while you look.
     for i = 1, (NUM_CHAT_WINDOWS or 10) do
         local cf = _G["ChatFrame" .. i]
         if cf and cf.AddMessage then
             hooksecurefunc(cf, "AddMessage", function(self, msg, r, g, b)
-                if frame:IsShown() and self == source then
-                    Add(msg, r, g, b)
-                    UpdateMore()
-                end
+                if frame:IsShown() and self == source then Add(msg, r, g, b) end
             end)
         end
     end
@@ -109,15 +71,12 @@ end
 local function Show()
     if not frame then Create() end
     source = SourceFrame()
-    stickY, carry = 0, 0
     Fill()
     frame:Show()
-    UpdateMore()
 end
 
 local function Hide()
     if frame then frame:Hide() end
-    stickY = 0
 end
 
 -- keystate: "down" on press, "up" on release (runOnUp). Repeats of "down" just keep it up.
@@ -126,12 +85,12 @@ local function Peek(on)
     elseif not (frame and frame:IsShown()) then Show() end
 end
 
--- The peek binding is the left paddle of DeckKit's paddle chords (hold, both held, double-tap).
+-- The old peek binding (runOnUp) still works: it goes through DeckKit's grip actions.
 -- keystate: "down" on press (repeats while held), "up" on release (runOnUp).
 function ChatDeck_Peek(keystate)
-    DeckKit.Paddles.Press("left", keystate ~= "up")
+    DeckKit.Grips.Press("left", keystate ~= "up")
 end
-DeckKit.Paddles.SetPeek("left", Peek)
+DeckKit.Grips.SetPeek("left", Peek)
 
 BINDING_HEADER_CHATDECK = "ChatDeck"
 BINDING_NAME_CHATDECK_PEEK = "Peek at chat (hold)"
@@ -147,7 +106,7 @@ SlashCmdList.CHATDECK = function(msg)
     elseif cmd == "" then
         if frame and frame:IsShown() then Hide() else Show() end
     else
-        Print("chat peek: a paddle chord slot (DeckKit menu, Controls > Paddles).  /chatdeck size <12-40>  ·  /chatdeck to show/hide")
+        Print("chat peek: a grip chord slot (DeckKit menu, Controls > Grips).  /chatdeck size <12-40>  ·  /chatdeck to show/hide")
     end
 end
 
@@ -160,7 +119,7 @@ loader:SetScript("OnEvent", function(self, event, name)
         for k, v in pairs(DEFAULTS) do if ChatDeckDB[k] == nil then ChatDeckDB[k] = v end end
         db = ChatDeckDB
     elseif event == "PLAYER_LOGIN" then
-        -- Built now, out of combat, so taking the sticks is allowed even if the first peek is mid-fight.
+        -- Built now, out of combat, so it's ready even if the first peek is mid-fight.
         if not frame then Create() end
         self:UnregisterAllEvents()
     end
@@ -175,5 +134,5 @@ ns.AddSettings({
           db.size = v
           if text then text:SetFont(STANDARD_TEXT_FONT, v, "") end
       end },
-    { type = "info", label = "Hold the chat peek's paddle (Controls > Paddles, L4 at first) to read chat; the right stick scrolls." },
+    { type = "info", label = "Hold the chat peek's grip slot (Controls > Grips, L4 at first) to read chat. Both sticks stay yours: you can keep running while it's up." },
 })

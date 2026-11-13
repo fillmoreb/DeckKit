@@ -1,4 +1,4 @@
--- Paddle actions: the peeks, the dictation indicator and hiding a side. Which grip or chord does
+-- Grip actions: the peeks, the dictation indicator and hiding a side. Which grip or chord does
 -- what is up to Chords.lua (slots); this file is what those actions do.
 --
 --   Peeks        ChatDeck's / MapDeck's peek bindings show that peek while held.
@@ -11,12 +11,12 @@
 --   Hiding a side  DECKKIT_HIDE_LEFT / _RIGHT: whatever sits along that screen edge, from any addon
 --                (see "Hiding a side" below), plus anything a module adds.
 --
--- Modules: ns.Paddles.SetPeek(side, fn(on)), ns.Paddles.AddSideToggle(side, fn(hidden)), and their
--- peek bindings call ns.Paddles.Press(side, down).
+-- Modules: ns.Grips.SetPeek(side, fn(on)), ns.Grips.AddSideToggle(side, fn(hidden)), and their
+-- peek bindings call ns.Grips.Press(side, down).
 local _, ns = ...
 
-local Paddles = {}
-ns.Paddles = Paddles
+local Grips = {}
+ns.Grips = Grips
 
 local TRANSCRIBE_TIMEOUT = 12 -- seconds "Transcribing" can show without a chat message arriving
 local DEFAULTS = { dictationIndicator = true }
@@ -30,8 +30,8 @@ end
 local peeks, toggles = {}, { left = {}, right = {} }
 local SIDE_NAME = { left = "Left side", right = "Right side" }
 
-function Paddles.SetPeek(side, fn) peeks[side] = fn end
-function Paddles.AddSideToggle(side, fn) table.insert(toggles[side], fn) end
+function Grips.SetPeek(side, fn) peeks[side] = fn end
+function Grips.AddSideToggle(side, fn) table.insert(toggles[side], fn) end
 
 local function Peek(side, on)
     if peeks[side] then peeks[side](on) end
@@ -45,7 +45,7 @@ local box, dot, label, pulse, timer, transcribing
 
 local function Box()
     if box then return box end
-    box = CreateFrame("Frame", "DeckKitPaddleIndicator", UIParent, "BackdropTemplate")
+    box = CreateFrame("Frame", "DeckKitGripIndicator", UIParent, "BackdropTemplate")
     box:SetPoint("CENTER", 0, 140)
     box:SetSize(220, 44)
     box:SetFrameStrata("HIGH")
@@ -99,10 +99,10 @@ local function HideBox()
 end
 
 ------------------------------------------------------------------------
--- Dictation, from the paddles (when Decktation's status hook isn't sending its real state)
+-- Dictation, from the grips (when Decktation's status hook isn't sending its real state)
 ------------------------------------------------------------------------
 
-local signalled = false -- Decktation has sent a real status: follow those, not the paddles
+local signalled = false -- Decktation has sent a real status: follow those, not the grips
 
 local function Dictation(down)
     if signalled or not Setting("dictationIndicator") then return end
@@ -184,7 +184,7 @@ local function SetSide(side, hidden)
     for _, fn in ipairs(toggles[side]) do fn(hidden) end
 end
 
-function Paddles.ToggleSide(side)
+function Grips.ToggleSide(side)
     ns.db.hidden = ns.db.hidden or {}
     ns.db.hidden[side] = not ns.db.hidden[side]
     SetSide(side, ns.db.hidden[side])
@@ -192,17 +192,17 @@ function Paddles.ToggleSide(side)
 end
 
 -- A peek binding went down / up.
-function Paddles.Press(side, down) Peek(side, down) end
+function Grips.Press(side, down) Peek(side, down) end
 
-function DeckKit_HideSide(side) Paddles.ToggleSide(side) end
-ns.Chords.OfferPress("DECKKIT_HIDE_LEFT", function() Paddles.ToggleSide("left") end, "Hide left side")
-ns.Chords.OfferPress("DECKKIT_HIDE_RIGHT", function() Paddles.ToggleSide("right") end, "Hide right side")
+function DeckKit_HideSide(side) Grips.ToggleSide(side) end
+ns.Chords.OfferPress("DECKKIT_HIDE_LEFT", function() Grips.ToggleSide("left") end, "Hide left side")
+ns.Chords.OfferPress("DECKKIT_HIDE_RIGHT", function() Grips.ToggleSide("right") end, "Hide right side")
 ns.Chords.OfferPress("DECKKIT_RELOAD", ReloadUI, "Reload UI")
 BINDING_NAME_DECKKIT_HIDE_LEFT = "Hide / show the left side"
 BINDING_NAME_DECKKIT_HIDE_RIGHT = "Hide / show the right side"
 
 -- Decktation's status, sent as key presses by its status hook (see the top of this file).
-function Paddles.Signal(event)
+function Grips.Signal(event)
     signalled = true
     ns.Debug("dictation", event)
     if not Setting("dictationIndicator") then return end
@@ -218,7 +218,7 @@ function Paddles.Signal(event)
         Show("Didn't catch that", 1, 0.45, 0.45, false, 2)
     end
 end
-function DeckKit_DictationSignal(event) Paddles.Signal(event) end
+function DeckKit_DictationSignal(event) Grips.Signal(event) end
 
 BINDING_NAME_DECKKIT_DICTATION_START = "Dictation signal: recording (sent by Decktation)"
 BINDING_NAME_DECKKIT_DICTATION_STOP = "Dictation signal: transcribing (sent by Decktation)"

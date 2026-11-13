@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: ChatDeck
-## Notes: Hold a button to read chat full-screen in a big font; right stick scrolls while you hold it. /chatdeck
+## Notes: Hold a button to read chat full-screen in a big font; you can keep moving while you hold it. /chatdeck
 ## Version: 1.0.0
 ## Author: Ben Fillmore
 ## SavedVariables: ChatDeckDB

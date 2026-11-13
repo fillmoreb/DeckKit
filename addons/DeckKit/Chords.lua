@@ -1,4 +1,4 @@
--- Paddle chords: the four back grips, alone or together, pressed or held, each a slot for an action.
+-- Grip chords: the four back grips, alone or together, pressed or held, each a slot for an action.
 --
 -- Steam sends plain keys only (deck-setup/make-chord-layout.py): a grip's own key while it's held,
 -- and a second key once it has been held for the long-press time (400 ms by default):
@@ -401,14 +401,14 @@ local HINT = {
 }
 
 local rows = {
-    { type = "section", tab = "Controls", label = "Paddles", order = 3 },
-    { type = "toggle", label = "Paddle chords",
+    { type = "section", tab = "Controls", label = "Grips", order = 3 },
+    { type = "toggle", label = "Grip chords",
       hint = "The back grips, alone or together, pressed or held: each one a slot below. Needs DeckKit's "
           .. "Steam layout (deck-setup/make-chord-layout.py).",
       get = function() return Chords.Enabled() end,
       set = function(on) ns.db.chordsOff = not on or nil; Apply(); Changed() end },
 }
-local GROUPS = { { 1, "Paddles: one grip" }, { 2, "Paddles: two grips" }, { 3, "Paddles: three or four grips" } }
+local GROUPS = { { 1, "Grips: one" }, { 2, "Grips: two together" }, { 3, "Grips: three or four together" } }
 -- One list for every slot row, filled in at login once the modules have made their offers.
 local choices = {}
 local function FillChoices()
@@ -437,6 +437,6 @@ end
 ns.Settings.Add("DeckKit", ns.TITLE, rows)
 
 ns.AddCommand("chords", function()
-    ns.Print(Chords.Enabled() and "paddle chords on" or "paddle chords off")
+    ns.Print(Chords.Enabled() and "grip chords on" or "grip chords off")
     for line in Summary():gmatch("[^\n]+") do ns.Print("  " .. line) end
-end, "list the paddle chord slots")
+end, "list the grip chord slots")

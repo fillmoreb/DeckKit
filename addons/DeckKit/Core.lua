@@ -6,13 +6,13 @@
 --   Override.lua  shared pad button overrides, e.g. X for wand shoot and fishing (DeckKit.Override)
 --   Settings.lua  the settings registry modules add their options to (ns.AddSettings)
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
---   Chords.lua    paddle chords: the four back grips, alone or together, pressed or held (secure slots)
---   Paddles.lua   what the paddle actions do: peeks, the dictation indicator, hiding a side
+--   Chords.lua    grip chords: the four back grips, alone or together, pressed or held (secure slots)
+--   Grips.lua     what the grip actions do: peeks, the dictation indicator, hiding a side
 --   Debug.lua     ns.Debug / ns.Logger: forward to DeckDev (the dev addon) when it's installed
 --
 -- Each feature addon lists "## Dependencies: DeckKit" and starts with
 --   DeckKit.NewModule(ns, "WayPad", "|cff4fc3f7WayPad|r")
--- which gives its namespace Print, On, Input, Window, Override, Paddles, AddCommand, AddSettings,
+-- which gives its namespace Print, On, Input, Window, Override, Grips, AddCommand, AddSettings,
 -- Debug (a line in DeckDev's log, if DeckDev is installed) and Notice (a short message mid-screen).
 local ADDON, ns = ...
 
@@ -88,7 +88,7 @@ function ns.NewModule(addonNS, name, title)
     addonNS.Input = ns.Input
     addonNS.Window = ns.Window
     addonNS.Override = ns.Override
-    addonNS.Paddles = ns.Paddles
+    addonNS.Grips = ns.Grips
     addonNS.Chords = ns.Chords
     addonNS.Debug = ns.Logger(name)
     addonNS.Notice = function(...) if ns.Notice then ns.Notice(...) end end

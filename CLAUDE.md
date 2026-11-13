@@ -39,6 +39,16 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 
 ## Rules
 
+- **Say "grip buttons" or "grips" for L4/R4/L5/R5, never "paddles"** (Valve's terms: "grip buttons", and
+  "back grips" in Steam's controller settings). Combinations are "grip chords"; the menu section is
+  Controls › Grips.
+- **Peeks never take the sticks.** Full character control while a peek (ChatDeck, MapDeck, any
+  hold-to-see view) is up matters more than features inside the peek. Ben decided this on
+  2026-11-13: ChatDeck's right-stick scrollback and MapDeck's right-stick zoom to the continent were
+  removed for it. `DeckKit.TakeSticks` takes *both* sticks (the client can't take one), so it's only
+  for windows you navigate, like the menu. Reading the right stick by polling without taking it
+  means the camera turns too: the camera speed CVars can't go below 0.1, so there's no way to hold
+  it still. Don't bring either back without asking.
 - **Never rename a SavedVariables table or a binding name.** Players' data and keybinds are stored
   under those names. This also holds while moving code into the DeckKit core.
 - Use `/deckkit` (and `/dkit`) for suite commands. `/deck` is taken by other Forever addons.
@@ -54,11 +64,11 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   `ns.Override.Set(key, id, { when = "[macro conditions]", priority = n, macro = "..." })`; the core
   picks the winner per press, in secure code. X (PAD3) today: wand shoot (20, `[harm,nodead]`), fishing
   (10, `[nocombat,nochanneling]`).
-- **The back grips are DeckKit's paddle chords** (`DeckKit/Chords.lua`). Steam sends 8 plain keys
+- **The back grips are DeckKit's grip chords** (`DeckKit/Chords.lua`). Steam sends 8 plain keys
   and nothing else (`deck-setup/make-chord-layout.py` writes the layout; never hand-edit it): each
   grip's own key while held (L4 F8, R4 F9, L5 F10, R5 F11) and a second key 400 ms in, Steam's long
   press (F1 F2 F3 F4). Secure code turns those into 15 chords x press / hold = 30 slots, set in
-  Controls > Paddles (`DeckKit/CheatSheet.lua` shows the picked slots on screen; it follows slot changes
+  Controls > Grips (`DeckKit/CheatSheet.lua` shows the picked slots on screen; it follows slot changes
   through `ns.Chords.OnChange`). A chord's press fires on the first release (or on press if nothing bigger or
   held could follow); its hold fires when the last-pressed grip's long key arrives. Restricted code
   has no clock, so there's no double-tap. Don't bind the 8 keys from a module: offer the action with
@@ -93,7 +103,7 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   choices, ranges, actions, key bindings, status and info rows. The menu is grouped by topic, not by
   addon: start each call with a `{ type = "section", tab = ..., label = ... }` row (tabs: Controls,
   Screen, Map & travel, Healing, Tools); actions a player triggers with a button are offered to
-  the paddle chord slots (`ns.Chords.Offer`, below), not given their own binding rows. Everything a player can change should be
+  the grip chord slots (`ns.Chords.Offer`, below), not given their own binding rows. Everything a player can change should be
   reachable there with the controller alone. Use `{A}`, `{MENU}`, `{LB}`, `{DPAD_LR}`... tokens for
   button icons.
 - DeckKit windows are built from `DeckKit/UI.lua` (screen with tabs and footer prompts, panels,

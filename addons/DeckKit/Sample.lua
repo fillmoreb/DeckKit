@@ -204,7 +204,7 @@ local function Build()
     local r1, r2, r3 = UI.Status(info, 360), UI.Status(info, 360), UI.Status(info, 360)
     for _, r in ipairs({ r1, r2, r3 }) do r:SetPoint("TOPLEFT", 12, iy); iy = iy - 22 end
     iy = iy - 16
-    local h3 = UI.Heading(info, "Paddle chord glyphs")
+    local h3 = UI.Heading(info, "Grip chord glyphs")
     h3:SetPoint("TOPLEFT", 12, iy)
     iy = iy - 30
     -- ns.Chords.Glyph(chord, gesture, size): inline markup for any text. Held grips lit, a bar for a hold.

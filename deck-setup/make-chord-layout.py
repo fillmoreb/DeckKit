@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Sets up the four back grips of a Steam Deck controller layout for DeckKit's paddle chords.
+# Sets up the four back grips of a Steam Deck controller layout for DeckKit's grip chords.
 #
 # Each grip sends two plain keys and nothing else: its own key while it's held (Full_Press), and a
 # second key once it has been held for the long-press time (Long_Press). DeckKit's secure code in the
@@ -197,7 +197,7 @@ def apply(text, hold_ms):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Set up the back grips for DeckKit paddle chords.")
+    ap = argparse.ArgumentParser(description="Set up the back grips for DeckKit grip chords.")
     ap.add_argument("infile", nargs="?")
     ap.add_argument("outfile", nargs="?")
     ap.add_argument("--install", action="store_true",
