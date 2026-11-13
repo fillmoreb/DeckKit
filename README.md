@@ -10,9 +10,11 @@ Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-si
 > rough edges that come with that, and please report anything broken. Notes for the assistant
 > live in [`CLAUDE.md`](CLAUDE.md), and you're welcome to use them if you work on DeckKit with AI too.
 
-> **Active development.** DeckKit grows out of actually playing on the Deck: features get added and
-> polished whenever I run into something I need, so expect regular updates. Suggestions are welcome
-> in the [issues](https://github.com/fillmoreb/DeckKit/issues).
+> **Early days.** DeckKit isn't ready for prime time yet: it grows out of actually playing on the
+> Deck, and features get added and polished whenever I run into something I need. You're welcome
+> to try it while it's in development; expect rough edges, settings that move around between
+> versions, and the occasional (inevitable) bug. Constructive feedback and suggestions are always welcome in the
+> [issues](https://github.com/fillmoreb/DeckKit/issues).
 
 ## Addons (`addons/`)
 
@@ -60,9 +62,30 @@ Your existing grip bindings become the first slots.
 Turn it on and pick its spot in **Controls › Cheat sheet**, and untick any slot you don't need
 reminding of. It can also go on a chord slot ("Cheat sheet"), or `/deckkit sheet`.
 
-If you use Decktation with push-to-talk on L4+R4, every chord containing L4+R4 starts dictation too.
-Decktation 0.3.24 and later fix this: turn on **Advanced settings › Sending › Exact binding only**.
-(Older versions: apply `patches/decktation/exact-binding.patch`, or avoid chords that include L4+R4.)
+## Voice chat with Decktation (optional)
+
+DeckKit doesn't turn speech into text itself. For that there's
+[Decktation](https://github.com/silverfoxy/decktation), a separate plugin for
+[Decky Loader](https://decky.xyz): hold a button combination, talk, and it types what you said into
+chat. DeckKit works alongside it:
+
+1. Install Decky Loader, then Decktation (see its page). Version 0.3.24 or later.
+2. In Decktation, set the binding to **L4 + R4**, and turn on **Advanced settings › Sending › Exact
+   binding only**. Without that, every bigger chord that includes L4 + R4 starts dictation too.
+3. DeckKit shows **Listening** while you talk and **Transcribing** until your message appears
+   (**Screen › Dictation indicator**). It goes by the L4 + R4 chord on its own. To make it follow
+   Decktation exactly, add DeckKit's status hook. In Desktop Mode, in Konsole:
+   ```
+   mkdir -p ~/.local/bin
+   curl -Lo ~/.local/bin/deckkit-decktation-hook https://raw.githubusercontent.com/fillmoreb/DeckKit/main/deck-setup/decktation-hook.sh
+   chmod +x ~/.local/bin/deckkit-decktation-hook
+   ```
+   Then add `"statusHookCommand": "/home/deck/.local/bin/deckkit-decktation-hook",` to Decktation's
+   settings file, `/home/deck/homebrew/settings/decktation/button_config.json` (owned by root, so
+   `sudo nano` it; `sudo` needs a password, which you set with `passwd` if you haven't). Decktation
+   picks it up on the next dictation.
+
+Older Decktation versions: `patches/` has both of these as patches (below).
 
 ## Suggested WoW settings
 
