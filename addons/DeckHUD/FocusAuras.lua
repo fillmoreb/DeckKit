@@ -18,10 +18,21 @@
 local _, ns = ...
 local UI = DeckKit.UI
 
-local ICON, GAP = 16, 2 -- screen pixels
 local MAX_PER_GROUP = 8
 
 local function DB() return ns.db end
+
+-- How the row looks (DeckHUDDB.focusAuraLook overrides these). Being tuned by eye on the Deck:
+-- DeckHUD_FocusAuraLook{ pos = "bottom", bg = 0.6, pad = 2 } changes it live; icon and gap need a
+-- reload (the icons are built once). pos: "top" (above the name) or "bottom" (under the health bar);
+-- bg: how dark the tile behind each icon is (0 = none); pad: how far that tile reaches past the icon.
+local LOOK = { pos = "top", icon = 16, gap = 2, bg = 0.75, pad = 1.5 }
+local function Look(key)
+    local l = DB().focusAuraLook
+    if l and l[key] ~= nil then return l[key] end
+    return LOOK[key]
+end
+local backs = {} -- the tiles behind the icons, for live changes
 
 -- Settings, with defaults: your own class's buffs ticked, both debuff groups on.
 local function BuffMode() return DB().focusAuraBuffs or "list" end -- "list" | "all" | "none"
@@ -60,7 +71,12 @@ local container, dispelContainer
 -- Each icon: the spell's icon, a cooldown sweep (no numbers), a stack count, and for debuffs a border
 -- in the dispel type's color (the game picks it).
 local function InitIcon(button, harmful)
-    button:SetSize(ICON, ICON)
+    button:SetSize(Look("icon"), Look("icon"))
+    local back = button:CreateTexture(nil, "BACKGROUND", nil, -8)
+    back:SetPoint("TOPLEFT", -Look("pad"), Look("pad"))
+    back:SetPoint("BOTTOMRIGHT", Look("pad"), -Look("pad"))
+    back:SetColorTexture(0, 0, 0, Look("bg"))
+    backs[#backs + 1] = back
     button:SetHideTooltipInCombat(true)
     local cd = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
     cd:SetAllPoints()
@@ -95,7 +111,7 @@ local function GroupOptions(harmful, candidateFilters)
         sortMethod = AuraContainerSortMethod.ExpirationOnly,
         sortDirection = AuraContainerSortDirection.Normal,
         maxFrameCount = MAX_PER_GROUP,
-        layout = { elementSpacing = GAP, groupSpacing = GAP * 3 },
+        layout = { elementSpacing = Look("gap"), groupSpacing = Look("gap") * 3 },
     }
 end
 
@@ -137,25 +153,49 @@ local function Configure()
     dispelContainer:SetAuraGroupEnabled("dispel", ShowDispel())
 end
 
--- Shown with the compact focus frame, under its health bar, as wide as it.
-function ns.FocusAurasPlace(compact, healthBar)
+-- Shown with the compact focus frame, as wide as it: above it (top: the frame's border, else the
+-- health bar) or under the health bar.
+function ns.FocusAurasPlace(compact, healthBar, top)
     if not compact then
         if container then container:Hide(); dispelContainer:Hide() end
         return false
     end
     local c = Build()
     if not c then return false end
-    -- Buffs and your debuffs under the health bar; dispellable debuffs off its right end, where they
-    -- catch the eye.
+    -- Buffs and your debuffs above the frame (or under the health bar); dispellable debuffs off the
+    -- health bar's right end, where they catch the eye.
+    local icon, gap, pad = Look("icon"), Look("gap"), Look("pad")
     local k = healthBar:GetEffectiveScale() / UIParent:GetEffectiveScale()
     c:ClearAllPoints()
-    c:SetPoint("TOPLEFT", healthBar, "BOTTOMLEFT", 0, -4)
-    c:SetFlowLayoutMaximumLineSize(math.max(ICON * 4, (healthBar:GetWidth() or 0) * k))
+    if Look("pos") == "top" then
+        c:SetFlowLayoutAnchorPoint("BOTTOMLEFT")
+        c:SetFlowLayoutGrowthDirection(1, 1)
+        c:SetPoint("BOTTOMLEFT", top or healthBar, "TOPLEFT", pad, pad + 3)
+    else
+        c:SetFlowLayoutAnchorPoint("TOPLEFT")
+        c:SetFlowLayoutGrowthDirection(1, -1)
+        c:SetPoint("TOPLEFT", healthBar, "BOTTOMLEFT", pad, -pad - 4)
+    end
+    c:SetFlowLayoutMaximumLineSize(math.max(icon * 4, (healthBar:GetWidth() or 0) * k))
     dispelContainer:ClearAllPoints()
-    dispelContainer:SetPoint("LEFT", healthBar, "RIGHT", 6, 0)
-    dispelContainer:SetFlowLayoutMaximumLineSize(ICON * 4 + GAP * 3)
+    dispelContainer:SetPoint("LEFT", healthBar, "RIGHT", 6 + pad, 0)
+    dispelContainer:SetFlowLayoutMaximumLineSize(icon * 4 + gap * 3)
     for _, x in ipairs({ c, dispelContainer }) do x:Show(); x:UpdateAllAuras() end
     return true
+end
+
+-- Live tuning (see LOOK above): merges the values into the saved look and redraws.
+function DeckHUD_FocusAuraLook(t)
+    DB().focusAuraLook = DB().focusAuraLook or {}
+    for key, v in pairs(t or {}) do DB().focusAuraLook[key] = v end
+    for _, back in ipairs(backs) do
+        back:SetColorTexture(0, 0, 0, Look("bg"))
+        back:ClearAllPoints()
+        back:SetPoint("TOPLEFT", -Look("pad"), Look("pad"))
+        back:SetPoint("BOTTOMRIGHT", Look("pad"), -Look("pad"))
+    end
+    if ns.FocusFrameApply then ns.FocusFrameApply() end
+    return DB().focusAuraLook
 end
 
 ns.On("PLAYER_FOCUS_CHANGED", function()

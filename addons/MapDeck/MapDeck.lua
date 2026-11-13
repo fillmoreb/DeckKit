@@ -194,14 +194,15 @@ end
 
 -- Small markers in map space (scaled back so they stay a fixed size on screen).
 -- back: an atlas drawn behind, a bit larger (the in-progress quest circle). Its texture is hidden otherwise.
-local function Dot(i, x, y, size, r, g, b, a, atlas, back)
+-- tint: color the atlas with r, g, b (and the back, if any, black: a dark ring that stands out anywhere).
+local function Dot(i, x, y, size, r, g, b, a, atlas, back, tint)
     local t = Pool(dots, i, "OVERLAY", 1, marks)
     local s = size / art:GetScale()
     t:SetSize(s, s)
     t:SetPoint("CENTER", art, "TOPLEFT", x * layerW, -y * layerH)
     if atlas and t.SetAtlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
         t:SetAtlas(atlas)
-        t:SetVertexColor(1, 1, 1, a or 1)
+        if tint then t:SetVertexColor(r, g, b, a or 1) else t:SetVertexColor(1, 1, 1, a or 1) end
     else
         t:SetTexture("Interface\\Buttons\\WHITE8X8")
         t:SetTexCoord(0, 1, 0, 1) -- pooled: undo an earlier atlas's crop
@@ -209,9 +210,12 @@ local function Dot(i, x, y, size, r, g, b, a, atlas, back)
     end
     if back then
         local bt = Pool(backs, i, "OVERLAY", 0, marks)
-        bt:SetSize(s * 1.45, s * 1.45)
+        -- A tinted dot's back is an outline: Blizzard's map has ~1 px of black around its group dots.
+        local bs = tint and (s + 2 / art:GetScale()) or s * 1.45
+        bt:SetSize(bs, bs)
         bt:SetPoint("CENTER", t, "CENTER")
         bt:SetAtlas(back)
+        if tint then bt:SetVertexColor(0, 0, 0, 1) else bt:SetVertexColor(1, 1, 1, 1) end
     elseif backs[i] then
         backs[i]:Hide()
     end
@@ -343,7 +347,8 @@ local function DrawMarkers()
             end
         end
     end
-    -- Your group: the whole raid, or your party
+    -- Your group: the whole raid, or your party. As on Blizzard's map: a round dot in each one's class
+    -- color with a thin black outline (a plain blue square vanished against the blue quest areas).
     local raid = IsInRaid and IsInRaid()
     for i = 1, raid and 40 or 4 do
         local unit = (raid and "raid" or "party") .. i
@@ -352,8 +357,10 @@ local function DrawMarkers()
             if x then
                 n = n + 1
                 local _, class = UnitClass(unit)
-                local c = raid and class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-                if c then Dot(n, x, y, 10, c.r, c.g, c.b, 1) else Dot(n, x, y, 12, 0.35, 0.65, 1, 1) end
+                local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+                local r, g, b = 0.35, 0.65, 1
+                if c then r, g, b = c.r, c.g, c.b end
+                Dot(n, x, y, raid and 12 or 14, r, g, b, 1, "WhiteCircle-RaidBlips", "WhiteCircle-RaidBlips", true)
             end
         end
     end

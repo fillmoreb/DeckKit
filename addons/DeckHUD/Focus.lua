@@ -220,7 +220,7 @@ local function Apply()
     end
     -- Auras: our own row (FocusAuras.lua) in this look; Blizzard's is hidden by alpha only (never moved:
     -- see "Buffs and debuffs" above).
-    local ours = ns.FocusAurasPlace and ns.FocusAurasPlace(compact, m.HealthBarsContainer)
+    local ours = ns.FocusAurasPlace and ns.FocusAurasPlace(compact, m.HealthBarsContainer, compact and border)
     local blizzard = f.GetAuraContainer and f:GetAuraContainer()
     Alpha(blizzard, ours)
     Icons(compact)

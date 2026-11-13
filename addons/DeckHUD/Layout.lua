@@ -320,8 +320,37 @@ ns.AddCommand("layout", function(arg)
     end
 end, "Edit Mode layout: suggested, party, focus, raid <left> <top>, crossbar <height>, restore, backups")
 
+------------------------------------------------------------------------
+-- The LB prompt on party and raid frames
+--
+-- With Gamepad UI on, Forever puts an "LB" button prompt under the raid-style party (and raid)
+-- frames: an unnamed child holding a promptContainerFrame. It's only a reminder (LB still jumps to
+-- the frames), so it's made transparent. Alpha only, polled, no hooks: hooking or hiding Blizzard's
+-- frames taints them (see Chat.lua's legend, done the same way).
+------------------------------------------------------------------------
+
+local GROUP_FRAMES = { "CompactPartyFrame", "CompactRaidFrameContainer" }
+local function NoGroupPrompt()
+    local alpha = ns.db.groupPromptShown and 1 or 0
+    for _, name in ipairs(GROUP_FRAMES) do
+        local holder = _G[name]
+        if holder and holder.GetChildren then
+            for _, child in ipairs({ holder:GetChildren() }) do
+                if not child:IsForbidden() and child.promptContainerFrame and child:GetAlpha() ~= alpha then
+                    child:SetAlpha(alpha)
+                end
+            end
+        end
+    end
+end
+ns.On("PLAYER_LOGIN", function() C_Timer.NewTicker(0.25, NoGroupPrompt) end)
+
 ns.AddSettings({
     { type = "section", tab = "Healing", label = "Party, raid and focus frames", order = 2 },
+    { type = "toggle", label = "Hide the LB prompt under party frames",
+      hint = "Forever's \"LB\" reminder under party and raid frames. LB still jumps to them.",
+      get = function() return not ns.db.groupPromptShown end,
+      set = function(on) ns.db.groupPromptShown = not on or nil; NoGroupPrompt() end },
     { type = "action", label = "Line up party frames", keepOpen = true,
       hint = "Raid-style party frames in a row, filling the gap between your frame and the target frame, just "
           .. "under them. Backs up your Edit Mode layout, then reloads. \"Undo the last layout change\" "
