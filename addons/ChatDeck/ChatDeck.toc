@@ -4,6 +4,8 @@
 ## Version: @project-version@
 ## Author: Ben Fillmore
 ## SavedVariables: ChatDeckDB
+## SavedVariablesPerCharacter: ChatDeckHistory
 ## Dependencies: DeckKit
 
 ChatDeck.lua
+History.lua
