@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: WayPad
 ## Notes: Controller-first waypoints: dial in coordinates with the d-pad, follow a floating arrow, see them on the map and minimap. /waypad, /way
-## Version: 1.0.0
+## Version: @project-version@
 ## Author: Ben Fillmore
 ## SavedVariablesPerCharacter: WayPadDB
 ## Dependencies: DeckKit

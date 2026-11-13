@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: MapDeck
 ## Notes: Hold a button to see the map full-screen. Works in combat, and you can keep moving while you hold it. /mapdeck
-## Version: 1.0.0
+## Version: @project-version@
 ## Author: Ben Fillmore
 ## Dependencies: DeckKit
 ## OptionalDeps: WayPad

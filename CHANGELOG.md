@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.1.0 - 2026-11-13
+
+### New
+- **DeckHUD: a focus frame for healers.** Screen › Unit frames › Focus frame offers Blizzard's,
+  **No portrait**, or **Name and health**: a big first name (class color; for NPCs, their full name
+  in reaction color) over a tall health bar. Under the bar, an aura row: the buffs you pick (your
+  class's by default), your Weakened Soul, and debuffs you can dispel. **Center the focus frame**
+  places it between your frame and your target's. Works in combat.
+- **DeckKit: grip cheat sheet.** A small on-screen list of what your grip chords do. Turn it on in
+  Controls › Cheat sheet, pick one of four spots, and tick the slots to show. Also on a grip chord
+  slot, or `/deckkit sheet`.
+
+### Changed
+- **Keep moving while you peek.** The chat and map peeks no longer take the sticks, so you can keep
+  running while one is open. In exchange, chat's right-stick scrolling and the map's zoom out to the
+  continent are gone.
+- **"Paddles" are now grips**, Valve's name for L4, R4, L5 and R5: the menu section is
+  Controls › Grips. Your slots carry over.
+- **Reload UI is no longer put on F6 for you.** Bind it under Key Bindings › DeckKit, put it on a
+  grip chord, or use MenuReload's button in the game menu. If F6 already reloads for you, it still
+  does.
+- American spellings in menus and messages ("Center", "color").
+
+### Voice chat
+- Works with Decktation 0.3.24's built-in status hook and **Exact binding only**. No more patching
+  Decktation. Setup steps are on GitHub.
+
 ## 1.0.0 - 2026-11-11
 
 First release. Controller-first addons for WoW: Forever on the Steam Deck, all set up from one menu

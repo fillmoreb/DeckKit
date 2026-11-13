@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: HealPad
 ## Notes: Move a cursor around the raid frames with the d-pad; the selected member becomes your focus, for [@focus] heal macros. 5 to 40 players. /deckkit healpad
-## Version: 1.0.0
+## Version: @project-version@
 ## Author: Ben Fillmore
 ## Dependencies: DeckKit
 

@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: DeckAngler
 ## Notes: Controller fishing. With a pole equipped, X casts; tallies what you catch per session, chimes on a missed catch, reminds you when idle. /deckkit fish
-## Version: 1.0.0
+## Version: @project-version@
 ## Author: Ben Fillmore
 ## Dependencies: DeckKit
 ## SavedVariablesPerCharacter: DeckAnglerDB

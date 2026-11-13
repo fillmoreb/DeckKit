@@ -3,3 +3,5 @@
 deploy.local
 dist/
 __pycache__/
+luac.out
+.release/

@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: DisenchantDeck
 ## Notes: Controller list of everything in your bags you can disenchant. A disenchants, Y hides, RB shows the hidden ones. /dd
-## Version: 1.0.0
+## Version: @project-version@
 ## Author: Ben Fillmore
 ## SavedVariablesPerCharacter: DisenchantDeckDB
 ## Dependencies: DeckKit

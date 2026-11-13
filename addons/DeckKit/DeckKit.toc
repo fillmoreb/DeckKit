@@ -1,7 +1,8 @@
 ## Interface: 16001
 ## Title: DeckKit
 ## Notes: Shared core for the DeckKit controller addons: the DeckKit menu, controller input, grip chords. /deckkit
-## Version: 1.0.0
+## Version: @project-version@
+## X-Curse-Project-ID: 1795170
 ## Author: Ben Fillmore
 ## SavedVariables: DeckKitDB
 ## OptionalDeps: DeckDev

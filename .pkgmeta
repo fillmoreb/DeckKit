@@ -1,0 +1,33 @@
+# BigWigs packager (https://github.com/BigWigsMods/packager): how a tag becomes the release zip.
+# Every addon lives under addons/; each is moved to the top of the zip, so it unzips straight into
+# Interface/AddOns. Everything else in the repo (setup scripts, patches, art) stays out.
+package-as: DeckKit
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+move-folders:
+  DeckKit/addons/DeckKit: DeckKit
+  DeckKit/addons/ChatDeck: ChatDeck
+  DeckKit/addons/DeckAngler: DeckAngler
+  DeckKit/addons/DeckHUD: DeckHUD
+  DeckKit/addons/DeckSundries: DeckSundries
+  DeckKit/addons/DisenchantDeck: DisenchantDeck
+  DeckKit/addons/HealPad: HealPad
+  DeckKit/addons/MapDeck: MapDeck
+  DeckKit/addons/MenuReload: MenuReload
+  DeckKit/addons/QuestPad: QuestPad
+  DeckKit/addons/WayPad: WayPad
+
+ignore:
+  - deck-setup
+  - patches
+  - media
+  - scripts
+  - dist
+  - CLAUDE.md
+  - deploy.sh
+  - deploy.local.example
+  - "**/apicheck.globals"
+  - "**/luac.out"

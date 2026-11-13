@@ -1,41 +1,44 @@
-# Builds the DeckKit zip (scripts/package.sh).
-# - Push a tag like v1.2.0: a GitHub Release with the zip attached.
-# - Run it by hand (Actions > Release > Run workflow): just the zip, as a build artifact, no release.
+# Releases DeckKit with the BigWigs packager (.pkgmeta says what goes in the zip; CHANGELOG.md is the
+# changelog; the tag becomes every .toc's version).
+# - Push a tag: 1.2.0 goes up as a Release, 1.2.0-beta1 as a Beta, 1.2.0-alpha1 as an Alpha, to
+#   CurseForge (project id in addons/DeckKit/DeckKit.toc) and to a GitHub Release.
+# - Run it by hand (Actions > Release > Run workflow): builds the zip only, nothing is uploaded; the
+#   zip is kept as a build artifact to look at.
+# Needs the CF_API_TOKEN secret (a CurseForge API token, from authors.curseforge.com).
 name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["[0-9]*"]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  package:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the packager reads the tags
 
-      - name: Build the zip
-        id: build
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          [ "$GITHUB_REF_TYPE" = "tag" ] || VERSION=""
-          ZIP=$(scripts/package.sh $VERSION | head -1)
-          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+      - name: Package and upload
+        if: github.ref_type == 'tag'
+        uses: BigWigsMods/packager@v2
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload as a build artifact
+      - name: Package only (no upload)
+        if: github.ref_type != 'tag'
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -d
+
+      - name: Keep the zip
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: DeckKit-test-build
-          path: ${{ steps.build.outputs.zip }}
-
-      - name: Create the GitHub Release
-        if: github.ref_type == 'tag'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" "${{ steps.build.outputs.zip }}" \
-            --title "DeckKit $GITHUB_REF_NAME" --generate-notes
+          path: .release/*.zip

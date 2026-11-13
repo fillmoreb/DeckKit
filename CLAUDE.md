@@ -80,7 +80,7 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   on a key skips keys where `DeckKit.Chords.Owns(key)`. Glyphs: `ns.Chords.Glyph(chord, gesture)`,
   from `media/chords.tga` (`deck-setup/make-chord-glyphs.py`). Decktation (push-to-talk on
   L4+R4) needs "Exact binding only" (`exactBindingMs`, 150) so bigger chords containing L4+R4 don't
-  start dictation: `patches/decktation/exact-binding.patch` until it's released upstream.
+  start dictation: built into Decktation 0.3.24+ (`patches/decktation/` only for older versions).
 - Module bindings go in the DeckKit section of Key Bindings: `category="BINDING_HEADER_DECKKIT"` in
   `Bindings.xml`, with the module's own `header`.
 - Gamepad input: secure actions (casting, using items) need SecureActionButtons and override
@@ -148,7 +148,24 @@ The dev tooling lives in **~/Projects/AddonTools** (read its README): the **Deck
 - There is no automated test harness for DeckKit itself yet. Behavior has to be verified in the
   game; say plainly when a change hasn't been tested in-game yet.
 
-## Layout
+## Releasing
+
+Releases go out through the BigWigs packager (`.github/workflows/release.yml`, `.pkgmeta`). Only
+when Ben asks for a release; pushing a tag publishes to CurseForge.
+
+1. Add the release's section to `CHANGELOG.md` (newest first; it's uploaded as the changelog).
+2. Commit, then tag and push: `git tag 1.2.0 && git push origin 1.2.0`. A tag with "beta" in it
+   (`1.2.0-beta1`) goes up as a Beta, with "alpha" as an Alpha, anything else as a Release.
+3. The workflow builds the zip, uploads it to CurseForge (project 1795170, `X-Curse-Project-ID` in
+   `addons/DeckKit/DeckKit.toc`, token in the `CF_API_TOKEN` secret) and makes a GitHub Release.
+   CurseForge holds new files for moderation before they show.
+
+- `.toc` versions are `@project-version@`: the packager writes the tag in. Don't hard-code versions.
+- A new addon folder needs a `move-folders` line in `.pkgmeta`, or it's left out of the zip.
+- The CurseForge description isn't uploaded: `media/curseforge-description.md` is pasted by hand.
+- To check the zip without releasing: Actions > Release > Run workflow builds it with no upload and
+  keeps it as a build artifact.
+
 
 - `addons/<Name>/`: one folder per addon (`.toc`, Lua, optional `Bindings.xml`).
 - `deck-setup/`: Battle.net launcher script and Steam shortcut tooling for the Deck.
