@@ -19,7 +19,7 @@ local Grips = {}
 ns.Grips = Grips
 
 local TRANSCRIBE_TIMEOUT = 12 -- seconds "Transcribing" can show without a chat message arriving
-local DEFAULTS = { dictationIndicator = true }
+local DEFAULTS = { dictationIndicator = true, indicatorAlpha = 1 }
 
 local function Setting(key)
     local v = ns.db[key]
@@ -45,17 +45,20 @@ local box, dot, label, pulse, timer, transcribing
 
 local function Box()
     if box then return box end
-    box = CreateFrame("Frame", "DeckKitGripIndicator", UIParent, "BackdropTemplate")
+    box = CreateFrame("Frame", "DeckKitGripIndicator", UIParent)
     box:SetPoint("CENTER", 0, 140)
-    box:SetSize(220, 44)
+    box:SetSize(220, 64) -- the metal edge's corners are 64 tall: any shorter and they poke out
     box:SetFrameStrata("HIGH")
-    box:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-    box:SetBackdropColor(0, 0, 0, 0.6)
-    box:SetBackdropBorderColor(0, 0, 0, 0.9)
+    -- DeckKit's window look: Forever's thin metal edge on the windows' dark fill.
+    local fill = box:CreateTexture(nil, "BACKGROUND", nil, -8)
+    fill:SetPoint("TOPLEFT", 3, -3)
+    fill:SetPoint("BOTTOMRIGHT", -3, 3)
+    fill:SetColorTexture(0.035, 0.035, 0.045, 0.9)
+    ns.UI.Border(box, "SimplePanelTemplate")
     box:Hide()
     dot = box:CreateTexture(nil, "OVERLAY")
-    dot:SetSize(14, 14)
-    dot:SetPoint("LEFT", 16, 0)
+    dot:SetSize(24, 24)
+    dot:SetPoint("LEFT", 14, 0)
     label = box:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     label:SetPoint("LEFT", dot, "RIGHT", 10, 0)
     pulse = dot:CreateAnimationGroup()
@@ -67,24 +70,33 @@ local function Box()
     return box
 end
 
--- dot: nil, or a color for a pulsing light ("Red", "Yellow": the game's Indicator-<color>).
-local DOT_FALLBACK = { Red = { 0.9, 0.15, 0.15 }, Yellow = { 1, 0.82, 0 } }
+-- dot: nil, or which pulsing icon: "Red" (listening: the voice chat mic), "Yellow" (transcribing:
+-- voice chat's speech-to-text bubble) or "Error" (failed: the same bubble, red). Without
+-- those atlases, the game's Indicator-<color> light (a plain color for Error).
+local DOT_ICON = { Red = "voicechat-icon-mic", Yellow = "voicechat-icon-stt-on", Error = "voicechat-icon-stt-silenced" }
+local DOT_FALLBACK = { Red = { 0.9, 0.15, 0.15 }, Yellow = { 1, 0.82, 0 }, Error = { 0.9, 0.15, 0.15 } }
 
 local function Show(text, r, g, b, dot_, seconds)
     Box()
     local withDot = type(dot_) == "string"
     if withDot then
-        dot:SetTexture("Interface\\COMMON\\Indicator-" .. dot_)
-        if not dot:GetTexture() then local c = DOT_FALLBACK[dot_]; dot:SetColorTexture(c[1], c[2], c[3]) end
+        local atlas = DOT_ICON[dot_]
+        if atlas and C_Texture.GetAtlasInfo(atlas) then
+            dot:SetAtlas(atlas)
+        else
+            dot:SetTexture("Interface\\COMMON\\Indicator-" .. dot_)
+            if not dot:GetTexture() then local c = DOT_FALLBACK[dot_]; dot:SetColorTexture(c[1], c[2], c[3]) end
+        end
     end
     if timer then timer:Cancel(); timer = nil end
     label:SetText(text)
     label:SetTextColor(r, g, b)
     dot:SetShown(withDot)
     if withDot then pulse:Play() else pulse:Stop() end
-    box:SetWidth(label:GetStringWidth() + (withDot and 62 or 32))
+    box:SetWidth(label:GetStringWidth() + (withDot and 70 or 32))
     label:ClearAllPoints()
     if withDot then label:SetPoint("LEFT", dot, "RIGHT", 10, 0) else label:SetPoint("CENTER") end
+    box:SetAlpha(Setting("indicatorAlpha"))
     box:Show()
     if seconds then timer = C_Timer.NewTimer(seconds, function() timer = nil; box:Hide(); transcribing = false end) end
 end
@@ -108,10 +120,10 @@ local function Dictation(down)
     if signalled or not Setting("dictationIndicator") then return end
     if down then
         transcribing = false
-        Show("Listening", 1, 0.3, 0.3, "Red")
+        Show("Listening", 1, 0.82, 0.2, "Red")
     elseif not transcribing then
         transcribing = true
-        Show("Transcribing", 1, 0.82, 0, "Yellow", TRANSCRIBE_TIMEOUT)
+        Show("Transcribing", 0.4, 0.9, 0.35, "Yellow", TRANSCRIBE_TIMEOUT)
     end
 end
 ns.Chords.Offer("DECKKIT_DICTATION", { label = "Dictation", run = Dictation })
@@ -208,14 +220,14 @@ function Grips.Signal(event)
     if not Setting("dictationIndicator") then return end
     if event == "record_start" then
         transcribing = false
-        Show("Listening", 1, 0.3, 0.3, "Red")
+        Show("Listening", 1, 0.82, 0.2, "Red")
     elseif event == "record_stop" then
         transcribing = true
-        Show("Transcribing", 1, 0.82, 0, "Yellow", TRANSCRIBE_TIMEOUT)
+        Show("Transcribing", 0.4, 0.9, 0.35, "Yellow", TRANSCRIBE_TIMEOUT)
     elseif event == "transcription_done" then
         HideBox()
     elseif event == "error" then
-        Show("Didn't catch that", 1, 0.45, 0.45, false, 2)
+        Show("Failed", 1, 0.3, 0.3, "Error", 2)
     end
 end
 function DeckKit_DictationSignal(event) Grips.Signal(event) end
@@ -275,8 +287,17 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ns.Settings.Add("DeckKit", ns.TITLE, {
-    { type = "toggle", label = "Dictation indicator", tab = "Screen", section = "Dictation", sectionOrder = 4,
+    { type = "toggle", label = "Dictation indicator", tab = "Chat", section = "Dictation", sectionOrder = 4,
       hint = "\"Listening\" while the dictation chord is held, then \"Transcribing\".",
       get = function() return Setting("dictationIndicator") end,
       set = function(on) ns.db.dictationIndicator = on end },
+    { type = "range", label = "Indicator opacity", tab = "Chat", section = "Dictation", sectionOrder = 4,
+      min = 0.2, max = 1, step = 0.1, format = function(v) return math.floor(v * 100 + 0.5) .. "%" end,
+      hint = "How solid the Listening / Transcribing box is (and DeckKit's other short notices, which "
+          .. "show in the same spot). It shows for a moment as you change it.",
+      get = function() return Setting("indicatorAlpha") end,
+      set = function(v)
+          ns.db.indicatorAlpha = v
+          Show("Indicator opacity " .. math.floor(v * 100 + 0.5) .. "%", 1, 1, 1, false, 1.5)
+      end },
 })

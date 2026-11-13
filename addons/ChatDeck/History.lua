@@ -8,7 +8,7 @@
 -- that made them), and the combat log. Adding lines to a chat frame is ordinary addon work; the chat
 -- *edit box* is never touched (that's what taints chat; see DeckHUD/Chat.lua).
 --
--- Menu: Screen > Chat > "Keep chat across reloads" (on by default) and "Clear saved chat".
+-- Menu: Chat > Chat history > "Keep chat across reloads" (on by default) and "Clear saved chat".
 local ADDON, ns = ...
 
 local KEEP = 200 -- lines per chat tab
@@ -84,7 +84,7 @@ loader:SetScript("OnEvent", function(_, event, name)
 end)
 
 ns.AddSettings({
-    { type = "section", tab = "Screen", label = "Chat", order = 2 },
+    { type = "section", tab = "Chat", label = "Chat history", order = 3 },
     { type = "toggle", label = "Keep chat across reloads",
       hint = "The last " .. KEEP .. " lines of each chat tab come back after a reload or login (and in the "
           .. "chat peek), under a gray line with the time they were saved. Kept per character, in your "

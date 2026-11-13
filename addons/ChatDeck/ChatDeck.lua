@@ -126,7 +126,7 @@ loader:SetScript("OnEvent", function(self, event, name)
 end)
 
 ns.AddSettings({
-    { type = "section", tab = "Screen", label = "Chat", order = 2 },
+    { type = "section", tab = "Chat", label = "Chat peek", order = 2 },
     { type = "range", label = "Font size", min = 12, max = 40, step = 2,
       hint = "Text size in the chat peek.",
       get = function() return db and db.size or DEFAULTS.size end,

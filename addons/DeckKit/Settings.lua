@@ -2,7 +2,7 @@
 -- and section, so related settings from different addons sit together.
 --
 --   ns.AddSettings({
---       { type = "section", tab = "Screen", label = "Chat", order = 2 },  -- where the rows below go
+--       { type = "section", tab = "Chat", label = "Chat peek", order = 2 },  -- where the rows below go
 --       { type = "toggle", label = "Wand shoot", hint = "...", get = function() ... end, set = function(on) ... end },
 --       { type = "choice", label = "Idle reminder", values = { { false, "Off" }, { 60, "1 min" } }, get, set },
 --       { type = "range",  label = "Font size", min = 12, max = 40, step = 2, format = fn(v) -> text, get, set },
@@ -14,7 +14,7 @@
 --       { type = "info",   label = "Plain text that explains something." },
 --   })
 --
--- Tabs: Controls, Screen, Map & travel, Healing, Tools. A section row sets the tab/section for the
+-- Tabs: Controls, Screen, Chat, Map & travel, Healing, Tools. A section row sets the tab/section for the
 -- rows after it (in that call); any row can also carry its own tab/section. Without one, rows go to
 -- Tools under the addon's name. order sorts sections within a tab (default 5).
 -- get/set read and write the module's own saved settings; the menu only calls them while it's open
@@ -25,7 +25,7 @@ local _, ns = ...
 local Settings = { rows = {}, sections = {} }
 ns.Settings = Settings
 
-Settings.TABS = { "Controls", "Screen", "Map & travel", "Healing", "Tools" }
+Settings.TABS = { "Controls", "Screen", "Chat", "Map & travel", "Healing", "Tools" }
 
 local function Section(tab, label, order, title)
     for _, s in ipairs(Settings.sections) do

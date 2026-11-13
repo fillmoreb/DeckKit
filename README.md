@@ -73,7 +73,7 @@ chat. DeckKit works alongside it:
 2. In Decktation, set the binding to **L4 + R4**, and turn on **Advanced settings › Sending › Exact
    binding only**. Without that, every bigger chord that includes L4 + R4 starts dictation too.
 3. DeckKit shows **Listening** while you talk and **Transcribing** until your message appears
-   (**Screen › Dictation indicator**). It goes by the L4 + R4 chord on its own. To make it follow
+   (**Chat › Dictation**, where its opacity is set too). It goes by the L4 + R4 chord on its own. To make it follow
    Decktation exactly, add DeckKit's status hook. In Desktop Mode, in Konsole:
    ```
    mkdir -p ~/.local/bin

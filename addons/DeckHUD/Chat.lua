@@ -148,7 +148,7 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ns.AddSettings({
-    { type = "section", tab = "Screen", label = "Chat", order = 2 },
+    { type = "section", tab = "Chat", label = "Chat window", order = 1 },
     { type = "toggle", label = "Chat: thin frame",
       hint = "A thin dark edge instead of Blizzard's chat art. Turning it off needs a /reload.",
       get = function() return DB().chatThin ~= false end,
