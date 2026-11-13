@@ -384,7 +384,7 @@ end
 
 ---------------------------------------------------------------------------
 -- Missed-catch chime: the fishing channel ran its full length, so the bobber
--- timed out without a catch. Reeling in (clicking the bobber) or cancelling
+-- timed out without a catch. Reeling in (clicking the bobber) or canceling
 -- (moving, jumping) ends the channel early and stays silent.
 
 local CHIME = (SOUNDKIT and SOUNDKIT.ALARM_CLOCK_WARNING_3) or 12889

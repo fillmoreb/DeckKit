@@ -27,7 +27,7 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 - Forever's own UI source (FrameXML) is mirrored at github.com/Ketho/wow-ui-source-forever
   (`gh api repos/Ketho/wow-ui-source-forever/contents/<path> -H "Accept: application/vnd.github.raw"`,
   `gh search code ... --repo Ketho/wow-ui-source-forever`). Read it before guessing at Blizzard
-  behaviour.
+  behavior.
 - Don't hook or hide the chat edit box or anything in its path (HookScript on `ChatFrame1EditBox`,
   hooked Show/Hide on its gamepad legend): it taints the box, Enter stops running slash commands, and
   the game blames a random addon ("DeckHUD has been blocked..."). To hide something there, set its
@@ -48,7 +48,7 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   `DeckKit.Override`, which shares pad buttons between modules. A module lists
   `## Dependencies: DeckKit` and starts its first file with
   `DeckKit.NewModule(ns, ADDON, "<colored title>")`, which sets `ns.Print`, `ns.On`, `ns.Input`,
-  `ns.Window`, `ns.Override`, `ns.AddCommand` and `ns.TITLE`. Shared behaviour gets fixed once, in the core. Never copy core code into
+  `ns.Window`, `ns.Override`, `ns.AddCommand` and `ns.TITLE`. Shared behavior gets fixed once, in the core. Never copy core code into
   a module.
 - Never bind a pad button directly from a module. Claim it with
   `ns.Override.Set(key, id, { when = "[macro conditions]", priority = n, macro = "..." })`; the core
@@ -135,7 +135,7 @@ The dev tooling lives in **~/Projects/AddonTools** (read its README): the **Deck
   in ~/Projects/AddonTools with tests, not here. The one exception is the real key press for secure
   code above.
 - DeckKit must work without DeckDev: it's an optional dependency (`## OptionalDeps: DeckDev`).
-- There is no automated test harness for DeckKit itself yet. Behaviour has to be verified in the
+- There is no automated test harness for DeckKit itself yet. Behavior has to be verified in the
   game; say plainly when a change hasn't been tested in-game yet.
 
 ## Layout

@@ -2,7 +2,7 @@
 --
 -- Tabs (LB/RB) group settings by what they're about, not by addon: Controls, Screen, Map & travel,
 -- Healing, Tools. Each tab is a scrolling list of sections on the left (each addon's rows under a
--- gold heading) and, on the right, what the focused setting does. Look and behaviour come from
+-- gold heading) and, on the right, what the focused setting does. Look and behavior come from
 -- UI.lua (the game's pointer, 45 degree d-pad moves, A / B / footer prompts).
 --
 -- Opens when the controller's Menu button (three lines, PADFORWARD) is pressed twice quickly, or

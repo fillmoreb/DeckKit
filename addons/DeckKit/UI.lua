@@ -1,4 +1,4 @@
--- DeckKit UI: the shared look and controller behaviour for DeckKit windows.
+-- DeckKit UI: the shared look and controller behavior for DeckKit windows.
 --
 -- Built to behave like Forever's own gamepad windows:
 --   * The cursor is the game's own pointer (SmartNavigationPointerTemplate: the white chevron with
@@ -15,7 +15,7 @@
 --   normal    plain
 --   focused   chevron + the control's highlight held on (focus is never shown any other way)
 --   pressed   a short pushed flash on A
---   disabled  grey; still focusable, the footer says why instead of offering A
+--   disabled  gray; still focusable, the footer says why instead of offering A
 --   selected  gold: a ticked box, a lit switch side, a check in a list, the gold action-button
 --             glow on an icon. Never the chevron, so focus and selection can't be confused.
 local _, ns = ...
@@ -43,7 +43,7 @@ UI.Font = {
     title = MakeFont("DeckKitFontTitle", GameFontNormalLarge, 18),     -- gold
     heading = MakeFont("DeckKitFontHeading", GameFontNormal, 15),      -- gold
     body = MakeFont("DeckKitFontBody", GameFontHighlight, 14),         -- white
-    dim = MakeFont("DeckKitFontDim", GameFontDisable, 14),             -- grey
+    dim = MakeFont("DeckKitFontDim", GameFontDisable, 14),             -- gray
     small = MakeFont("DeckKitFontSmall", GameFontHighlightSmall, 12),  -- white, small
     smallDim = MakeFont("DeckKitFontSmallDim", GameFontDisableSmall, 12),
 }
@@ -371,7 +371,7 @@ function Screen:SetFocus(f, intro)
     self:UpdatePrompts()
 end
 
--- The game's rule: nearest control whose centre is inside a 45 degree cone that way.
+-- The game's rule: nearest control whose center is inside a 45 degree cone that way.
 function Screen:Move(dir)
     local cur = self:Focused()
     local list = (self.popup and self.popup:IsShown()) and self.popup.items or self:Focusables()
@@ -559,7 +559,7 @@ function UI.Description(parent, text, width)
     return fs
 end
 
--- "Label ........ value", value coloured by state (good / bad / gold / nil = white).
+-- "Label ........ value", value colored by state (good / bad / gold / nil = white).
 function UI.Status(parent, width)
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(width, 22)

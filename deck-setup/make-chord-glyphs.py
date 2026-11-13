@@ -38,7 +38,7 @@ def rounded(px, py, x0, y0, x1, y1, r):
 
 
 def cell_pixel(mask, hold, px, py):
-    """Colour and coverage (0..1) of one sample point in a cell."""
+    """Color and coverage (0..1) of one sample point in a cell."""
     for bit, (gx, gy) in enumerate(GRIPS):
         d = rounded(px, py, gx, gy, gx + GW, gy + GH, RADIUS)
         if mask & (1 << bit):

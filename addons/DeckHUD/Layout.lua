@@ -244,12 +244,12 @@ function Layout.RaidTopLeft()
 end
 
 ------------------------------------------------------------------------
--- The focus frame centred in the gap between your frame and the target frame, at their height.
+-- The focus frame centered in the gap between your frame and the target frame, at their height.
 -- Measured from what's visible: the focus frame's border (Focus.lua's portrait-less one, or
 -- Blizzard's), and the two frames' art, wherever they are when you ask.
 ------------------------------------------------------------------------
 
-function Layout.FocusCentre()
+function Layout.FocusCenter()
     local focus = Enum.EditModeUnitFrameSystemIndices and Enum.EditModeUnitFrameSystemIndices.Focus
     if not focus then return false, "this client has no focus frame in Edit Mode" end
     local _, pRight, pBottom, pTop = Rect(Art(PlayerFrame, "PlayerFrameContainer"))
@@ -257,7 +257,7 @@ function Layout.FocusCentre()
     local aLeft, aRight, aBottom, aTop = Rect(ns.FocusVisual and ns.FocusVisual() or Art(FocusFrame, "TargetFrameContainer"))
     local fLeft, fRight, fBottom, fTop = Rect(FocusFrame)
     if not (pRight and tLeft and aLeft and fLeft) then return false, "couldn't find the unit frames" end
-    -- Where the focus frame's centre goes so that its border's centre lands mid-gap, level with
+    -- Where the focus frame's center goes so that its border's center lands mid-gap, level with
     -- the middle of your frame's art.
     local cx = (pRight + tLeft) / 2 - ((aLeft + aRight) / 2 - (fLeft + fRight) / 2)
     local cy = (pBottom + pTop) / 2 - ((aBottom + aTop) / 2 - (fBottom + fTop) / 2)
@@ -302,8 +302,8 @@ ns.AddCommand("layout", function(arg)
             relativePoint = "TOPLEFT", offsetX = tonumber(x), offsetY = -tonumber(y) })
         ns.Print(ok and ("Raid frames moved to " .. x .. ", " .. y .. " (layout backed up). /reload to see it.") or ("Not changed: " .. err .. "."))
     elseif cmd == "focus" then
-        local ok, info = Layout.FocusCentre()
-        if ok then ReloadSoon("Focus frame centred (layout backed up).") else ns.Print("Not changed: " .. info .. ".") end
+        local ok, info = Layout.FocusCenter()
+        if ok then ReloadSoon("Focus frame centered (layout backed up).") else ns.Print("Not changed: " .. info .. ".") end
     elseif cmd == "party" then
         local ok, info = Layout.PartyRow()
         if ok then ReloadSoon("Party frames lined up (" .. info .. " px wide each, layout backed up).")
@@ -330,13 +330,13 @@ ns.AddSettings({
           local ok, info = Layout.PartyRow()
           if ok then ReloadSoon("Party frames lined up.") else ns.Print("Not changed: " .. info .. ".") end
       end },
-    { type = "action", label = "Centre the focus frame", keepOpen = true,
+    { type = "action", label = "Center the focus frame", keepOpen = true,
       hint = "The focus frame in the middle of the gap between your frame and the target frame, at their "
           .. "height (with the Name and health look, it also turns on Use Larger Frame, which the focus's "
           .. "buffs need). Backs up your Edit Mode layout, then reloads.",
       run = function()
-          local ok, info = Layout.FocusCentre()
-          if ok then ReloadSoon("Focus frame centred.") else ns.Print("Not changed: " .. info .. ".") end
+          local ok, info = Layout.FocusCenter()
+          if ok then ReloadSoon("Focus frame centered.") else ns.Print("Not changed: " .. info .. ".") end
       end },
     { type = "action", label = "Line up raid frames", keepOpen = true,
       hint = "Raid frames in the top left corner: just off the screen's edge and just under the XP and "

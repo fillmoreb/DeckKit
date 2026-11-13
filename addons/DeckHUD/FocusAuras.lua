@@ -58,7 +58,7 @@ end
 local container, dispelContainer
 
 -- Each icon: the spell's icon, a cooldown sweep (no numbers), a stack count, and for debuffs a border
--- in the dispel type's colour (the game picks it).
+-- in the dispel type's color (the game picks it).
 local function InitIcon(button, harmful)
     button:SetSize(ICON, ICON)
     button:SetHideTooltipInCombat(true)

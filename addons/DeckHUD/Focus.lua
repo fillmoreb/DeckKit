@@ -1,15 +1,15 @@
 -- The focus frame, slimmed down for healing. Three looks (Screen > Unit frames > Focus frame):
 --   Blizzard's     as the game draws it
 --   No portrait    a thin border around the name and bars: no portrait, no level badge
---   Name and health  just a big first name in the player's class colour over a tall health bar,
+--   Name and health  just a big first name in the player's class color over a tall health bar,
 --                  a little wider than Blizzard's, in a thin border of our own; no cast bar
 -- Forever's Edit Mode has no "hide portrait" for the focus frame and no portrait-less target art,
 -- so "No portrait" uses the player frame's portrait-less art ("UI-HUD-UnitFrame-Player-PortraitOff"),
--- mirrored and centred on the bars. Blizzard redraws the frame's art when the focus changes
+-- mirrored and centered on the bars. Blizzard redraws the frame's art when the focus changes
 -- (CheckClassification) and its name on every update (UnitFrame_Update), so both are hooked and
 -- the look reapplied. Only regions and unprotected child frames change, so it works in combat.
 --
--- Where the frame sits is Edit Mode's business: Layout.lua's "Centre the focus frame".
+-- Where the frame sits is Edit Mode's business: Layout.lua's "Center the focus frame".
 local _, ns = ...
 
 local ART = "UI-HUD-UnitFrame-Player-PortraitOff"
@@ -55,8 +55,8 @@ local function Border(f, m)
     return border
 end
 
--- The name: a player's first name in their class colour; an NPC's whole name ("Lazy Peon", not
--- "Lazy") in the usual reaction colour (red hostile, yellow neutral, green friendly). Shrunk to fit
+-- The name: a player's first name in their class color; an NPC's whole name ("Lazy Peon", not
+-- "Lazy") in the usual reaction color (red hostile, yellow neutral, green friendly). Shrunk to fit
 -- if it's long. Re-run after every Blizzard update.
 ------------------------------------------------------------------------
 -- Buffs and debuffs. Never read auras from addon code (C_UnitAuras): that hands back the aura tables
@@ -155,7 +155,7 @@ local function Apply()
         local t = c.FrameTexture
         if t:SetAtlas(ART, true) then
             t:SetTexCoord(1, 0, 0, 1) -- mirrored: the target-style frame faces the other way
-            -- Centred on the content: across the bars, and from the name down to the mana bar.
+            -- Centered on the content: across the bars, and from the name down to the mana bar.
             local hx = m.HealthBarsContainer:GetCenter()
             local mx, my = m.ManaBar:GetCenter()
             local _, ny = m.Name:GetCenter()
@@ -194,7 +194,7 @@ local function Apply()
             hb.HealthBarMask:SetTexture("Interface\\Buttons\\WHITE8X8", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
         end
         -- Under the name: our own strip, the minimap title's black (Minimap.lua), in place of Blizzard's
-        -- band, which it recolours by reputation on every update.
+        -- band, which it recolors by reputation on every update.
         if band then band:SetAlpha(0) end
         if not strip then
             strip = m:CreateTexture(nil, "BACKGROUND")
@@ -278,7 +278,7 @@ ns.AddSettings({
     { type = "choice", label = "Focus frame",
       values = { { "blizzard", "Blizzard's" }, { "noportrait", "No portrait" }, { "compact", "Name and health" } },
       hint = "No portrait: a thin border around the focus's name and bars. Name and health: just a big first "
-          .. "name in their class colour over a tall health bar. Handy when the focus is who your heals go to. "
+          .. "name in their class color over a tall health bar. Handy when the focus is who your heals go to. "
           .. "Going back to Blizzard's look takes a reload.",
       get = Style,
       set = function(v)

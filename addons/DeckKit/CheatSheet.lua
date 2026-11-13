@@ -19,7 +19,7 @@ local SPOTS = {
         if ChatFrame1 then f:SetPoint("BOTTOMLEFT", ChatFrame1, "TOPLEFT", 0, 36)
         else f:SetPoint("LEFT", UIParent, "LEFT", MARGIN, 0) end
     end },
-    { "topcenter", "Top centre", nil, function(f) f:SetPoint("TOP", UIParent, "TOP", 0, -150) end },
+    { "topcenter", "Top center", nil, function(f) f:SetPoint("TOP", UIParent, "TOP", 0, -150) end },
     { "righttracker", "Right, under the quest tracker", "right", function(f)
         local t = ObjectiveTrackerFrame
         if t and t:IsShown() and t:GetBottom() then

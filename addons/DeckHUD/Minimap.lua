@@ -88,7 +88,7 @@ local function Tracker()
     if t and t:IsShown() and t:GetLeft() and t:GetTop() then return t end
 end
 
--- The map sits centred in a holder the size of the part you see. The minimap itself stays
+-- The map sits centered in a holder the size of the part you see. The minimap itself stays
 -- square (it can't stretch, and it ignores frame clipping), so a shorter map is a square one with
 -- a mask cutting the same amount off its top and bottom: masks/crop_NN.tga, NN% of the height
 -- (deck-setup/make-minimap-masks.py makes them).
@@ -209,7 +209,7 @@ local function Place(force)
     Minimap:SetZoom(z)
 end
 
--- The zone's name across the top of the map (Blizzard's sits in the hidden cluster), coloured
+-- The zone's name across the top of the map (Blizzard's sits in the hidden cluster), colored
 -- like Blizzard's: green friendly, red hostile, gold contested, blue sanctuary.
 local zoneBar
 local ZONE_COLORS = { friendly = { 0.1, 1, 0.1 }, hostile = { 1, 0.1, 0.1 }, contested = { 1, 0.7, 0 },
@@ -317,7 +317,7 @@ ns.AddSettings({
       get = function() return db.square ~= false end,
       set = function(on) db.square = on; Shape(); Place(true) end },
     { type = "toggle", label = "Zone name on the map",
-      hint = "The zone or area you're in, across the top of the minimap, coloured friendly / hostile / contested.",
+      hint = "The zone or area you're in, across the top of the minimap, colored friendly / hostile / contested.",
       get = function() return db.zoneTitle ~= false end,
       set = function(on) db.zoneTitle = on; ZoneTitle() end },
     { type = "choice", label = "Border", values = { { "dialog", "Dialog" }, { "metal", "Thin metal" }, { "line", "Thin line" }, { false, "None" } },

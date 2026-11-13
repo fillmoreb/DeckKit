@@ -39,7 +39,7 @@ local function Section(tab, label, order, title)
     return s
 end
 
--- name: the addon; title: its coloured title (shown beside the list as "From ...").
+-- name: the addon; title: its colored title (shown beside the list as "From ...").
 function Settings.Add(name, title, items)
     local tab, label, order = "Tools", (title or name), nil
     for _, item in ipairs(items) do

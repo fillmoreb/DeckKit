@@ -2,7 +2,7 @@
 -- right now. Which quest:
 --   1. the quest your target belongs to (from the target's tooltip quest lines), else
 --   2. the quest whose area you're standing in: the real shape the map draws for it, not a
---      distance from its centre. An invisible quest-area frame (QuestPOIFrame) draws the areas of
+--      distance from its center. An invisible quest-area frame (QuestPOIFrame) draws the areas of
 --      every quest that has an item, then answers "which area is this point in?" for your position.
 -- A paddle chord slot (Controls > Paddles, R5 at first) or any key bound to QUESTPAD_USE uses it. Items need a secure click,
 -- so the item, the button and its key only change out of combat; in combat it keeps what it had.
@@ -190,7 +190,7 @@ local function Create()
 
     button.icon = button:CreateTexture(nil, "ARTWORK")
     button.icon:SetAllPoints()
-    -- The Extra Action Button's frame art: 256 x 128, centred on the 52 px button.
+    -- The Extra Action Button's frame art: 256 x 128, centered on the 52 px button.
     button.art = button:CreateTexture(nil, "OVERLAY")
     button.art:SetSize(256, 128)
     button.art:SetPoint("CENTER", -2, 0)

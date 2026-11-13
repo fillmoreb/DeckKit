@@ -51,7 +51,7 @@ local function Chevron(side)
     else
         tex:SetColorTexture(1, 0.9, 0, 1) -- no atlas: a plain marker, still visible
     end
-    -- Starts BOB further out than INSET and travels 2 * BOB in and back, so it's centred on INSET.
+    -- Starts BOB further out than INSET and travels 2 * BOB in and back, so it's centered on INSET.
     if side == "left" then
         holder:SetPoint("RIGHT", look, "LEFT", INSET - BOB, 0)
     else
@@ -226,7 +226,7 @@ end
 -- Practice frames: Blizzard hides its raid-style frames when you're alone, so these stand in for
 -- them, laid out exactly as your Edit Mode party or raid frames would be. Every frame is you, so
 -- the cursor works on them as on the real ones and focus lands on you. They look like Blizzard's:
--- class-coloured health, name, dark background. Made and moved out of combat only; off after a
+-- class-colored health, name, dark background. Made and moved out of combat only; off after a
 -- /reload.
 ------------------------------------------------------------------------
 
