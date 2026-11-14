@@ -13,7 +13,7 @@ ns.ARRIVE_YARDS = 10
 ns.ARRIVED_SHOWN = 2.5
 
 local db
-ns.points = {} -- { mapID, x, y, label } with x, y in 0..1
+ns.points = {} -- { id, mapID, x, y, label } with x, y in 0..1; id stays put while the list shifts
 
 ------------------------------------------------------------------------
 -- Helpers
@@ -141,10 +141,30 @@ ns.player = player
 -- The store
 ------------------------------------------------------------------------
 
+-- Ids: 1-65535, never reused while the waypoint they named is still in the list. Other addons (and
+-- DeckAgent) refer to waypoints by id (WayPad_Get, WayPad_Remove), since list positions shift.
+local function InUse(id)
+    for _, p in ipairs(ns.points) do if p.id == id then return true end end
+end
+
+local function NewId()
+    local id = db and db.nextId or 1
+    for _ = 1, 65535 do
+        if not InUse(id) then break end
+        id = id % 65535 + 1
+    end
+    if db then db.nextId = id % 65535 + 1 end
+    return id
+end
+
+function ns.Find(id)
+    for i, p in ipairs(ns.points) do if p.id == id then return i, p end end
+end
+
 local function Save()
     local out = {}
     for i, p in ipairs(ns.points) do
-        out[i] = { mapID = p.mapID, x = p.x, y = p.y, label = p.label }
+        out[i] = { id = p.id, mapID = p.mapID, x = p.x, y = p.y, label = p.label }
     end
     db.points = out
     db.active = ns.active
@@ -162,7 +182,7 @@ function ns.Changed()
 end
 
 function ns.Add(mapID, x, y, label)
-    table.insert(ns.points, { mapID = mapID, x = x, y = y, label = label })
+    table.insert(ns.points, { id = NewId(), mapID = mapID, x = x, y = y, label = label })
     ns.active = #ns.points
     ns.arrival = nil
     if ns.HandOff then ns.HandOff.Added(ns.points[ns.active]) end
@@ -282,10 +302,13 @@ ns.On("ADDON_LOADED", function(name)
     ns.db = db
     for _, p in ipairs(db.points or {}) do
         if type(p.mapID) == "number" and type(p.x) == "number" and type(p.y) == "number" then
-            table.insert(ns.points, { mapID = p.mapID, x = p.x, y = p.y, label = p.label })
+            -- Waypoints saved before ids existed (or a clash) get a fresh one.
+            local id = type(p.id) == "number" and not InUse(p.id) and p.id or nil
+            table.insert(ns.points, { id = id or NewId(), mapID = p.mapID, x = p.x, y = p.y, label = p.label })
         end
     end
     ns.active = ns.points[db.active or 0] and db.active or (#ns.points > 0 and #ns.points or nil)
+    Save() -- so ids given just now are kept, not given again at the next load
 end)
 
 ns.On("PLAYER_ENTERING_WORLD", function()
