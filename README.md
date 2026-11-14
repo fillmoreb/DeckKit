@@ -49,20 +49,11 @@ Grip chords need your WoW: Forever controller layout to make each back grip send
 (which grip or chord does what) is set in the game, in the DeckKit menu under **Controls › Grips**.
 Your existing grip bindings become the first slots.
 
-1. In Game Mode, open WoW: Forever's controller settings once, so Steam has a layout for it.
-2. Switch to **Desktop Mode** and quit Steam (Steam menu › Exit): Steam rewrites layouts when it exits.
-3. In Konsole:
-   ```
-   curl -LO https://raw.githubusercontent.com/fillmoreb/DeckKit/main/deck-setup/make-chord-layout.py
-   python3 make-chord-layout.py --install
-   ```
-   It finds your Forever layout, keeps a backup next to it (`.bak-before-chords`) and changes only the
-   four back grips. With more than one match it lists them; pick one with `--layout <path>`.
-   `--hold-ms 300` makes holds quicker (default 400).
-4. Back to Game Mode, start the game, and set up slots in **Controls › Grips**.
+A script on the Deck sets that up (`deck-setup/make-chord-layout.py --install --stop-steam`): the steps
+are in [INSTALL.md, step 4](INSTALL.md#4-grip-chords-the-steam-controller-layout).
 
 **Upgrading from DeckKit 1.1 or earlier:** the grips moved from F8-F11 / F1-F4 to F1-F4 / F5-F8. Run
-step 3 again (it rewrites the four grips in place), or the grips won't work.
+the script again (it rewrites the four grips in place), or the grips won't work.
 
 **Cheat sheet:** a small list on screen of what your grips do (each chord's glyph and its action).
 Turn it on and pick its spot in **Controls › Cheat sheet**, and untick any slot you don't need

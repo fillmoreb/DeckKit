@@ -19,7 +19,7 @@
 #       lists them; pick one with --game (the layout folder's name) or --layout (the file).
 # The long-press time is in milliseconds (400 by default); shorter holds are snappier but turn more
 # quick squeezes into holds.
-import argparse, os, shutil, sys
+import argparse, os, shutil, subprocess, sys, time
 
 GRIPS = [  # (name, Steam input, key while held, key after the long press)
     ("L4", "button_back_left_upper", "F1", "F5"),
@@ -30,6 +30,36 @@ GRIPS = [  # (name, Steam input, key while held, key after the long press)
 DEFAULT_HOLD_MS = 400
 # Steam keeps one layout per game (or non-Steam shortcut) here: <account id>/config/<game>/controller_neptune.vdf
 CONFIGS = os.path.expanduser("~/.local/share/Steam/steamapps/common/Steam Controller Configs")
+
+
+def layout_folders():
+    """Every game layout folder there is (its name is the game's or shortcut's), for when none matched."""
+    names = set()
+    for account in sorted(os.listdir(CONFIGS)) if os.path.isdir(CONFIGS) else []:
+        base = os.path.join(CONFIGS, account, "config")
+        for folder in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+            if os.path.isfile(os.path.join(base, folder, "controller_neptune.vdf")):
+                names.add(folder)
+    return sorted(names)
+
+
+def steam_running():
+    return subprocess.call(["pgrep", "-x", "steam"], stdout=subprocess.DEVNULL) == 0
+
+
+def stop_steam(timeout=60):
+    """Asks Steam to exit (it writes its layouts as it does) and waits for it. False if it's still up."""
+    if not steam_running():
+        return True
+    print("stopping Steam...")
+    subprocess.call(["steam", "-shutdown"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    end = time.time() + timeout
+    while time.time() < end:
+        if not steam_running():
+            time.sleep(2)  # let it finish writing files
+            return True
+        time.sleep(1)
+    return False
 
 
 def find_layouts(game=None):
@@ -203,7 +233,11 @@ def main():
     ap.add_argument("outfile", nargs="?")
     ap.add_argument("--install", action="store_true",
                     help="rewrite your WoW: Forever layout on this Deck (Steam must not be running)")
-    ap.add_argument("--game", help="with --install: the layout folder's name, if more than one matches")
+    ap.add_argument("--stop-steam", action="store_true",
+                    help="with --install: close Steam first and wait for it (lets you type the command with "
+                         "Steam's on-screen keyboard before Steam goes away)")
+    ap.add_argument("--game", help="with --install: the layout folder's name (the Steam shortcut's name), "
+                                   "when it doesn't contain \"forever\" or more than one matches")
     ap.add_argument("--layout", help="with --install: the controller_neptune.vdf to rewrite")
     ap.add_argument("--hold-ms", type=int, default=DEFAULT_HOLD_MS, help="long-press time for every grip")
     for name, *_ in GRIPS:
@@ -220,8 +254,10 @@ def main():
     if a.install:
         if a.infile or a.outfile:
             ap.error("--install takes no file names")
-        if os.system("pgrep -x steam >/dev/null") == 0:
-            sys.exit("Steam is running: stop it first (it rewrites the layout when it exits)")
+        if a.stop_steam and not stop_steam():
+            sys.exit("Steam didn't close within a minute: exit it from its menu, then run this again")
+        if steam_running():
+            sys.exit("Steam is running: add --stop-steam, or exit Steam first (it rewrites the layout when it exits)")
         if a.layout:
             layouts = [a.layout] if os.path.isfile(a.layout) else []
         else:
@@ -230,7 +266,11 @@ def main():
             if not layouts:
                 print("No WoW: Forever controller layout found under", CONFIGS)
                 print("Open the game's controller settings in Steam once (so it has a layout), or")
-                print("name it: --game \"<layout folder>\" or --layout <path to controller_neptune.vdf>")
+                print("name it: --game \"<layout folder>\" or --layout \"<path to controller_neptune.vdf>\"")
+                folders = layout_folders()
+                if folders:
+                    print("Layout folders on this Deck (one is your WoW: Forever shortcut's):")
+                    for name in folders: print('  --game "%s"' % name)
             else:
                 print("More than one layout matches; pick one with --layout:")
                 for path in layouts: print("  " + path)

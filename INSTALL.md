@@ -18,9 +18,19 @@ every DeckKit addon.
 **By hand:** download the latest zip from CurseForge or from
 [GitHub releases](https://github.com/fillmoreb/DeckKit/releases), and unzip it into WoW: Forever's
 `_forever_/Interface/AddOns` folder. You should end up with `AddOns/DeckKit`, `AddOns/DeckHUD`,
-`AddOns/HealPad` and so on, one folder each. On the Deck, in Desktop Mode, Dolphin (the file manager) can
-do it; where the folder is depends on where Battle.net put the game, inside its Wine prefix (look for the
-`_forever_` folder).
+`AddOns/HealPad` and so on, one folder each.
+
+Finding that folder on the Deck (Desktop Mode):
+- **Ask Battle.net:** on WoW: Forever's page, the gear next to Play › **Show in Explorer** opens the game
+  folder (`World of Warcraft`); `_forever_` is inside it. That's a Windows path inside Wine, so note
+  where it lives (often `C:\Program Files (x86)\World of Warcraft`).
+- **Then in Dolphin** (the file manager): Wine's `C:` drive is the `drive_c` folder of Battle.net's
+  prefix. Press **Ctrl+H** to show hidden folders (the prefix often starts with a dot). Typical places:
+  - Lutris: `~/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft/_forever_`
+  - Steam (Battle.net added as a non-Steam game, run with Proton):
+    `~/.local/share/Steam/steamapps/compatdata/<a number>/pfx/drive_c/Program Files (x86)/World of Warcraft/_forever_`
+  - Installed to an SD card: the card is under `/run/media/deck/`.
+- No `Interface/AddOns` inside `_forever_` yet? Create both folders.
 
 Every addon is optional except **DeckKit** itself (the core): delete the folders of any you don't want.
 
@@ -50,18 +60,24 @@ The back grips (L4 R4 L5 R5) become 30 slots for any action, but only once your 
 layout makes each grip send two plain keys (one while held, one after 0.4 s). A script does that:
 
 1. In Game Mode, open WoW: Forever's controller settings once (Steam button › Controller settings), so
-   Steam has a layout for it.
-2. Switch to **Desktop Mode** and quit Steam (Steam menu › Exit): Steam rewrites layouts when it exits.
-3. Open **Konsole** and run:
+   Steam has a layout for it. Note the name of the Steam shortcut you start the game from.
+2. Switch to **Desktop Mode** (Steam button › Power › Switch to Desktop) and open **Konsole**. Steam's
+   on-screen keyboard is **STEAM + X**.
+3. Type this, and press Enter:
    ```
-   curl -LO https://raw.githubusercontent.com/fillmoreb/DeckKit/main/deck-setup/make-chord-layout.py
-   python3 make-chord-layout.py --install
+   curl -LO https://raw.githubusercontent.com/fillmoreb/DeckKit/main/deck-setup/make-chord-layout.py && python3 make-chord-layout.py --install --stop-steam
    ```
-   It finds your Forever layout, keeps a backup next to it (`.bak-before-chords`) and changes only the
-   four back grips. With more than one match it lists them; pick one with `--layout <path>`.
-   `--hold-ms 300` makes holds quicker (default 400).
-4. Back to Game Mode, start the game, hold a grip (the welcome window's step 2 turns Done), and set up
-   slots in **Controls › Grips**.
+   `--stop-steam` closes Steam for you once you've pressed Enter (Steam rewrites layouts as it exits, so it
+   has to be closed; and the on-screen keyboard goes with it, which is why it waits until then). The
+   script finds your Forever layout, keeps a backup next to it (`.bak-before-chords`) and changes only
+   the four back grips.
+   - **"No WoW: Forever controller layout found"**: it looks for a shortcut with "forever" in its name.
+     It then lists the layout folders it did find; run it again naming yours, in quotes, e.g.
+     `python3 make-chord-layout.py --install --stop-steam --game "battle.net"`.
+   - More than one match: it lists them; pick one with `--layout "<path>"`.
+   - `--hold-ms 300` makes holds quicker (default 400).
+4. Back to Game Mode (the **Return to Gaming Mode** icon on the desktop), start the game, hold a grip
+   (the welcome window's step 2 turns Done), and set up slots in **Controls › Grips**.
 
 **Upgrading from DeckKit 1.1 or earlier:** the grips' keys moved; run step 3 again or the grips stop
 working. Your slots are kept.

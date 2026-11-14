@@ -175,6 +175,8 @@ class Tests(unittest.TestCase):
                 self.assertEqual(len(found), 2)
                 self.assertTrue(all("orever" in f for f in found))
                 self.assertEqual(len(mcl.find_layouts("some other game")), 1)
+                # With nothing matching, the folders that are there get listed, each once.
+                self.assertEqual(mcl.layout_folders(), ["WoW Forever (Lutris)", "some other game", "wow forever"])
             finally:
                 mcl.CONFIGS = old
 

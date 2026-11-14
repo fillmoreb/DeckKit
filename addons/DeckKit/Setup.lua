@@ -162,8 +162,8 @@ Setup.AddStep({
     id = "grips", order = 20,
     title = "Steam controller layout for the grips",
     text = "Hold any back grip (L4 R4 L5 R5) for a second: this step turns Done when its keys arrive. "
-        .. "If it stays Not yet, install DeckKit's controller layout from Desktop Mode: the README on "
-        .. "github.com/fillmoreb/DeckKit, \"Grip chords\", has the steps.",
+        .. "If it stays Not yet, install DeckKit's controller layout from Desktop Mode: INSTALL.md on "
+        .. "github.com/fillmoreb/DeckKit, step 4, has the steps.",
     done = GripsSeen,
 })
 
