@@ -1,2 +1,4 @@
 # Optional: Blizzard_MacroUI is load-on-demand; its MacroFrame_Show exists only after loading it.
 MacroFrame_Show
+# Retail global; Forever lacks it (HealMacros.lua falls back to 120)
+MAX_ACCOUNT_MACROS

@@ -185,6 +185,9 @@ ns.Settings.Add("DeckKit", ns.TITLE, {
           ns.db.menuDouble = on
           if not on then ns.Print("double-tap Menu is off. Type /deckkit to open the menu.") end
       end },
+    { type = "action", label = "Setup", verb = "Open",
+      hint = "The welcome window: the few things to set up once, and how each is going. Also /deckkit setup.",
+      run = function() Menu.Close(); if ns.Setup then ns.Setup.Open() end end },
     { type = "section", tab = "Tools", label = "DeckKit", order = 9 },
     { type = "info", label = "Chat commands: /deckkit help" },
     { type = "section", tab = "Controls", label = "Bindings", order = 9 },

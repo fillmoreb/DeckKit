@@ -19,3 +19,4 @@ Sample.lua
 Chords.lua
 Grips.lua
 CheatSheet.lua
+Setup.lua

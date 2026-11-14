@@ -224,10 +224,55 @@ local function Build()
     summary:SetPoint("LEFT", makeButton, "RIGHT", 12, 0)
 end
 
-function ns.OpenHealMacros()
+local returnToSetup = false
+
+-- fromSetup: opened by the welcome window's healing step, which comes back when this closes.
+function ns.OpenHealMacros(fromSetup)
     if InCombatLockdown() then ns.Print("can't open that in combat.") return end
-    if not screen then Build() end
+    if not screen then
+        Build()
+        screen.win:HookScript("OnHide", function()
+            if returnToSetup and DeckKit.Setup then
+                returnToSetup = false
+                C_Timer.After(0, function() DeckKit.Setup.Open() end)
+            end
+        end)
+    end
+    returnToSetup = fromSetup == true
     Fill()
     summary:SetText("")
     screen:Show()
+end
+
+-- The welcome window's healing step (DeckKit/Setup.lua), for classes that heal: the d-pad macros, then
+-- this window to pick the heal macros. Done once both are there (a character macro aimed at the focus).
+local HEALERS = { PRIEST = true, DRUID = true, SHAMAN = true, PALADIN = true }
+
+-- One of HealPad's heal macros exists (account or character): their bodies cast at "[@focus,help".
+local function HealMacrosMade()
+    local account, character = GetNumMacros()
+    local first = MAX_ACCOUNT_MACROS or 120 -- character macros come after the account ones
+    local function Has(index)
+        local body = GetMacroBody(index)
+        return body and body:find("[@focus,help", 1, true) ~= nil
+    end
+    for i = 1, account or 0 do if Has(i) then return true end end
+    for i = 1, character or 0 do if Has(first + i) then return true end end
+    return false
+end
+
+if DeckKit.Setup then
+    DeckKit.Setup.AddStep({
+        id = "healpad", order = 30,
+        title = "Healing macros",
+        text = "HealPad's d-pad moves a cursor over your party or raid frames and makes that player your focus; "
+            .. "heal macros cast on them. This makes the four d-pad macros now, then opens a window to choose "
+            .. "your heal macros. To place them afterwards: game menu > Macros, pick one, {X} Bind to Action Bar.",
+        shown = function() local _, class = UnitClass("player") return HEALERS[class] == true end,
+        done = function() return ns.MoveMacrosMade() and HealMacrosMade() end,
+        action = { label = "Choose heal macros", verb = "Choose", opensWindow = true, run = function()
+            ns.MakeMoveMacros()
+            ns.OpenHealMacros(true)
+        end, doneReason = "Healing > HealPad remakes them" },
+    })
 end

@@ -116,28 +116,80 @@ end
 local SYSTEMS = Enum and Enum.EditModeSystem or {}
 local GAMEPAD_BAR = SYSTEMS.GamepadMainActionBar
 
--- The suggested layout for the Deck: the XP bar (and the bar that stacks with it, e.g.
--- reputation) along the top edge, which frees the bottom so the crossbar can sit low.
-local SUGGESTED = {
-    { system = SYSTEMS.StatusTrackingBar, index = 1,
-      anchor = { point = "TOP", relativeTo = "UIParent", relativePoint = "TOP", offsetX = 0, offsetY = 0 } },
-    { system = SYSTEMS.StatusTrackingBar, index = 2,
-      anchor = { point = "TOP", relativeTo = "UIParent", relativePoint = "TOP", offsetX = 0, offsetY = -17 } },
-    { system = GAMEPAD_BAR,
-      anchor = { point = "BOTTOM", relativeTo = "UIParent", relativePoint = "BOTTOM", offsetX = 0, offsetY = 6 } },
-}
+-- The suggested layout for the Deck, Ben's own (measured on the Deck at 1280 x 800, written relative
+-- to the bottom middle so it holds at other widths):
+--   your frame and the target's either side of the middle, above the crossbar
+--   the party frames in a row between them (raid style, side by side), just under them
+--   the focus frame centered between them, at their height
+--   the crossbar near the bottom, compact
+--   the XP bars along the top (hidden while the status bar shows)
+-- plus, measured when applied: the raid frames in the top-left corner and the buffs on the right,
+-- both just under the status bar (or the XP bars).
+local function UnitIndex(name)
+    return Enum and Enum.EditModeUnitFrameSystemIndices and Enum.EditModeUnitFrameSystemIndices[name]
+end
+local function AuraIndex(name)
+    return Enum and Enum.EditModeAuraFrameSystemIndices and Enum.EditModeAuraFrameSystemIndices[name]
+end
+local function Anchor(point, relativePoint, x, y)
+    return { point = point, relativeTo = "UIParent", relativePoint = relativePoint, offsetX = x, offsetY = y }
+end
+local SUGGESTED_EDGE = 4 -- raid frames and buffs: gap to the screen edge and to the bar above them
 
--- All the suggested positions in one change (one backup). Takes effect after a reload.
+local function Suggested()
+    local UFS = Enum and Enum.EditModeUnitFrameSetting or {}
+    local GBS = Enum and Enum.EditModeGamepadMainActionBarSetting or {}
+    local top = math.floor(ns.TopEdge() + SUGGESTED_EDGE + 0.5)
+    return {
+        { system = SYSTEMS.UnitFrame, index = UnitIndex("Player"), anchor = Anchor("BOTTOMRIGHT", "BOTTOM", -185, 295) },
+        { system = SYSTEMS.UnitFrame, index = UnitIndex("Target"), anchor = Anchor("BOTTOMLEFT", "BOTTOM", 185, 295) },
+        { system = SYSTEMS.UnitFrame, index = UnitIndex("Focus"), anchor = Anchor("CENTER", "BOTTOM", 37, 327),
+          -- Focus.lua's "Name and health" look needs the larger frame (the small one shows no buffs).
+          settings = ns.db.focusStyle == "compact" and { [UFS.UseLargerFrame or -1] = 1 } or nil },
+        { system = SYSTEMS.UnitFrame, index = UnitIndex("Party"), anchor = Anchor("TOPLEFT", "BOTTOM", -201, 320),
+          settings = { [UFS.UseRaidStylePartyFrames or -1] = 1, [UFS.UseHorizontalGroups or -2] = 1,
+                       [UFS.FrameWidth or -3] = 8 } },
+        { system = SYSTEMS.UnitFrame, index = UnitIndex("Raid"), anchor = Anchor("TOPLEFT", "TOPLEFT", SUGGESTED_EDGE, -top) },
+        { system = SYSTEMS.AuraFrame, index = AuraIndex("BuffFrame"), anchor = Anchor("TOPRIGHT", "TOPRIGHT", -255, -top) },
+        { system = GAMEPAD_BAR, anchor = Anchor("BOTTOM", "BOTTOM", 0, 55),
+          -- Compact, empty bars shown, no button prompts on the buttons, highlight on, expanding.
+          settings = { [GBS.Compact or -1] = 1, [GBS.ShowEmptyBars or -2] = 1, [GBS.ShowButtonPrompts or -3] = 0,
+                       [GBS.ShowHighlight or -4] = 1, [GBS.ShouldExpand or -5] = 1 } },
+        { system = SYSTEMS.StatusTrackingBar, index = 1, anchor = Anchor("TOP", "TOP", 0, 0) },
+        { system = SYSTEMS.StatusTrackingBar, index = 2, anchor = Anchor("TOP", "TOP", 0, -17) },
+    }
+end
+
+local function SetSetting(sys, setting, value)
+    for _, st in ipairs(sys.settings) do
+        if st.setting == setting then st.value = value; return end
+    end
+    table.insert(sys.settings, { setting = setting, value = value })
+end
+
+-- Can the layout be changed? false and why when not (a preset can't be edited, or in combat).
+function Layout.CanChange()
+    if InCombatLockdown() then return false, "not in combat" end
+    local info, layout = Layout.Active()
+    if not info then return false, "this client has no Edit Mode layouts" end
+    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
+    return true
+end
+
+-- The whole suggested layout in one change (one backup, so one undo). Takes effect after a reload.
 function Layout.ApplySuggested()
     if InCombatLockdown() then return false, "not in combat" end
     local info, layout = Layout.Active()
     if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
     if not Backup(layout) then return false, "couldn't back up the layout first" end
     local n = 0
-    for _, s in ipairs(SUGGESTED) do
+    for _, s in ipairs(Suggested()) do
         local sys = s.system and FindSystem(layout, s.system, s.index)
         if sys then
             for k, v in pairs(s.anchor) do sys.anchorInfo[k] = v end
+            for setting, value in pairs(s.settings or {}) do
+                if setting >= 0 then SetSetting(sys, setting, value) end
+            end
             sys.isInDefaultPosition = false
             n = n + 1
         end
@@ -172,13 +224,6 @@ end
 local function Art(frame, container)
     local c = frame[container]
     return (c and c.FrameTexture) or frame
-end
-
-local function SetSetting(sys, setting, value)
-    for _, st in ipairs(sys.settings) do
-        if st.setting == setting then st.value = value; return end
-    end
-    table.insert(sys.settings, { setting = setting, value = value })
 end
 
 function Layout.PartyRow()
@@ -391,12 +436,6 @@ ns.AddSettings({
 
 -- On the Suggested settings page (Suggested.lua makes the page; these go after its rows).
 Layout.MenuItems = {
-    { type = "action", label = "Apply suggested layout", keepOpen = true,
-      hint = "XP bar along the top, crossbar near the bottom. Backs up your Edit Mode layout, then reloads.",
-      run = function()
-          local ok, info = Layout.ApplySuggested()
-          if ok then ReloadSoon("Suggested layout applied.") else ns.Print("Not changed: " .. info .. ".") end
-      end },
     { type = "action", label = "Undo the last layout change", keepOpen = true,
       hint = "Puts back your Edit Mode layout from before DeckKit's last change, then reloads.",
       run = function()

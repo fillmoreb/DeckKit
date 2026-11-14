@@ -99,16 +99,20 @@ grip slot or bind it in Key Bindings.
 ## Suggested WoW settings
 
 These suit playing on the Deck. Each is a toggle on the **Suggested settings** page of the DeckKit menu
-(double-tap ☰), with **Apply all suggested** to set them in one go; switching one off restores what you had.
+(double-tap ☰); switching one off restores what you had. **Apply everything suggested** sets them all in one go
+and applies the suggested Edit Mode layout (unit, party, focus and raid frames, buffs, the compact crossbar),
+backing up your layout first (Undo the last layout change puts it back), then reloads.
 
 | Setting | Suggested | Why |
 |---|---|---|
 | Chat style | Classic | Enter sends a message *and* closes the input box, including dictated messages |
 | Auto loot | On | Opening a corpse takes everything; no picking items one by one on a controller |
 | Controller button legend | Hidden | The always-on list of what each button does, once you know them |
+| UI scale | The game's own | The suggested layout's positions are measured at it |
+| Key bindings on F1-F8 | Cleared | The grips send those keys; by default F1-F5 target you and your party |
 
-Also worth turning on in **Edit Mode**: *Use Compact Action Bar* on the Gamepad Action Bar (it shows only
-the bar you're using). DeckHUD can move the crossbar for you: `/deckkit layout crossbar <px from bottom>`.
+The suggested layout includes the crossbar's *Compact* option (only the bar you're using shows). DeckHUD
+can also move the crossbar on its own: `/deckkit layout crossbar <px from bottom>`.
 
 ## Deck setup (`deck-setup/`)
 

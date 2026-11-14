@@ -478,6 +478,8 @@ function Screen:Key(key)
     end
     if key == "PAD2" or key == "PADFORWARD" then
         if self.popup and self.popup:IsShown() then self:ClosePopup() return end
+        -- The player closed it (not combat or another window): screens that care set OnPlayerClose.
+        if self.OnPlayerClose then self:OnPlayerClose() end
         self:Hide()
         return
     end

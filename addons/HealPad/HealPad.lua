@@ -456,6 +456,17 @@ local function MakeMacros()
         .. "Put them on your healing page's d-pad.", made, have, MACRO_PREFIX))
 end
 
+ns.MakeMoveMacros = MakeMacros
+
+-- The four d-pad macros exist (the welcome window's healing step).
+function ns.MoveMacrosMade()
+    for _, dir in ipairs(DIRS) do
+        local index = GetMacroIndexByName(MACRO_PREFIX .. dir)
+        if not index or index == 0 then return false end
+    end
+    return true
+end
+
 -- Placing the macros is left to WoW's own Macros window, opened from the game menu (Esc > Macros):
 -- {X} on a macro there is "Bind to Action Bar". We never open that window ourselves: opened by an
 -- addon, its bind screen needs a protected call (SetPreferredGamepadInteractTarget) and the game
