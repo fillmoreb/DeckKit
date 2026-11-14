@@ -130,7 +130,8 @@ can also move the crossbar on its own: `/deckkit layout crossbar <px from bottom
 
 - `wowforever.bat` – lives at `C:\wowforever.bat` in the Lutris Battle.net prefix; starts Battle.net, waits 8 s,
   then sends `launch WoWF` every 2 s until Wow.exe runs (Battle.net ignores it until it has logged in).
-- `addshortcut.py` + `wowforever-art/` – the "WoW Forever" Steam shortcut and its artwork.
+- `addshortcut.py` + `wowforever-art/` – the "WoW Forever" Steam shortcut and its artwork (cover, capsule, hero,
+  logo, icon; setting it by hand on any shortcut: INSTALL.md step 7).
 - `make-chord-layout.py` – the grip chord layout (above); `test_make_chord_layout.py` tests it.
 - `make-chord-glyphs.py` / `make-minimap-masks.py` – generate DeckKit's chord glyphs and DeckHUD's minimap masks.
 
@@ -138,6 +139,7 @@ can also move the crossbar on its own: `/deckkit layout crossbar <px from bottom
 
 MIT, see [`LICENSE`](LICENSE). DeckKit's controller input is adapted from BagPad (MIT, © 2026 Chris), and the shared button overrides and
 wand shoot from Improved Forever (MIT, © 2026 markg).
-The Steam art in `deck-setup/wowforever-art/` and the logo in `media/` are AI-generated and not covered by the MIT License.
+The Steam art in `deck-setup/wowforever-art/` and the logo in `media/` are AI-generated and not covered by the MIT License;
+the Steam art's terms are in [its README](deck-setup/wowforever-art/README.md).
 DeckKit is an unofficial fan project, not affiliated with Blizzard Entertainment. World of Warcraft,
 Hearthstone and related marks belong to Blizzard.

@@ -110,6 +110,25 @@ under Blizzard's terms, and you should choose it knowingly. Nothing in it plays 
 
 Its [INSTALL.md](https://github.com/fillmoreb/DeckKitAfterDark/blob/main/INSTALL.md) has the steps.
 
+## 7. Steam artwork (optional)
+
+DeckKit comes with artwork for WoW: Forever's Steam shortcut, in `deck-setup/wowforever-art/`: a cover,
+a wide capsule, a banner, a logo and an icon. **The art is AI-generated** unofficial fan art, for personal,
+noncommercial use, and DeckKit's MIT License doesn't cover it: see
+[its terms](deck-setup/wowforever-art/README.md). Steam can't know a
+non-Steam shortcut's art, so this fills the gap. Download the folder from GitHub (or take it from a copy of the repo),
+then in **Desktop Mode**, in the Steam library, right-click your WoW: Forever shortcut:
+
+| File | Where it goes |
+|---|---|
+| `cover.png` | **Manage › Set custom artwork** while the library shows covers (the grid) |
+| `capsule.png` | **Manage › Set custom artwork** from the wide "recent games" shelf |
+| `hero.png` | **Manage › Set custom background** (the banner on the game's page) |
+| `logo.png` | **Manage › Set custom logo** (over that banner) |
+| `icon.png` | **Properties › Shortcut**, the icon next to its name |
+
+(If you use my launch setup below, `addshortcut.py` puts all five in place for you.)
+
 ## Appendix: my launch setup
 
 Not needed to use DeckKit: this is how I run WoW: Forever on my own Deck, in case it helps.
@@ -118,6 +137,9 @@ Not needed to use DeckKit: this is how I run WoW: Forever on my own Deck, in cas
   in that prefix: it starts Battle.net, waits 8 s, then sends `launch WoWF` every 2 s until `Wow.exe`
   runs (Battle.net ignores it until it has logged in). A Lutris game runs it with
   `cmd.exe /c C:\\wowforever.bat`.
-- `deck-setup/addshortcut.py` adds a **WoW Forever** Steam shortcut for that Lutris game, with the art in
-  `deck-setup/wowforever-art/`. Run it on the Deck as `deck`, with Steam closed (Steam rewrites
-  `shortcuts.vdf` when it exits).
+- `deck-setup/addshortcut.py` adds a **WoW Forever** Steam shortcut for that Lutris game, copies the
+  artwork from `deck-setup/wowforever-art/` in under the names Steam looks for, and copies a "world of
+  warcraft" shortcut's controller layout to it if there is one. Run it on the Deck as `deck`, with Steam
+  closed (Steam rewrites `shortcuts.vdf` when it exits): `python3 addshortcut.py` (`--dry` shows what it
+  would do; `--user <number>` picks the Steam account if the Deck has more than one). The Lutris launch
+  line is `LAUNCH` at its top.
