@@ -65,7 +65,7 @@ step 3 again (it rewrites the four grips in place), or the grips won't work.
 Turn it on and pick its spot in **Controls › Cheat sheet**, and untick any slot you don't need
 reminding of. It can also go on a chord slot ("Cheat sheet"), or `/deckkit sheet`.
 
-## Voice chat with Decktation (optional)
+## Speech to text with Decktation (optional)
 
 DeckKit doesn't turn speech into text itself. For that there's
 [Decktation](https://github.com/silverfoxy/decktation), a separate plugin for
