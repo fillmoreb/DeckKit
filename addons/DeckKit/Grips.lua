@@ -6,7 +6,9 @@
 --                "Listening" indicator mid-screen while held; when you let go it says "Transcribing"
 --                until your next chat message arrives (or a timeout). Something that knows the
 --                dictation tool's real state can report it instead with DeckKit.Dictation.SetState
---                (below); from then on the grips no longer drive the indicator.
+--                (below); from then on the grips no longer drive the indicator. A source that is
+--                installed calls DeckKit.Dictation.Claim() as it loads, so the grips never drive it
+--                at all ("Listening" only ever means the tool really is recording).
 --   Hiding a side  DECKKIT_HIDE_LEFT / _RIGHT: whatever sits along that screen edge, from any addon
 --                (see "Hiding a side" below), plus anything a module adds.
 --
@@ -18,6 +20,7 @@ local Grips = {}
 ns.Grips = Grips
 
 local TRANSCRIBE_TIMEOUT = 12 -- seconds "Transcribing" can show without a chat message arriving
+local THINK_TIMEOUT = 60 -- seconds "Thinking" can show without an answer (done) arriving
 local DEFAULTS = { dictationIndicator = true, indicatorAlpha = 1 }
 
 local function Setting(key)
@@ -73,7 +76,7 @@ end
 -- voice chat's speech-to-text bubble) or "Error" (failed: the same bubble, red). Without
 -- those atlases, the game's Indicator-<color> light (a plain color for Error).
 local DOT_ICON = { Red = "voicechat-icon-mic", Yellow = "voicechat-icon-stt-on", Error = "voicechat-icon-stt-silenced" }
-local DOT_FALLBACK = { Red = { 0.9, 0.15, 0.15 }, Yellow = { 1, 0.82, 0 }, Error = { 0.9, 0.15, 0.15 } }
+local DOT_FALLBACK = { Red = { 0.9, 0.15, 0.15 }, Yellow = { 1, 0.82, 0 }, Green = { 0.2, 0.85, 0.3 }, Error = { 0.9, 0.15, 0.15 } }
 
 local function Show(text, r, g, b, dot_, seconds)
     Box()
@@ -213,12 +216,15 @@ BINDING_NAME_DECKKIT_HIDE_LEFT = "Hide / show the left side"
 BINDING_NAME_DECKKIT_HIDE_RIGHT = "Hide / show the right side"
 
 -- The dictation tool's real state, from whatever can see it:
---   DeckKit.Dictation.SetState("recording" | "transcribing" | "done" | "error")
+--   DeckKit.Dictation.Claim()   "I report the real state": the grips stop driving the indicator now,
+--                               before the first state arrives (call it as your addon loads)
+--   DeckKit.Dictation.SetState("recording" | "transcribing" | "thinking" | "done" | "error"[, binding])
 -- DeckKit doesn't know or care who calls it.
 ns.Dictation = {}
-function ns.Dictation.SetState(state)
+function ns.Dictation.Claim() signalled = true end
+function ns.Dictation.SetState(state, binding)
     signalled = true
-    ns.Debug("dictation", state)
+    ns.Debug("dictation", state, binding)
     if not Setting("dictationIndicator") then return end
     if state == "recording" then
         transcribing = false
@@ -226,6 +232,9 @@ function ns.Dictation.SetState(state)
     elseif state == "transcribing" then
         transcribing = true
         Show("Transcribing", 0.4, 0.9, 0.35, "Yellow", TRANSCRIBE_TIMEOUT)
+    elseif state == "thinking" then -- an assistant working on what you asked (DeckAgent's voice)
+        transcribing = false
+        Show("Thinking", 0.55, 0.8, 1, "Green", THINK_TIMEOUT)
     elseif state == "done" then
         HideBox()
     elseif state == "error" then
