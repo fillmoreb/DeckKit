@@ -214,9 +214,9 @@ ns.On("CURRENT_SPELL_CAST_CHANGED", function()
     C_Timer.After(0, function()
         if (win and win:IsShown()) or InCombatLockdown() then return end
         if not (SpellIsTargeting() and IsCurrent(ns.DISENCHANT)) then return end
-        -- With Gamepad UI on, the game opens the bags and puts the pad's focus there. Closing them
-        -- (not protected) should hand the d-pad back to the list.
-        if CloseAllBags then CloseAllBags() end
+        -- With Gamepad UI on, the game opens the bags too. They stay open behind the list: the list
+        -- takes the pad anyway (DeckKit windows' override bindings), and closing Blizzard's bags from
+        -- addon code taints the gamepad bar ("DisenchantDeck called SetPreferredGamepadInteractTarget()").
         List.Open()
     end)
 end)
