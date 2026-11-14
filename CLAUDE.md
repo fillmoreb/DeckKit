@@ -69,8 +69,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   what it opens: closing a menu from addon code taints the gamepad bar.
 - **The back grips are DeckKit's grip chords** (`DeckKit/Chords.lua`). Steam sends 8 plain keys
   and nothing else (`deck-setup/make-chord-layout.py` writes the layout; never hand-edit it): each
-  grip's own key while held (L4 F8, R4 F9, L5 F10, R5 F11) and a second key 400 ms in, Steam's long
-  press (F1 F2 F3 F4). Secure code turns those into 15 chords x press / hold = 30 slots, set in
+  grip's own key while held (L4 F1, R4 F2, L5 F3, R5 F4) and a second key 400 ms in, Steam's long
+  press (F5 F6 F7 F8). They live in `ns.GRIPS` (`DeckKit/Core.lua`) and nowhere else in the addons;
+  README "Keys" has every key the setup uses. Secure code turns those into 15 chords x press / hold = 30 slots, set in
   Controls > Grips (`DeckKit/CheatSheet.lua` shows the picked slots on screen; it follows slot changes
   through `ns.Chords.OnChange`). A chord's press fires on the first release (or on press if nothing bigger or
   held could follow); its hold fires when the last-pressed grip's long key arrives. Restricted code

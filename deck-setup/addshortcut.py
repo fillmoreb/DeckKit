@@ -43,7 +43,7 @@ else:
         shutil.copy2(VDF, VDF + ".bak-wowforever")
         open(VDF, "wb").write(new)
 
-# Controller layout: same as "world of warcraft" (back buttons -> F8-F11).
+# Controller layout: a copy of "world of warcraft" (its back buttons; make-chord-layout.py sets the grip keys).
 cfg = "/home/deck/.local/share/Steam/steamapps/common/Steam Controller Configs/70511644/config"
 src, dst = cfg + "/world of warcraft", cfg + "/wow forever"
 if os.path.isdir(src) and not os.path.isdir(dst):

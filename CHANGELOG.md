@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **The grips moved to F1-F8** (held: L4 F1, R4 F2, L5 F3, R5 F4; long press F5-F8), so F9-F12
+  are free for other addons. **Rerun `make-chord-layout.py --install`** (README, Grip chords step 3)
+  after updating, or the grips stop working. Your slots are kept. README has a new Keys section.
+
 ## 1.1.1-beta1 - 2026-11-13
 
 ### New

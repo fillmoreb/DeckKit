@@ -6,9 +6,10 @@
 # game turns those into chords (any set of grips, fired on release) and holds (fired when the long
 # keys arrive). Steam does no chord logic: no layers, no double presses.
 #
-#   L4 = F8 / F1    R4 = F9 / F2    L5 = F10 / F3    R5 = F11 / F4
+#   L4 = F1 / F5    R4 = F2 / F6    L5 = F3 / F7    R5 = F4 / F8
 #
-# Everything else in the layout is left alone. Keep these keys in step with addons/DeckKit/Chords.lua.
+# Everything else in the layout is left alone. Keep these keys in step with ns.GRIPS in
+# addons/DeckKit/Core.lua (a test checks). All of the setup's key assignments: README.md, "Keys".
 #
 # Usage:
 #   make-chord-layout.py IN.vdf OUT.vdf [--hold-ms 400] [--hold-ms-L4 500 ...]
@@ -21,10 +22,10 @@
 import argparse, os, shutil, sys
 
 GRIPS = [  # (name, Steam input, key while held, key after the long press)
-    ("L4", "button_back_left_upper", "F8", "F1"),
-    ("R4", "button_back_right_upper", "F9", "F2"),
-    ("L5", "button_back_left", "F10", "F3"),
-    ("R5", "button_back_right", "F11", "F4"),
+    ("L4", "button_back_left_upper", "F1", "F5"),
+    ("R4", "button_back_right_upper", "F2", "F6"),
+    ("L5", "button_back_left", "F3", "F7"),
+    ("R5", "button_back_right", "F4", "F8"),
 ]
 DEFAULT_HOLD_MS = 400
 # Steam keeps one layout per game (or non-Steam shortcut) here: <account id>/config/<game>/controller_neptune.vdf

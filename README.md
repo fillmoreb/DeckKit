@@ -42,7 +42,7 @@ that every addon loaded without errors.
 ## Grip chords: Steam setup
 
 Grip chords need your WoW: Forever controller layout to make each back grip send two plain keys
-(L4 F8/F1, R4 F9/F2, L5 F10/F3, R5 F11/F4: one while held, one after 0.4 s). Everything else
+(L4 F1/F5, R4 F2/F6, L5 F3/F7, R5 F4/F8: one while held, one after 0.4 s; see [Keys](#keys)). Everything else
 (which grip or chord does what) is set in the game, in the DeckKit menu under **Controls › Grips**.
 Your existing grip bindings become the first slots.
 
@@ -57,6 +57,9 @@ Your existing grip bindings become the first slots.
    four back grips. With more than one match it lists them; pick one with `--layout <path>`.
    `--hold-ms 300` makes holds quicker (default 400).
 4. Back to Game Mode, start the game, and set up slots in **Controls › Grips**.
+
+**Upgrading from DeckKit 1.1 or earlier:** the grips moved from F8-F11 / F1-F4 to F1-F4 / F5-F8. Run
+step 3 again (it rewrites the four grips in place), or the grips won't work.
 
 **Cheat sheet:** a small list on screen of what your grips do (each chord's glyph and its action).
 Turn it on and pick its spot in **Controls › Cheat sheet**, and untick any slot you don't need
@@ -86,6 +89,21 @@ chat. DeckKit works alongside it:
    picks it up on the next dictation.
 
 Older Decktation versions: `patches/` has both of these as patches (below).
+
+## Keys
+
+The keys DeckKit's setup uses. Keyboard players: these are taken while DeckKit is loaded.
+
+| Key | Sent by | Does |
+|---|---|---|
+| F1 / F2 / F3 / F4 | the Steam layout, while grip L4 / R4 / L5 / R5 is held | grip chords (`DeckKit/Core.lua` `ns.GRIPS`) |
+| F5 / F6 / F7 / F8 | the Steam layout, once L4 / R4 / L5 / R5 has been held 0.4 s | grip chord holds |
+| Insert / Home / End / Delete | Decktation's status hook (`deck-setup/decktation-hook.sh`) | the dictation indicator: recording / transcribing / done or aborted / error. Bound once, only where the key is free or on its default camera binding |
+| F9-F12 | | not used by DeckKit, free for other addons |
+
+F1-F5 lose their default bindings (target yourself / party members 1-4) while DeckKit is loaded;
+on a pad those come from the gamepad UI anyway. Reload UI (`DECKKIT_RELOAD`) has no key; put it on a
+grip slot or bind it in Key Bindings.
 
 ## Suggested WoW settings
 

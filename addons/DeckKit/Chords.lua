@@ -2,7 +2,7 @@
 --
 -- Steam sends plain keys only (deck-setup/make-chord-layout.py): a grip's own key while it's held,
 -- and a second key once it has been held for the long-press time (400 ms by default):
---   L4 = F8 / F1    R4 = F9 / F2    L5 = F10 / F3    R5 = F11 / F4
+--   L4 = F1 / F5    R4 = F2 / F6    L5 = F3 / F7    R5 = F4 / F8     (ns.GRIPS, in Core.lua)
 -- Everything else is decided here, in secure code, so a slot can cast and use items in combat:
 --   chord   every grip that was down together (L4, L4+L5, L4+R4+L5+R5... 15 in all)
 --   press   fires when the first grip of the chord lets go. If nothing could follow (no hold on
@@ -26,12 +26,7 @@ local _, ns = ...
 local Chords = {}
 ns.Chords = Chords
 
-Chords.GRIPS = {
-    { name = "L4", key = "F8",  long = "F1" },
-    { name = "R4", key = "F9",  long = "F2" },
-    { name = "L5", key = "F10", long = "F3" },
-    { name = "R5", key = "F11", long = "F4" },
-}
+Chords.GRIPS = ns.GRIPS
 local GRIPS = Chords.GRIPS
 
 -- The 15 chords, singles first, in grip order: "L4", "R4", ..., "L4+R4", ..., "L4+R4+L5+R5".
@@ -307,7 +302,8 @@ ns.On("PLAYER_REGEN_ENABLED", function() if pending then Apply() end end)
 local function FirstSlots()
     ns.db.chords = {}
     for _, g in ipairs(GRIPS) do
-        local id = GetBindingAction(g.key)
+        -- Bindings from before slots lived on the grips' old keys (F1-F4 now default to targeting).
+        local id = GetBindingAction(ns.OLD_GRIP_KEYS[g.name])
         if id and id ~= "" then
             ns.db.chords[g.name] = { [id:find("_PEEK$") and "hold" or "press"] = id }
         end

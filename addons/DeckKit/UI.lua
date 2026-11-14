@@ -146,15 +146,17 @@ local ScrollOf -- (defined with the scrolling list below)
 local TAB_H, FOOTER_H, PAD = 30, 34, 14
 
 local PAD_KEYS = { "PADDUP", "PADDDOWN", "PADDLEFT", "PADDRIGHT", "PAD1", "PAD2", "PAD3", "PAD4",
-    "PADLSHOULDER", "PADRSHOULDER", "PADLTRIGGER", "PADRTRIGGER", "PADFORWARD",
-    "F8", "F9", "F10", "F11" }
+    "PADLSHOULDER", "PADRSHOULDER", "PADLTRIGGER", "PADRTRIGGER", "PADFORWARD" }
 
 -- Glyph names for pad keys (for binding controls).
 UI.KeyGlyph = { PAD1 = "A", PAD2 = "B", PAD3 = "X", PAD4 = "Y", PADLSHOULDER = "LB", PADRSHOULDER = "RB",
     PADLTRIGGER = "LT", PADRTRIGGER = "RT", PADDUP = "DUP", PADDDOWN = "DDOWN", PADDLEFT = "DLEFT",
-    PADDRIGHT = "DRIGHT", PADFORWARD = "MENU", PADLSTICK = "L3", PADRSTICK = "R3",
-    -- The Deck's back grips reach the game as F8-F11 (DeckKit's Steam layout).
-    F8 = "L4", F9 = "R4", F10 = "L5", F11 = "R5" }
+    PADDRIGHT = "DRIGHT", PADFORWARD = "MENU", PADLSTICK = "L3", PADRSTICK = "R3" }
+-- The Deck's back grips reach the game as their held keys (ns.GRIPS, DeckKit's Steam layout).
+for _, g in ipairs(ns.GRIPS) do
+    table.insert(PAD_KEYS, g.key)
+    UI.KeyGlyph[g.key] = g.name
+end
 
 function UI.NewScreen(name, width, height, title)
     local s = setmetatable({ tabs = {}, tab = 1, mode = nil }, Screen)
@@ -840,7 +842,8 @@ end
 
 -- Key binding for a game binding action (e.g. "CHATDECK_PEEK"), bound for real with SetBinding.
 -- Only the back grips are offered: everything else on the pad belongs to the crossbar or the game.
-local BINDABLE = { F8 = true, F9 = true, F10 = true, F11 = true }
+local BINDABLE = {}
+for _, g in ipairs(ns.GRIPS) do BINDABLE[g.key] = true end
 
 local function KeyName(key)
     local g = UI.KeyGlyph[key]

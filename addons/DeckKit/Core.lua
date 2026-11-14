@@ -25,6 +25,18 @@ ns.TITLE = "|cffffb347DeckKit|r"
 BINDING_HEADER_DECKKIT = "DeckKit"
 BINDING_NAME_DECKKIT_RELOAD = "Reload UI"
 
+-- The back grips' keys, as DeckKit's Steam layout sends them (deck-setup/make-chord-layout.py; keep the
+-- two in step): a grip's own key while it's held, and a second key once it has been held for the
+-- long-press time. All of Ben's key assignments are in README.md, "Keys".
+ns.GRIPS = {
+    { name = "L4", key = "F1", long = "F5" },
+    { name = "R4", key = "F2", long = "F6" },
+    { name = "L5", key = "F3", long = "F7" },
+    { name = "R5", key = "F4", long = "F8" },
+}
+-- The keys the grips used before 1.2 (held F8-F11, long F1-F4), only for carrying old bindings over.
+ns.OLD_GRIP_KEYS = { L4 = "F8", R4 = "F9", L5 = "F10", R5 = "F11" }
+
 local GetMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 ns.version = GetMetadata and GetMetadata(ADDON, "Version") or "?"
 

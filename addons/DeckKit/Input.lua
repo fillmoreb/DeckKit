@@ -86,9 +86,9 @@ function Input.New(window, handlers)
     end)
     -- Keyboard fallback (arrows, Enter, Escape) for testing at a desk.
     local KEYS = { UP = "PADDUP", DOWN = "PADDDOWN", LEFT = "PADDLEFT", RIGHT = "PADDRIGHT",
-        ENTER = "PAD1", ESCAPE = "PAD2", DELETE = "PAD4", E = "PAD3",
-        -- The Deck's back grips arrive as F8-F11 (DeckKit's Steam layout); windows can take them.
-        F8 = "F8", F9 = "F9", F10 = "F10", F11 = "F11" }
+        ENTER = "PAD1", ESCAPE = "PAD2", DELETE = "PAD4", E = "PAD3" }
+    -- The Deck's back grips arrive as their held keys (ns.GRIPS); windows can take them.
+    for _, g in ipairs(ns.GRIPS) do KEYS[g.key] = g.key end
     catcher:SetScript("OnKeyDown", function(_, key)
         if h.draining then
             SetPropagate(catcher, true)

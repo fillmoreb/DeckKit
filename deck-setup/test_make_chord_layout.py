@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Tests for make-chord-layout.py: python3 deck-setup/test_make_chord_layout.py
-import importlib.util, os, unittest
+import importlib.util, os, re, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 spec = importlib.util.spec_from_file_location("mcl", os.path.join(HERE, "make-chord-layout.py"))
@@ -134,6 +134,11 @@ class Tests(unittest.TestCase):
         for _, _, key, long_key in mcl.GRIPS:
             self.assertEqual(out.count('"key_press %s, , "' % key), 1, key)
             self.assertEqual(out.count('"key_press %s, , "' % long_key), 1, long_key)
+
+    def test_keys_match_the_addon(self):
+        core = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "addons", "DeckKit", "Core.lua")).read()
+        lua = re.findall(r'\{ name = "(\w+)", key = "(\w+)", long = "(\w+)" \}', core)
+        self.assertEqual(lua, [(name, key, long_key) for name, _, key, long_key in mcl.GRIPS])
 
     def test_disabled_activators_are_cleared(self):
         root = mcl.parse(mcl.apply(SAMPLE, HOLD))
