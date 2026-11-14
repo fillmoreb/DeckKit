@@ -84,7 +84,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   on a key skips keys where `DeckKit.Chords.Owns(key)`. Glyphs: `ns.Chords.Glyph(chord, gesture)`,
   from `media/chords.tga` (`deck-setup/make-chord-glyphs.py`). Decktation (push-to-talk on
   L4+R4) needs "Exact binding only" (`exactBindingMs`, 150) so bigger chords containing L4+R4 don't
-  start dictation: built into Decktation 0.3.24+ (`patches/decktation/` only for older versions).
+  start dictation: built into Decktation 0.3.24+. Decktation's status hook (its real state for the
+  dictation indicator) lives in DeckKitAfterDark (it feeds the game from outside); DeckKit only
+  offers `DeckKit.Dictation.SetState(state)` and must not depend on AfterDark.
 - Module bindings go in the DeckKit section of Key Bindings: `category="BINDING_HEADER_DECKKIT"` in
   `Bindings.xml`, with the module's own `header`.
 - Gamepad input: secure actions (casting, using items) need SecureActionButtons and override

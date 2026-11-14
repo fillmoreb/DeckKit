@@ -6,6 +6,9 @@
 - **The grips moved to F1-F8** (held: L4 F1, R4 F2, L5 F3, R5 F4; long press F5-F8), so F9-F12
   are free for other addons. **Rerun `make-chord-layout.py --install`** (README, Grip chords step 3)
   after updating, or the grips stop working. Your slots are kept. README has a new Keys section.
+- **Decktation's status hook left DeckKit**, with its four signal bindings (Insert / Home / End /
+  Delete) and the old Decktation patches (built into Decktation 0.3.24). The dictation indicator still
+  follows the L4 + R4 chord; other addons can report the exact state with `DeckKit.Dictation.SetState`.
 
 ## 1.1.1-beta1 - 2026-11-13
 

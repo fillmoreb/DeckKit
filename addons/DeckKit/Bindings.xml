@@ -1,9 +1,5 @@
 <Bindings>
 	<Binding name="DECKKIT_RELOAD" header="DECKKIT" category="BINDING_HEADER_DECKKIT">ReloadUI()</Binding>
-	<Binding name="DECKKIT_DICTATION_START" category="BINDING_HEADER_DECKKIT">DeckKit_DictationSignal("record_start")</Binding>
-	<Binding name="DECKKIT_DICTATION_STOP" category="BINDING_HEADER_DECKKIT">DeckKit_DictationSignal("record_stop")</Binding>
-	<Binding name="DECKKIT_DICTATION_DONE" category="BINDING_HEADER_DECKKIT">DeckKit_DictationSignal("transcription_done")</Binding>
-	<Binding name="DECKKIT_DICTATION_ERROR" category="BINDING_HEADER_DECKKIT">DeckKit_DictationSignal("error")</Binding>
 	<Binding name="DECKKIT_HIDE_LEFT" category="BINDING_HEADER_DECKKIT">DeckKit_HideSide("left")</Binding>
 	<Binding name="DECKKIT_HIDE_RIGHT" category="BINDING_HEADER_DECKKIT">DeckKit_HideSide("right")</Binding>
 </Bindings>

@@ -193,10 +193,4 @@ ns.Settings.Add("DeckKit", ns.TITLE, {
           local k = GetBindingKey("DECKKIT_RELOAD")
           return k or "Not bound", (not k) and UI.Color.dim or nil
       end },
-    { type = "status", label = "Dictation signals",
-      hint = "Keys Decktation sends while you dictate. Changing them would break the indicator.",
-      get = function()
-          local ok = GetBindingKey("DECKKIT_DICTATION_START") ~= nil
-          return ok and "Set up" or "Not set up", ok and UI.Color.good or UI.Color.dim
-      end },
 })

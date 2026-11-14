@@ -76,19 +76,9 @@ chat. DeckKit works alongside it:
 2. In Decktation, set the binding to **L4 + R4**, and turn on **Advanced settings › Sending › Exact
    binding only**. Without that, every bigger chord that includes L4 + R4 starts dictation too.
 3. DeckKit shows **Listening** while you talk and **Transcribing** until your message appears
-   (**Chat › Dictation**, where its opacity is set too). It goes by the L4 + R4 chord on its own. To make it follow
-   Decktation exactly, add DeckKit's status hook. In Desktop Mode, in Konsole:
-   ```
-   mkdir -p ~/.local/bin
-   curl -Lo ~/.local/bin/deckkit-decktation-hook https://raw.githubusercontent.com/fillmoreb/DeckKit/main/deck-setup/decktation-hook.sh
-   chmod +x ~/.local/bin/deckkit-decktation-hook
-   ```
-   Then add `"statusHookCommand": "/home/deck/.local/bin/deckkit-decktation-hook",` to Decktation's
-   settings file, `/home/deck/homebrew/settings/decktation/button_config.json` (owned by root, so
-   `sudo nano` it; `sudo` needs a password, which you set with `passwd` if you haven't). Decktation
-   picks it up on the next dictation.
-
-Older Decktation versions: `patches/` has both of these as patches (below).
+   (**Chat › Dictation**, where its opacity is set too). It goes by the L4 + R4 chord. Another addon
+   that knows Decktation's exact state can report it with `DeckKit.Dictation.SetState("recording" |
+   "transcribing" | "done" | "error")`, and the indicator follows that instead.
 
 ## Keys
 
@@ -98,8 +88,9 @@ The keys DeckKit's setup uses. Keyboard players: these are taken while DeckKit i
 |---|---|---|
 | F1 / F2 / F3 / F4 | the Steam layout, while grip L4 / R4 / L5 / R5 is held | grip chords (`DeckKit/Core.lua` `ns.GRIPS`) |
 | F5 / F6 / F7 / F8 | the Steam layout, once L4 / R4 / L5 / R5 has been held 0.4 s | grip chord holds |
-| Insert / Home / End / Delete | Decktation's status hook (`deck-setup/decktation-hook.sh`) | the dictation indicator: recording / transcribing / done or aborted / error. Bound once, only where the key is free or on its default camera binding |
 | F9-F12 | | not used by DeckKit, free for other addons |
+
+Nothing else: Decktation's own push-to-talk reads the controller directly.
 
 F1-F5 lose their default bindings (target yourself / party members 1-4) while DeckKit is loaded;
 on a pad those come from the gamepad UI anyway. Reload UI (`DECKKIT_RELOAD`) has no key; put it on a
@@ -126,15 +117,6 @@ the bar you're using). DeckHUD can move the crossbar for you: `/deckkit layout c
 - `addshortcut.py` + `wowforever-art/` – the "WoW Forever" Steam shortcut and its artwork.
 - `make-chord-layout.py` – the grip chord layout (above); `test_make_chord_layout.py` tests it.
 - `make-chord-glyphs.py` / `make-minimap-masks.py` – generate DeckKit's chord glyphs and DeckHUD's minimap masks.
-
-## Patches to other people's addons/plugins (`patches/`)
-
-- `decktation/status-hooks.patch` – adds a `statusHookCommand` setting to Decktation 0.3.22: a command run
-  on record_start / record_stop / transcription_done / error (`DECKTATION_EVENT`). With
-  `deck-setup/decktation-hook.sh` as that command, DeckKit's dictation indicator follows Decktation's real
-  state (signal keys INSERT / HOME / END / DELETE). Built into Decktation 0.3.24 and later: only needed for older versions.
-- `decktation/exact-binding.patch` – "Exact binding only" (`exactBindingMs`): push-to-talk doesn't start
-  when another button joins the binding, so bigger grip chords stay free. Built into Decktation 0.3.24 and later.
 
 ## License
 
