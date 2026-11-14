@@ -28,7 +28,7 @@ Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-si
 | **ChatDeck** | Hold a grip slot to read chat full-screen; you can keep moving while it's up |
 | **MapDeck** | Hold a grip slot for a full-screen map (works in combat), and you can keep moving while it's up; shows party/raid, quest markers, waypoints, flight masters, a guard's directions and your spirit healer |
 | **DeckAngler** | Controller fishing: with a pole equipped X casts; per-session catch tally, missed-catch chime, idle reminder (`/deckkit fish`) |
-| **DeckHUD** | Interface tweaks: square minimap in the top-right corner (zone name on top, a choice of borders), thin chat frame tucked into the bottom-left; Edit Mode layouts with backups: suggested layout, party frames lined up under your frame and the target's, raid frames in the top-left corner (`/deckkit layout`) |
+| **DeckHUD** | Interface tweaks: a status bar across the top (clock, FPS, latency, gold, bags, durability, an XP line in place of Blizzard's; the Deck's battery, temperature, power and fan with DeckKitAfterDark's DeckTelemetry; slots picked in Screen › Status bar), square minimap in the top-right corner (zone name on top, a choice of borders), thin chat frame tucked into the bottom-left; Edit Mode layouts with backups: suggested layout, party frames lined up under your frame and the target's, raid frames in the top-left corner (`/deckkit layout`) |
 | **DeckSundries** | Small extras. Wand shoot: Square fires your wand at an enemy instead of swinging (`/deckkit wandshoot`). Friends reply: Y on a friend in the friends list makes them your reply target, so `/r` (or dictating "reply ...") whispers them |
 | **MenuReload** | Reload UI button in the game menu, under AddOns |
 

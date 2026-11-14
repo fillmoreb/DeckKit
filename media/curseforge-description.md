@@ -35,6 +35,7 @@ Chords need DeckKit's Steam controller layout for WoW: Forever, which makes each
 **DeckAngler** – Laid-back controller fishing, built so you don't even have to watch the screen. With a pole equipped, `Ⓧ` **casts**; when you hear the splash, `Ⓧ` reels it in. Everything else is by ear, too: a **chime** tells you when a fish got away, and a gentle **sound reminder** nudges you when you haven't cast in a while (you pick the timing and the sound). A tally keeps count of what you've caught this session.
 
 **DeckHUD** – Interface tweaks for a handheld screen, each one switchable in the menu:
+- a **status bar** across the top of the screen: clock, FPS, latency, gold, bag space, durability and XP (with an XP line in place of Blizzard's bar), and with the optional **DeckTelemetry** from DeckKitAfterDark, the Steam Deck's battery, temperature, power and fan. You pick what goes where
 - a **square minimap** in the top-right corner, with the zone name on top and a choice of borders
 - a **thin chat frame** tucked into the bottom-left corner
 - one-press Edit Mode layouts that back up your layout first: a suggested layout, **party frames lined up** under your frame and your target's, **raid frames** tucked into the top-left corner
