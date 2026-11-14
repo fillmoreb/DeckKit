@@ -4,6 +4,9 @@
 
 Controller-first addons for **WoW: Forever** on the Steam Deck, plus the Deck-side setup that goes with them.
 
+**Installing:** [INSTALL.md](INSTALL.md) walks through everything, from the addons to the Steam controller
+layout for the grips and speech to text.
+
 > **Built with AI.** DeckKit is largely developed with an AI coding assistant
 > ([Claude Code](https://claude.com/claude-code)). Most of the Lua here was written by Claude
 > from my descriptions, then reviewed and tested in-game by me on a Steam Deck. Expect the kind of
@@ -75,10 +78,28 @@ chat. DeckKit works alongside it:
 1. Install Decky Loader, then Decktation (see its page). Version 0.3.24 or later.
 2. In Decktation, set the binding to **L4 + R4**, and turn on **Advanced settings › Sending › Exact
    binding only**. Without that, every bigger chord that includes L4 + R4 starts dictation too.
-3. DeckKit shows **Listening** while you talk and **Transcribing** until your message appears
-   (**Chat › Dictation**, where its opacity is set too). It goes by the L4 + R4 chord. Another addon
-   that knows Decktation's exact state can report it with `DeckKit.Dictation.SetState("recording" |
-   "transcribing" | "done" | "error")`, and the indicator follows that instead.
+3. While you dictate, DeckKit shows a small box in the middle of the screen, so you know where things
+   stand without watching chat:
+   - **Listening** (a microphone) while you hold L4 + R4 and talk;
+   - **Transcribing** (a speech bubble) once you let go, until your message appears in chat.
+
+   Turn it off or make it more see-through in **Chat › Dictation**.
+
+**DeckKit can only guess.** It can't see Decktation: it knows you're holding L4 + R4, and it sees your
+message turn up in chat. If Decktation didn't hear anything, or failed, DeckKit can't tell. It keeps
+showing Transcribing until it gives up after 12 seconds.
+
+**For the real thing, add DeckKitAfterDark.** Its **DeckDictation** addon uses Decktation's status
+hook to pass along exactly what Decktation is doing, the moment it happens. Listening appears when
+recording really starts, Transcribing when Decktation starts working on it, **Failed** when it heard
+nothing or something went wrong, and the box closes as soon as your text is typed.
+[DeckKitAfterDark](https://github.com/fillmoreb/DeckKitAfterDark) is our companion suite of addons that
+exchange data with programs running on the Deck. It's a separate project only because that's a gray area
+under Blizzard's terms, and you should choose it knowingly. Its
+[INSTALL.md](https://github.com/fillmoreb/DeckKitAfterDark/blob/main/INSTALL.md) has the steps.
+
+For addon authors: anything that knows Decktation's state can drive the box with
+`DeckKit.Dictation.SetState("recording" | "transcribing" | "done" | "error")`. That's all DeckDictation does.
 
 ## Keys
 
