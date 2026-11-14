@@ -158,8 +158,20 @@ for _, g in ipairs(ns.GRIPS) do
     UI.KeyGlyph[g.key] = g.name
 end
 
+local screens = {} -- every DeckKit screen made so far
+
+-- True while any DeckKit screen (the menu, a module's window) is open: it has the pad then, whatever
+-- the game's own gamepad focus says.
+function UI.AnyScreenShown()
+    for _, s in ipairs(screens) do
+        if s.win:IsShown() then return true end
+    end
+    return false
+end
+
 function UI.NewScreen(name, width, height, title)
     local s = setmetatable({ tabs = {}, tab = 1, mode = nil }, Screen)
+    screens[#screens + 1] = s
 
     local win = CreateFrame("Frame", name, UIParent)
     win:SetSize(width, height)

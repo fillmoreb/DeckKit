@@ -13,4 +13,5 @@ FocusAuraSpells.lua
 FocusAuras.lua
 Focus.lua
 ActionBars.lua
+LootRolls.lua
 Suggested.lua
