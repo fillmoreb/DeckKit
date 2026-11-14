@@ -168,7 +168,10 @@ end
 -- Width, height and offsets from the top-right corner, in UIParent units.
 local function Layout()
     local margin = PixelsToUnits(MARGIN_PX)
-    local top = PixelsToUnits(MARGIN_PX + (db.overlayRoom ~= false and OVERLAY_PX or 0))
+    -- Under the status bar while it shows (StatusBar.lua); else clear of the Steam overlay, if asked.
+    local bar = ns.StatusBarHeight and ns.StatusBarHeight() or 0
+    local top = bar > 0 and (bar + PixelsToUnits(MARGIN_PX))
+        or PixelsToUnits(MARGIN_PX + (db.overlayRoom ~= false and OVERLAY_PX or 0))
     local size = db.size or DEFAULTS.size
     -- The dialog border sticks out past the map; keep it clear of the screen's right edge.
     local inset = (db.square ~= false and BorderStyle() == "dialog") and PixelsToUnits(DIALOG_PX) or 0

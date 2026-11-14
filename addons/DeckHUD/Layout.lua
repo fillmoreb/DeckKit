@@ -228,20 +228,30 @@ local RAID_EDGE = 4
 function Layout.RaidTopLeft()
     local raid = Enum.EditModeUnitFrameSystemIndices and Enum.EditModeUnitFrameSystemIndices.Raid
     if not raid then return false, "this client has no raid frames in Edit Mode" end
-    local screenTop = UIParent:GetTop()
-    local below = 0 -- how far down from the top the bars reach
-    for _, name in ipairs({ "MainStatusTrackingBarContainer", "SecondaryStatusTrackingBarContainer" }) do
-        local bar = _G[name]
-        if bar and bar:IsVisible() and bar:GetTop() and screenTop - bar:GetTop() < 2 + below then
-            below = math.max(below, screenTop - bar:GetBottom())
-        end
-    end
+    local below = ns.TopEdge() -- how far down from the top the bars reach (StatusBar.lua)
     local top = math.floor(below + RAID_EDGE + 0.5)
     local ok, err = Layout.SetAnchor(SYSTEMS.UnitFrame, raid, { point = "TOPLEFT", relativeTo = "UIParent",
         relativePoint = "TOPLEFT", offsetX = RAID_EDGE, offsetY = -top })
     if not ok then return false, err end
     return true, top
 end
+
+------------------------------------------------------------------------
+-- Buffs just under the top-edge bars (the status bar, or Blizzard's XP bars along the top), keeping
+-- their distance from the right edge.
+------------------------------------------------------------------------
+
+local BUFF_GAP = 4
+
+function Layout.BuffsUnderBar()
+    local index = Enum.EditModeAuraFrameSystemIndices and Enum.EditModeAuraFrameSystemIndices.BuffFrame
+    if not (SYSTEMS.AuraFrame and index) then return false, "this client has no buff frame in Edit Mode" end
+    local top = math.floor(ns.TopEdge() + BUFF_GAP + 0.5)
+    local ok, err = Layout.SetAnchor(SYSTEMS.AuraFrame, index, { offsetY = -top })
+    if not ok then return false, err end
+    return true, top
+end
+ns.ReloadSoon = function(what) ns.Print(what .. " Reloading the interface...") ReloadUI() end
 
 ------------------------------------------------------------------------
 -- The focus frame centered in the gap between your frame and the target frame, at their height.
@@ -301,6 +311,9 @@ ns.AddCommand("layout", function(arg)
         local ok, err = Layout.SetAnchor(SYSTEMS.UnitFrame, raid, { point = "TOPLEFT", relativeTo = "UIParent",
             relativePoint = "TOPLEFT", offsetX = tonumber(x), offsetY = -tonumber(y) })
         ns.Print(ok and ("Raid frames moved to " .. x .. ", " .. y .. " (layout backed up). /reload to see it.") or ("Not changed: " .. err .. "."))
+    elseif cmd == "buffs" then
+        local ok, info = Layout.BuffsUnderBar()
+        ns.Print(ok and ("Buffs moved to " .. info .. " px from the top (layout backed up). /reload to see it.") or ("Not changed: " .. info .. "."))
     elseif cmd == "focus" then
         local ok, info = Layout.FocusCenter()
         if ok then ReloadSoon("Focus frame centered (layout backed up).") else ns.Print("Not changed: " .. info .. ".") end
@@ -318,7 +331,7 @@ ns.AddCommand("layout", function(arg)
     else
         ns.Print("/deckkit layout suggested  |  party  |  focus  |  raid <left> <top>  |  crossbar <px from bottom>  |  restore  |  backups")
     end
-end, "Edit Mode layout: suggested, party, focus, raid <left> <top>, crossbar <height>, restore, backups")
+end, "Edit Mode layout: suggested, party, focus, buffs, raid <left> <top>, crossbar <height>, restore, backups")
 
 ------------------------------------------------------------------------
 -- The LB prompt on party and raid frames

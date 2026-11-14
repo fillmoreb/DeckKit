@@ -31,19 +31,6 @@ local function Window() return _G.GamepadGroupLootRollFrame end
 -- Top-left corner
 ------------------------------------------------------------------------
 
--- How far down from the top the XP bar (and the bar stacked with it) reach, 0 when not along the top.
-local function BarsBottom()
-    local top = UIParent:GetTop()
-    local below = 0
-    for _, name in ipairs({ "MainStatusTrackingBarContainer", "SecondaryStatusTrackingBarContainer" }) do
-        local bar = _G[name]
-        if bar and bar:IsVisible() and bar:GetTop() and top - bar:GetTop() < 2 + below then
-            below = math.max(below, top - bar:GetBottom())
-        end
-    end
-    return below
-end
-
 local original -- Blizzard's anchor, to put back when turned off
 local list     -- our compact list
 
@@ -53,7 +40,7 @@ local function Place()
     if not original then original = { f:GetPoint(1) } end
     f:ClearAllPoints()
     if TopLeft() then
-        f:SetPoint("TOPLEFT", UIParent, "TOPLEFT", EDGE, -math.floor(BarsBottom() + EDGE + 0.5))
+        f:SetPoint("TOPLEFT", UIParent, "TOPLEFT", EDGE, -math.floor(ns.TopEdge() + EDGE + 0.5))
     else
         f:SetPoint(unpack(original))
     end
