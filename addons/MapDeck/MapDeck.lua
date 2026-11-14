@@ -222,8 +222,19 @@ local function Dot(i, x, y, size, r, g, b, a, atlas, back, tint)
     return t
 end
 
+-- The current waypoint's pin bounces so it's easy to find (moved in OnUpdate, between redraws).
+local bouncing
+
+local function Bounce()
+    local b = bouncing
+    if not (b and b.t:IsShown()) then return end
+    local h = math.abs(math.sin(GetTime() * 3)) * 7 -- screen px, two hops a second
+    b.t:SetPoint("CENTER", art, "TOPLEFT", b.x * layerW, -b.y * layerH + h / art:GetScale())
+end
+
 local function DrawMarkers()
     local n = 0
+    bouncing = nil
     -- Quests on this map
     local ok, quests = pcall(C_QuestLog.GetQuestsOnMap, mapID)
     if ok and type(quests) == "table" then
@@ -247,8 +258,9 @@ local function DrawMarkers()
             local x, y = Translate(p.mapID, p.x, p.y, mapID)
             if x then
                 n = n + 1
-                Dot(n, x, y, i == active and 26 or 18, 1, 1, 1, 1,
+                local t = Dot(n, x, y, i == active and 26 or 18, 1, 1, 1, 1,
                     i == active and "Waypoint-MapPin-Tracked" or "Waypoint-MapPin-Untracked")
+                if i == active then bouncing = { t = t, x = x, y = y } end
             end
         end
     end
@@ -258,8 +270,9 @@ local function DrawMarkers()
         local tracked = C_SuperTrack and C_SuperTrack.IsSuperTrackingUserWaypoint
             and C_SuperTrack.IsSuperTrackingUserWaypoint()
         n = n + 1
-        Dot(n, pin.x, pin.y, tracked and 26 or 20, 1, 1, 1, 1,
+        local t = Dot(n, pin.x, pin.y, tracked and 26 or 20, 1, 1, 1, 1,
             tracked and "Waypoint-MapPin-Tracked" or "Waypoint-MapPin-Untracked")
+        if tracked and not bouncing then bouncing = { t = t, x = pin.x, y = pin.y } end
     end
     -- Where a guard sent you ("Where is the weapon master?"): the game's flag, with its name
     -- (the label sits on its own unscaled layer so it stays readable at any zoom).
@@ -371,6 +384,7 @@ local function DrawMarkers()
         Dot(n, cx, cy, 28, 0.8, 0.8, 0.8, 1, "poi-graveyard-neutral")
     end
     HideFrom(dots, n + 1)
+    Bounce() -- the redraw put the pin back down; lift it again before this frame shows
     for i, t in pairs(backs) do -- has gaps (only some markers have one)
         if i > n then t:Hide() end
     end
@@ -499,6 +513,7 @@ local function Create()
     local markerClock = 0
     frame:SetScript("OnUpdate", function(_, elapsed)
         DrawPlayer()
+        Bounce()
         markerClock = markerClock + elapsed
         if markerClock > 0.5 then -- party and waypoints move less often
             markerClock = 0
