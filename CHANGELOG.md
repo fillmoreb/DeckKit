@@ -1,6 +1,20 @@
 # Changelog
 
-## Unreleased
+## 1.2.0-beta1 - 2026-11-13
+
+### New
+- **A status bar across the top of the screen** (DeckHUD). A dark bar with a thin metal edge and
+  readings you pick for its left, middle and right: clock, FPS, latency, gold, free bag slots,
+  durability, XP and coordinates. With **DeckTelemetry** (from the companion suite DeckKitAfterDark)
+  it also shows the Steam Deck's own battery, battery draw, APU power, CPU / GPU load, memory, APU
+  temperature and fan. An XP line runs along its bottom, so Blizzard's XP bar is hidden. The minimap
+  moves under it. Screen › Status bar, where **Buffs under the bar** also moves your buffs down to
+  clear it (`/deckkit layout buffs`).
+- **Loot rolls, compact until you need them** (DeckHUD). Forever's Need / Greed / Pass window opens in
+  the top-left corner, and until you press View it's a small list instead: each item's [name] in its
+  quality color with a countdown under it (a thin bar, seconds, or a bar behind the name). View brings
+  up the game's window to roll. Screen › Loot rolls; each part can be turned off, and the list has
+  its own opacity.
 
 ### Changed
 - **The grips moved to F1-F8** (held: L4 F1, R4 F2, L5 F3, R5 F4; long press F5-F8), so F9-F12
@@ -8,7 +22,8 @@
   after updating, or the grips stop working. Your slots are kept. README has a new Keys section.
 - **Decktation's status hook left DeckKit**, with its four signal bindings (Insert / Home / End /
   Delete) and the old Decktation patches (built into Decktation 0.3.24). The dictation indicator still
-  follows the L4 + R4 chord; other addons can report the exact state with `DeckKit.Dictation.SetState`.
+  follows the L4 + R4 chord. For Decktation's exact state, install **DeckDictation** from
+  DeckKitAfterDark (other addons can report it with `DeckKit.Dictation.SetState`).
 
 ## 1.1.1-beta1 - 2026-11-13
 
