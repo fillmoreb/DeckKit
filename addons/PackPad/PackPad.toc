@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: PackPad
+## Notes: Your bags, controller first, on Blizzard's own gamepad bag window: the bag icons in their own column, the slots in one grid. /deckkit pack
+## Version: @project-version@
+## Author: Ben Fillmore
+## SavedVariablesPerCharacter: PackPadDB
+## Dependencies: DeckKit
+## OptionalDeps: Pawn
+
+Broom.lua
+Marks.lua
+Core.lua
+Peek.lua

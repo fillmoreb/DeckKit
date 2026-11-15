@@ -1,0 +1,4 @@
+# From the required dependency, deployed alongside.
+DeckKit
+# Pawn (optional): its documented bag-addon API for upgrade arrows in the bag peek.
+PawnShouldItemLinkHaveUpgradeArrow
