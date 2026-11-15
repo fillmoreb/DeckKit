@@ -15,10 +15,9 @@ local ADDON, ns = ...
 DeckKit.NewModule(ns, ADDON, "|cff8fd16fMapDeck|r")
 
 local MARGIN, HEADER = 24, 44
-local TILE = 256
 
 local frame, canvas, art, marks, blob, title, coords
-local tiles, overlays, dots, backs = {}, {}, {}, {}
+local dots, backs = {}, {}
 local playerArrow
 local mapID, homeMap -- shown map; the map you're standing in
 local layerW, layerH = 1, 1
@@ -94,74 +93,12 @@ local function Fit()
     if blob then blob:SetSize(layerW, layerH) end
 end
 
+-- The zone's art and explored areas (DeckKit's UI.DrawMapArt, shared with the map peek).
 local function DrawArt()
-    local layers = C_Map.GetMapArtLayers and C_Map.GetMapArtLayers(mapID)
-    local layer = layers and layers[1]
-    if not layer then
-        HideFrom(tiles, 1)
-        HideFrom(overlays, 1)
-        return false
-    end
-    layerW, layerH = layer.layerWidth, layer.layerHeight
+    local w, h = DeckKit.UI.DrawMapArt(art, mapID)
+    if not w then return false end
+    layerW, layerH = w, h
     Fit()
-
-    local tw, th = layer.tileWidth or TILE, layer.tileHeight or TILE
-    local wide, tall = math.ceil(layerW / tw), math.ceil(layerH / th)
-    local files = C_Map.GetMapArtLayerTextures(mapID, 1) or {}
-    local n = 0
-    for row = 1, tall do
-        for col = 1, wide do
-            local file = files[(row - 1) * wide + col]
-            if file then
-                n = n + 1
-                local t = Pool(tiles, n, "BACKGROUND")
-                t:SetSize(tw, th)
-                t:SetPoint("TOPLEFT", (col - 1) * tw, -(row - 1) * th)
-                t:SetTexture(file, nil, nil, "TRILINEAR")
-            end
-        end
-    end
-    HideFrom(tiles, n + 1)
-
-    -- Explored areas (the same pieces Blizzard's map lays over the base art).
-    n = 0
-    local explored = C_MapExplorationInfo and C_MapExplorationInfo.GetExploredMapTextures
-        and C_MapExplorationInfo.GetExploredMapTextures(mapID) or {}
-    for _, info in ipairs(explored) do
-        -- Some maps leave out the piece counts; they follow from the size (256-pixel tiles).
-        local tall = info.numTexturesTall or math.ceil((info.textureHeight or 0) / TILE)
-        local wide = info.numTexturesWide or math.ceil((info.textureWidth or 0) / TILE)
-        if not info.isShownByMouseOver and info.fileDataIDs then
-            for j = 1, tall do
-                local ph, fh = TILE, TILE
-                if j == tall then
-                    ph = info.textureHeight % TILE
-                    if ph == 0 then ph = TILE end
-                    fh = 16
-                    while fh < ph do fh = fh * 2 end
-                end
-                for k = 1, wide do
-                    local pw, fw = TILE, TILE
-                    if k == wide then
-                        pw = info.textureWidth % TILE
-                        if pw == 0 then pw = TILE end
-                        fw = 16
-                        while fw < pw do fw = fw * 2 end
-                    end
-                    local file = info.fileDataIDs[(j - 1) * wide + k]
-                    if file then
-                        n = n + 1
-                        local t = Pool(overlays, n, "BORDER")
-                        t:SetSize(pw, ph)
-                        t:SetTexCoord(0, pw / fw, 0, ph / fh)
-                        t:SetPoint("TOPLEFT", info.offsetX + TILE * (k - 1), -(info.offsetY + TILE * (j - 1)))
-                        t:SetTexture(file, nil, nil, "TRILINEAR")
-                    end
-                end
-            end
-        end
-    end
-    HideFrom(overlays, n + 1)
     return true
 end
 

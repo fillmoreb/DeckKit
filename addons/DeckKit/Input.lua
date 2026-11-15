@@ -66,9 +66,10 @@ function Input.Owned() return owner ~= nil end
 -- window: the frame whose visibility turns input on and off.
 -- handlers: key ("PADDUP", "PAD1", ...) -> function(). Unlisted keys reach the game.
 -- opts.shared: don't take the pad from (or close) other windows.
+-- opts.release: function(key), when a press a handler took is let go (hold-to-see things).
 function Input.New(window, handlers, opts)
     local h = setmetatable({ window = window, handlers = handlers, pressed = {}, polled = {}, held = {},
-        shared = opts and opts.shared }, Handler)
+        shared = opts and opts.shared, release = opts and opts.release }, Handler)
 
     local catcher = CreateFrame("Frame", nil, UIParent)
     catcher:SetFrameStrata("TOOLTIP")
@@ -129,8 +130,10 @@ function Handler:Handle(key)
 end
 
 function Handler:Release(key)
+    local was = self.pressed[key]
     self.pressed[key] = nil
     self.held[key] = nil
+    if was and self.release then self.release(key) end
 end
 
 function Handler:Poll(elapsed)
@@ -153,7 +156,10 @@ function Handler:Poll(elapsed)
                 self.held[key] = 0
                 self.handlers[key]()
             end
-        elseif not down then
+        elseif not down and self.polled[key] then
+            -- Let go, as polled. Only after polling saw it down: a press that arrived as an event can
+            -- read as up for a frame or two before the polled state catches up (its button-up event
+            -- releases it otherwise).
             self:Release(key)
         end
         self.polled[key] = down

@@ -213,7 +213,52 @@ local function Build()
     said:Set("Saved", "nothing yet", UI.Color.dim)
 
     ------------------------------------------------------------------
-    -- Tab 4: information only. Nothing takes the cursor.
+    -- Tab 4: a layout (Layout.lua): the same kind of window described as data, the way an assistant
+    -- would send it. Checks tick themselves from your bags and quest log.
+    ------------------------------------------------------------------
+    local tl = screen:AddTab("Layout")
+    local said2 = UI.Status(tl.frame, 400)
+    said2:SetPoint("BOTTOMLEFT", 4, 0)
+    said2:Set("Reply", "nothing yet", UI.Color.dim)
+    local ticks = {} -- your own ticks, kept while the sample is (an owner saves them for real)
+    local SPEC = {
+        type = "list", items = {
+            { type = "section", title = "Before Shadowfang Keep", items = {
+                { type = "row", items = { { type = "item", id = 6948 }, { type = "check", bind = { item = 6948 } } } },
+                { type = "row", items = { { type = "item", id = 159, count = 10 },
+                    { type = "check", bind = { item = 159, count = 10 } } } },
+                { type = "row", items = { { type = "item", id = 4306 }, { type = "check", toggle = true } } },
+                { type = "progress", text = "Linen Cloth", bind = { item = 2589, count = 20 } },
+            } },
+            { type = "section", title = "Quests", items = {
+                { type = "row", items = { { type = "quest", id = 1013, text = "The Book of Ur" },
+                    { type = "check", bind = { quest = 1013 } } } },
+                { type = "row", items = { { type = "quest", id = 1014, text = "Arugal Must Die" },
+                    { type = "check", bind = { quest = 1014 } } } },
+            } },
+            { type = "section", title = "Where", items = {
+                { type = "waypoint", map = 1421, x = 44.8, y = 67.8, label = "Shadowfang Keep" },
+                { type = "waypoint", map = 1458, x = 84.2, y = 17.4, label = "Bethor Iceshard" },
+                { type = "text", style = "dim", text = "Hold {Y} to see an item's tooltip or a place's map beside the window (move "
+                    .. "while holding to look at others). On a place, {A} makes it your waypoint." },
+            } },
+        },
+        footer = { type = "row", items = {
+            { type = "space" },
+            { type = "button", text = "Count me in", width = 150, buttons = { a = { reply = "in", label = "Join" } } },
+            { type = "button", text = "Not tonight", width = 150, buttons = { a = { reply = "out", label = "Decline" } } },
+        } },
+        title = "Shadowfang Keep",
+    }
+    local function Reply(v) said2:Set("Reply", v, UI.Color.gold) end
+    UI.Build(tl.frame, SPEC, { width = W, height = 442 - 30, onReply = Reply, ticks = ticks })
+    local alone = UI.Action(tl.frame, 260, { label = "Open it in a window of its own", verb = "Open",
+        run = function() UI.ShowLayout(SPEC, { title = "Sample display", ticks = ticks,
+            onReply = function(v) ns.Print("Sample display: replied " .. tostring(v)) end }) end })
+    alone:SetPoint("BOTTOMRIGHT", 0, 0)
+
+    ------------------------------------------------------------------
+    -- Tab 5: information only. Nothing takes the cursor.
     ------------------------------------------------------------------
     local t3 = screen:AddTab("Status")
     local info = UI.Panel(t3.frame, "HealPad")

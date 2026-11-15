@@ -3,6 +3,9 @@
 --   Core.lua    the DeckKit global, modules, events, sticks, /deckkit and its commands
 --   Input.lua   controller capture for windows (DeckKit.Input)
 --   Window.lua  the window look and sounds (DeckKit.Window)
+--   UI.lua      the UI kit for windows: screens, tabs, footer prompts, controls (DeckKit.UI)
+--   Conditions.lua  live questions about the game: quest taken, items carried... (DeckKit.Conditions)
+--   Layout.lua  windows described as data, built from the UI kit (UI.Build), and maps beside them
 --   Override.lua  shared pad button overrides, e.g. X for wand shoot and fishing (DeckKit.Override)
 --   Settings.lua  the settings registry modules add their options to (ns.AddSettings)
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit

@@ -58,7 +58,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 - Each feature stays a separate addon on top of the **DeckKit core** (`addons/DeckKit`), which holds
   the shared controller input (`Input.lua`: one window owns the pad at a time), the window look and the
   suite's colors (`Window.lua`, `DeckKit.COLORS` lilac/plum), the UI kit (`UI.lua`, including
-  `UI.MakePointer`/`UI.PlacePointer` for the game's chevron), map maths (`Map.lua`, `DeckKit.Map`:
+  `UI.MakePointer`/`UI.PlacePointer` for the game's chevron), windows described as data (`Layout.lua`:
+  `UI.Build`, `UI.ShowLayout`, the hold-Y map peek and `UI.DrawMapArt`, which MapDeck draws with too), live
+  game conditions (`Conditions.lua`, `DeckKit.Conditions`: quest taken, items carried...), map maths (`Map.lua`, `DeckKit.Map`:
   positions, world positions, bearings, facing), the waypoints (`Waypoints.lua`, `DeckKit.Waypoints`:
   list, guidance, arrival; WayPad is only their controller front end, DeckHUD's compass shows them), and
   in `Core.lua` the `DeckKit` global, per-module event buses, `DeckKit.Readable` (secret-value check),
@@ -134,7 +136,8 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   button icons.
 - DeckKit windows are built from `DeckKit/UI.lua` (screen with tabs and footer prompts, panels,
   checkbox, switch, selector, stepper, dial, action, key binding, icon grid, scrolling list; the game's
-  own pointer as the cursor). `DeckKit/Sample.lua` (`/deckkit sample`) shows every element; keep it
+  own pointer as the cursor), or described as data with `UI.Build` (`DeckKit/Layout.lua`'s header lists the
+  node types). `DeckKit/Sample.lua` (`/deckkit sample`) shows every element; keep it
   in step when adding one. `/deckkit sample <PADKEY ...>` replays presses for testing.
 - Edit Mode positions and settings: change them through `DeckHUD/Layout.lua` (`C_EditMode`,
   backup first, then a /reload), never by fighting Edit Mode at runtime.

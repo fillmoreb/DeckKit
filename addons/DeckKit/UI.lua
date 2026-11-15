@@ -146,7 +146,18 @@ Screen.__index = Screen
 
 local ScrollOf -- (defined with the scrolling list below)
 
+-- Focus leaving a control: its highlight off, and its onBlur (a tooltip or peek it opened goes away).
+local function Blur(old)
+    if old.UnlockHighlight then old:UnlockHighlight() end
+    if old.dk and old.dk.onBlur then old.dk.onBlur(old) end
+end
+
 local TAB_H, FOOTER_H, PAD = 30, 34, 14
+-- The footer legend, after Blizzard's (InputLegendPromptGroup.lua): 10 px inside the slot, 15 between
+-- prompts, glyphs drawn 24 px (ours a little bigger: their atlases have padding).
+local LEGEND_H, LEGEND_PAD, LEGEND_GAP, LEGEND_GLYPH = 32, 10, 15, 26
+-- The game's order, left to right, whatever order a control lists them in.
+local LEGEND_ORDER = { A = 1, X = 2, Y = 3, DPAD_LR = 4, DPAD_UD = 5, DPAD = 6, LB = 13, RB = 14, LT = 20, RT = 21, B = 99 }
 
 local PAD_KEYS = { "PADDUP", "PADDDOWN", "PADDLEFT", "PADDRIGHT", "PAD1", "PAD2", "PAD3", "PAD4",
     "PADLSHOULDER", "PADRSHOULDER", "PADLTRIGGER", "PADRTRIGGER", "PADFORWARD" }
@@ -203,24 +214,34 @@ function UI.NewScreen(name, width, height, title)
     s.lb = Text(strip, UI.Font.body, "CENTER")
     s.rb = Text(strip, UI.Font.body, "CENTER")
 
+    -- How much taller a screen is than its tab body (title, tab strip, footer): for sizing a window to
+    -- its content (Layout.lua's UI.ShowLayout).
+    UI.SCREEN_CHROME = 36 + TAB_H + 10 + FOOTER_H + 8
     local body = CreateFrame("Frame", nil, win)
     body:SetPoint("TOPLEFT", PAD, -36 - TAB_H - 10)
     body:SetPoint("BOTTOMRIGHT", -PAD, FOOTER_H + 8)
     s.body = body
 
-    -- Footer: what the buttons do right now. Left: tab switching / messages; right: the prompts.
+    -- Footer: what the buttons do right now, as the game's own gamepad windows show it (Blizzard's
+    -- input legend: the footer slot with each button's glyph and its gold label, in the game's button
+    -- order). Left of it: why the focused control is unavailable, when it is.
     local footer = CreateFrame("Frame", nil, win)
     footer:SetPoint("BOTTOMLEFT", 2, 2)
     footer:SetPoint("BOTTOMRIGHT", -2, 2)
     footer:SetHeight(FOOTER_H)
-    Fill(footer, 0, 0, 0, 0.45)
-    local top = Line(footer, 0.45, 0.42, 0.35, 0.6)
-    top:SetPoint("TOPLEFT")
-    top:SetPoint("TOPRIGHT")
     s.footerLeft = Text(footer, UI.Font.small)
     s.footerLeft:SetPoint("LEFT", PAD, 0)
-    s.prompts = Text(footer, UI.Font.body, "RIGHT")
-    s.prompts:SetPoint("RIGHT", -PAD, 0)
+    local legend = CreateFrame("Frame", nil, footer)
+    legend:SetPoint("RIGHT", -6, 2)
+    legend:SetHeight(LEGEND_H)
+    legend.bg = legend:CreateTexture(nil, "BACKGROUND")
+    legend.bg:SetAllPoints()
+    if not legend.bg:SetAtlas("gamepad-footer-slot-bg") then legend.bg:SetColorTexture(0, 0, 0, 0.55) end
+    legend.border = legend:CreateTexture(nil, "BORDER")
+    legend.border:SetAllPoints()
+    legend.border:SetAtlas("gamepad-footer-slot-frameneutral")
+    legend.items = {}
+    s.legend = legend
     s.footer = footer
 
     s.pointer = MakePointer(win)
@@ -235,7 +256,7 @@ function UI.NewScreen(name, width, height, title)
 
     local handlers = {}
     for _, key in ipairs(PAD_KEYS) do handlers[key] = function() s:Key(key) end end
-    s.input = ns.Input.New(win, handlers)
+    s.input = ns.Input.New(win, handlers, { release = function(key) s:KeyUp(key) end })
 
     win:HookScript("OnShow", function()
         ns.Window.Sound(true)
@@ -246,6 +267,8 @@ function UI.NewScreen(name, width, height, title)
         s:ClosePopup()
         s.mode, s.capture = nil, nil
         s.pointer:Hide()
+        local f = s:Focused()
+        if f and f.dk and f.dk.onBlur then f.dk.onBlur(f) end
     end)
     return s
 end
@@ -281,7 +304,7 @@ function Screen:StickScroll(y, elapsed)
         end
         if best then
             local old = self.tabs[self.tab].focus
-            if old and old.UnlockHighlight then old:UnlockHighlight() end
+            if old then Blur(old) end
             self.tabs[self.tab].focus = best
             best:LockHighlight()
             PlacePointer(self.pointer, best)
@@ -341,6 +364,8 @@ end
 function Screen:SelectTab(i, quiet)
     if not self.tabs[i] then return end
     self:ClosePopup()
+    local was = self.tabs[self.tab] and self.tabs[self.tab].focus
+    if was and i ~= self.tab then Blur(was) end
     self.mode, self.capture = nil, nil
     self.tab = i
     for j, tab in ipairs(self.tabs) do
@@ -376,7 +401,7 @@ end
 
 function Screen:SetFocus(f, intro)
     local old = self:Focused()
-    if old and old ~= f and old.UnlockHighlight then old:UnlockHighlight() end
+    if old and old ~= f then Blur(old) end
     if self.popup and self.popup:IsShown() then self.popup.focus = f else self.tabs[self.tab].focus = f end
     if f then
         local sf = ScrollOf(f)
@@ -500,17 +525,52 @@ function Screen:Key(key)
     end
 end
 
+-- Lays the legend out: prompts = { {key, label, glyphs = markup or nil}, ... }, sorted into the game's order.
+function Screen:SetLegend(prompts)
+    local legend = self.legend
+    for i, p in ipairs(prompts) do p.i = i end
+    table.sort(prompts, function(a, b)
+        local oa, ob = LEGEND_ORDER[a[1]] or 50, LEGEND_ORDER[b[1]] or 50
+        if oa ~= ob then return oa < ob end
+        return a.i < b.i
+    end)
+    local x = LEGEND_PAD
+    for i, p in ipairs(prompts) do
+        local fs = legend.items[i]
+        if not fs then
+            fs = Text(legend, UI.Font.heading)
+            legend.items[i] = fs
+        end
+        local glyphs = p.glyphs or (p[1] and Glyph(p[1], LEGEND_GLYPH))
+        fs:SetText((glyphs and (glyphs .. " ") or "") .. p[2])
+        fs:ClearAllPoints()
+        fs:SetPoint("LEFT", legend, "LEFT", x, 0)
+        fs:Show()
+        x = x + fs:GetStringWidth() + LEGEND_GAP
+    end
+    for i = #prompts + 1, #legend.items do legend.items[i]:Hide() end
+    legend:SetWidth(x - LEGEND_GAP + LEGEND_PAD)
+end
+
+-- A button let go: a control's hold-to-see (dk.release = { y = fn }) ends.
+function Screen:KeyUp(key)
+    local name = ({ PAD1 = "a", PAD3 = "x", PAD4 = "y" })[key]
+    local f = self:Focused()
+    local fn = name and f and f.dk and f.dk.release and f.dk.release[name]
+    if fn then fn(f) end
+end
+
 -- Footer prompts for the focused control. Each control's dk.prompts returns
 -- { {"A", "Toggle"}, {"X", "Clear"} }; B and LB/RB are added here.
 function Screen:UpdatePrompts()
     local parts = {}
     local left = ""
     if self.mode == "capture" then
-        parts[#parts + 1] = Hex(UI.Color.gold) .. (self.capture and self.capture.dk.captureText or "Press a button") .. "|r"
-        parts[#parts + 1] = Glyph("B") .. " Cancel"
+        parts[#parts + 1] = { nil, Hex(UI.Color.gold) .. (self.capture and self.capture.dk.captureText or "Press a button") .. "|r" }
+        parts[#parts + 1] = { "B", "Cancel" }
     elseif self.mode == "confirm" then
-        parts[#parts + 1] = Glyph("A") .. " " .. (self.capture and self.capture.dk.confirmText or "Yes")
-        parts[#parts + 1] = Glyph("B") .. " Cancel"
+        parts[#parts + 1] = { "A", self.capture and self.capture.dk.confirmText or "Yes" }
+        parts[#parts + 1] = { "B", "Cancel" }
     else
         local f = self:Focused()
         if f and f.dk then
@@ -519,14 +579,16 @@ function Screen:UpdatePrompts()
                 if type(why) == "function" then why = why(f) end
                 left = Hex(UI.Color.dim) .. (why or "Unavailable") .. "|r"
             elseif f.dk.prompts then
-                for _, p in ipairs(f.dk.prompts(f)) do parts[#parts + 1] = Glyph(p[1]) .. " " .. p[2] end
+                for _, p in ipairs(f.dk.prompts(f)) do parts[#parts + 1] = { p[1], p[2] } end
             end
         end
         local inPopup = self.popup and self.popup:IsShown()
-        parts[#parts + 1] = Glyph("B") .. (inPopup and " Cancel" or " Close")
-        if #self.tabs > 1 and not inPopup and left == "" then left = Glyph("LB") .. " " .. Glyph("RB") .. " Tabs" end
+        parts[#parts + 1] = { "B", inPopup and "Cancel" or "Close" }
+        if #self.tabs > 1 and not inPopup then
+            parts[#parts + 1] = { "LB", "Tabs", glyphs = Glyph("LB", LEGEND_GLYPH) .. Glyph("RB", LEGEND_GLYPH) }
+        end
     end
-    self.prompts:SetText(table.concat(parts, "     "))
+    self:SetLegend(parts)
     self.footerLeft:SetText(left)
 end
 
@@ -551,6 +613,16 @@ local function Register(f, spec)
     return f
 end
 UI.Register = Register
+
+-- Takes a control out of its tab's focus order (Layout.lua, rebuilding a display in place).
+function UI.Unregister(f)
+    local tab = TabOf(f:GetParent())
+    if not tab then return end
+    for i = #tab.items, 1, -1 do
+        if tab.items[i] == f then table.remove(tab.items, i) end
+    end
+    if tab.focus == f then tab.focus = nil end
+end
 
 -- A recessed group with a gold heading. Content goes below panel.top (y offset from TOPLEFT).
 function UI.Panel(parent, title)
