@@ -410,6 +410,10 @@ local rows = {
     { type = "toggle", label = "Compass: Blizzard's map pin",
       hint = "The pin you place on the world map, as a dim gold pin on the compass.",
       get = function() return DB().compassBlizzardPin ~= false end, set = function(on) DB().compassBlizzardPin = on end },
+    { type = "toggle", label = "Compass: focused quest",
+      hint = "The quest the game has focused (super tracked) on the map and objective tracker, as its icon there: "
+          .. "the dots while you work on it, the ? once it's ready to turn in.",
+      get = function() return DB().compassQuest ~= false end, set = function(on) DB().compassQuest = on end },
     { type = "toggle", label = "Compass: guard directions",
       hint = "The flag a city guard puts on your map when you ask the way.",
       get = function() return DB().compassGuard ~= false end, set = function(on) DB().compassGuard = on end },

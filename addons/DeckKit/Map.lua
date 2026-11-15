@@ -92,3 +92,78 @@ function Map.Facing()
     local ok, f = pcall(GetPlayerFacing)
     if ok and Readable(f) then return f end
 end
+
+------------------------------------------------------------------------
+-- Quest areas: which quest's area you're standing in, by the real shape the map draws for it (not a
+-- distance from its center). Each tester is an invisible quest-area frame (QuestPOIFrame) that draws the
+-- areas of the quests asked about and answers "which area is this point in?". One per user (QuestPad,
+-- the compass), so they don't keep redrawing each other's.
+--
+--   local area = DeckKit.Map.QuestArea()
+--   area:At({ questID, ... })   the one you're in, or nil; nil, true while it can't tell yet (loading the
+--                               shapes, or drawing: it draws on one call and answers from the next), so
+--                               call it every so often (4 times a second) and keep the last answer then
+------------------------------------------------------------------------
+
+local testers = {}
+local requestedMap -- the map whose area shapes the game was asked to load (shared: one at a time)
+local REDRAW = 3   -- seconds outside every area before drawing again (shapes can arrive late, unannounced)
+
+local Tester = {}
+Tester.__index = Tester
+
+function Map.QuestArea()
+    local frame = CreateFrame("QuestPOIFrame", nil, UIParent)
+    frame:SetSize(512, 512)
+    frame:SetPoint("CENTER")
+    -- It must be shown to answer (one never shown has no layout to test against); fully transparent and
+    -- not clickable, so nothing appears.
+    frame:SetAlpha(0)
+    frame:EnableMouse(false)
+    frame:SetFrameStrata("BACKGROUND")
+    frame:Show()
+    local t = setmetatable({ frame = frame, drawnAt = 0 }, Tester)
+    testers[#testers + 1] = t
+    return t
+end
+
+function Tester:At(ids)
+    local map = C_Map.GetBestMapForUnit("player")
+    if not map or #ids == 0 then return end
+    local sorted = { unpack(ids) }
+    table.sort(sorted)
+    local key = map .. ":" .. table.concat(sorted, ",")
+    if key ~= self.drawnKey then
+        -- The shapes only exist once the game has loaded them for this map (the world map asks the same
+        -- way when it opens). Ask, then draw on a later call.
+        if requestedMap ~= map then
+            requestedMap = map
+            if C_QuestLog.SetMapForQuestPOIs then C_QuestLog.SetMapForQuestPOIs(map) end
+            if QuestPOIUpdateIcons then QuestPOIUpdateIcons() end
+            return nil, true
+        end
+        -- A new map: set it, and draw on a later call (drawn right after SetMapID, the areas come out empty).
+        if self.map ~= map then
+            self.map = map
+            self.frame:SetMapID(map)
+            return nil, true
+        end
+        self.frame:DrawNone()
+        for _, questID in ipairs(sorted) do self.frame:DrawBlob(questID, true) end
+        self.drawnKey, self.drawnAt = key, GetTime()
+        return nil, true -- it answers once it has drawn
+    end
+    if GetTime() == self.drawnAt then return nil, true end
+    local pos = C_Map.GetPlayerMapPosition(map, "player")
+    if not pos then return end
+    local x, y = pos:GetXY() -- (not "pos and pos:GetXY()": an "and" keeps only the first value)
+    if not (x and y and Readable(x) and Readable(y)) then return end
+    local hit = self.frame:UpdateMouseOverTooltip(x, y)
+    if not hit and GetTime() - self.drawnAt > REDRAW then self.drawnKey = nil end
+    return hit
+end
+
+local function Redraw() for _, t in ipairs(testers) do t.drawnKey = nil end end
+ns.On("QUEST_POI_UPDATE", Redraw) -- area data arrived or changed
+ns.On("QUEST_LOG_UPDATE", Redraw)
+ns.On("ZONE_CHANGED_NEW_AREA", function() requestedMap = nil; Redraw() end)

@@ -5,6 +5,9 @@
 --   * the active waypoint (DeckKit.Waypoints): the gold pin, hanging below the bar, with its distance
 --     in yards under it (dropping clear of the pointer as it reaches the middle); "Arrived" when reached
 --   * Blizzard's map pin and a guard's directions (the flag), sized and hung like the pin
+--   * the focused quest (the game's super-tracked one), drawn as Blizzard's map and objective tracker draw
+--     it: its classification's disc (gold, blue for dailies...) with the dots, or the ? once complete;
+--     pulsing with the map's quest glow while you stand in its area (DeckKit.Map.QuestArea)
 --   * your group: class-colored dots, or the raid marker one wears
 -- Waypoint-like marks stay on the strip: out of view they wait at the nearer end, side by side (Park).
 -- Group dots fade toward the ends like the ticks. Each kind of mark is a menu toggle.
@@ -196,9 +199,10 @@ end
 local marks = {}      -- { bearing, kind, unit or label } from the last Collect
 local markPool = {}   -- textures, reused
 local RAID_ICON = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_%d"
-local MARK_SIZE = { blizzard = 22, guard = 26, member = 12, marked = 14 } -- guard: sized by eye against the pin (its flag fills its cell; the pin has margin)
+local MARK_SIZE = { blizzard = 22, guard = 26, quest = 26, member = 12, marked = 14 } -- guard: sized by eye against the pin (its flag fills its cell; the pin has margin)
 -- Waypoint-like marks: on the unclipped layer, level with the waypoint pin, kept in view (Park).
-local BIG = { guard = true, blizzard = true }
+local BIG = { guard = true, blizzard = true, quest = true }
+local PULSE = 4 -- the in-area glow's beat (radians a second: about one and a half a second)
 local MARK_DROP = { guard = 2 }  -- hung this much lower than the pin
 local SOLID = { guard = true }   -- full strength even while waiting at an end
 
@@ -219,6 +223,39 @@ end
 
 local Bearing = DeckKit.Map.Bearing
 
+-- The focused quest's spot: where the map draws its icon (its area, or the turn-in once complete), on the
+-- map you're in or the first one above it that has it (zone, then continent). x, y, map; nil if none.
+local function QuestSpot(questID, pmap)
+    local m = pmap
+    for _ = 1, 4 do
+        if not m or m == 0 then return end
+        for _, q in ipairs(C_QuestLog.GetQuestsOnMap(m) or {}) do
+            if q.questID == questID and q.x then return q.x, q.y, m end
+        end
+        local info = C_Map.GetMapInfo(m)
+        m = info and info.parentMapID
+    end
+end
+
+-- Blizzard's quest icons (Blizzard_POIButton/POIButton.lua): a disc per classification (the focused
+-- look: "-SuperTracked"), and on it the in-progress dots or the classification's turn-in mark.
+local QC = Enum.QuestClassification or {}
+local DISC = { [QC.Legendary or -1] = "UI-QuestPoiLegendary-QuestNumber", [QC.Campaign or -2] = "UI-QuestPoiCampaign-QuestNumber",
+    [QC.Calling or -3] = "UI-QuestPoiCampaign-QuestNumber", [QC.Recurring or -4] = "UI-QuestPoiRecurring-QuestNumber",
+    [QC.Important or -5] = "UI-QuestPoiImportant-QuestNumber", [QC.Meta or -6] = "UI-QuestPoiWrapper-QuestNumber" }
+local TURN_IN = { [QC.Legendary or -1] = "UI-QuestPoiLegendary-QuestBangTurnIn", [QC.Campaign or -2] = "UI-QuestPoiCampaign-QuestBangTurnIn",
+    [QC.Calling or -3] = "UI-DailyQuestPoiCampaign-QuestBangTurnIn", [QC.Recurring or -4] = "UI-QuestPoiRecurring-QuestBangTurnIn",
+    [QC.Important or -5] = "UI-QuestPoiImportant-QuestBangTurnIn", [QC.Meta or -6] = "UI-QuestPoiWrapper-QuestBangTurnIn" }
+local function QuestAtlases(questID)
+    local class = C_QuestInfoSystem and C_QuestInfoSystem.GetQuestClassification
+        and C_QuestInfoSystem.GetQuestClassification(questID)
+    local disc = (DISC[class] or "UI-QuestPoi-QuestNumber") .. "-SuperTracked"
+    local done = C_QuestLog.IsComplete and C_QuestLog.IsComplete(questID)
+    return disc, done and (TURN_IN[class] or "UI-QuestIcon-TurnIn-Normal") or "Quest-In-Progress-Icon-Brown"
+end
+
+local questArea, insideOf, inside -- the focused quest's area tester; which quest, and are you in it
+
 local function Collect()
     wipe(marks)
     if Shows("compassGroup") then AddFakes() end
@@ -231,6 +268,20 @@ local function Collect()
             local px2, py2 = point.position:GetXY()
             local b = Bearing(pmap, px, py, point.uiMapID, px2, py2)
             if b then marks[#marks + 1] = { bearing = b, kind = "blizzard" } end
+        end
+    end
+    -- The focused quest (super tracked: the one the map and objective tracker single out), and whether
+    -- you're in its area (kept from the last answer while the area can't tell yet).
+    if Shows("compassQuest") and C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID then
+        local q = C_SuperTrack.GetSuperTrackedQuestID()
+        if q and q > 0 then
+            questArea = questArea or DeckKit.Map.QuestArea()
+            if q ~= insideOf then insideOf, inside = q, false end
+            local hit, pending = questArea:At({ q })
+            if not pending then inside = hit == q end
+            local qx, qy, qmap = QuestSpot(q, pmap)
+            local b = qx and Bearing(pmap, px, py, qmap, qx, qy)
+            if b then marks[#marks + 1] = { bearing = b, kind = "quest", quest = q, inside = inside } end
         end
     end
     -- A guard's directions (the flag a city guard puts on your map).
@@ -261,11 +312,27 @@ local function Collect()
 end
 
 local bigPool = {}
+-- A mark's texture, with a second one riding on it (t.top: a quest disc's dots or ?), hidden and faded
+-- along with it.
 local function MarkTexture(pool, i, layer)
     local t = pool[i]
     if not t then
         t = layer:CreateTexture(nil, "OVERLAY", nil, 1)
         Glide(t)
+        t.top = layer:CreateTexture(nil, "OVERLAY", nil, 2)
+        Glide(t.top)
+        t.top:SetPoint("CENTER", t)
+        t.top:Hide()
+        -- Behind it: the map's quest glow, pulsing while you're in the focused quest's area.
+        t.glow = layer:CreateTexture(nil, "OVERLAY", nil, 0)
+        Glide(t.glow)
+        t.glow:SetAtlas("UI-QuestPoi-OuterGlow")
+        t.glow:SetBlendMode("ADD")
+        t.glow:SetPoint("CENTER", t)
+        t.glow:Hide()
+        local hide, alpha = t.Hide, t.SetAlpha
+        function t:Hide() hide(self); self.top:Hide(); self.glow:Hide() end
+        function t:SetAlpha(a) alpha(self, a); self.top:SetAlpha(a) end
         pool[i] = t
     end
     return t
@@ -274,7 +341,17 @@ end
 local function Paint(t, m)
     t:SetTexCoord(0, 1, 0, 1)
     t:SetVertexColor(1, 1, 1)
-    if m.kind == "blizzard" then
+    t.top:Hide()
+    if m.kind == "quest" then
+        local disc, top = QuestAtlases(m.quest)
+        t:SetAtlas(disc)
+        t.top:SetAtlas(top)
+        -- The mark at its size against the disc's, as the map draws them.
+        local d, o = C_Texture.GetAtlasInfo(disc), C_Texture.GetAtlasInfo(top)
+        local k = (d and o and d.width > 0) and o.width / d.width or 0.7
+        t.top:SetSize(MARK_SIZE.quest * k, MARK_SIZE.quest * k * ((o and o.width > 0) and o.height / o.width or 1))
+        t.top:Show()
+    elseif m.kind == "blizzard" then
         t:SetAtlas("Waypoint-MapPin-Untracked")
     elseif m.kind == "guard" then
         -- The guard's flag, as the world map draws it: a cell of the minimap's POI sheet.
@@ -369,6 +446,14 @@ local function DrawMarks(facing, waypoint, elapsed)
             At(t, m.px, MARK_Y - (MARK_DROP[m.kind] or 0))
             t:SetAlpha((m.parked and not SOLID[m.kind]) and 0.6 or 1)
             t:Show()
+            if m.inside then
+                local s = MARK_SIZE.quest * 2 -- the glow's art is twice the disc's
+                t.glow:SetSize(s, s)
+                t.glow:SetAlpha(0.3 + 0.6 * (0.5 + 0.5 * math.sin(GetTime() * PULSE)))
+                t.glow:Show()
+            else
+                t.glow:Hide()
+            end
         else
             local a = EdgeAlpha(m.x)
             if a > 0 then

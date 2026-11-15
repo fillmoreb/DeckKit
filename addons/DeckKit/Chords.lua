@@ -136,6 +136,14 @@ local function Changed()
     end
 end
 
+-- A new name for an offered action (the cheat sheet and menu follow). For an offer whose name another
+-- addon knows better (the voice assistant's: Grips.lua, DeckKit.Dictation.SetAssistant).
+function Chords.SetLabel(id, label)
+    if not offers[id] then return end
+    offers[id].label = label
+    Changed()
+end
+
 local function Store(t, chord, gesture, v)
     local c = t[chord] or {}
     c[gesture] = v

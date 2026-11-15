@@ -2,8 +2,7 @@
 -- right now. Which quest:
 --   1. the quest your target belongs to (from the target's tooltip quest lines), else
 --   2. the quest whose area you're standing in: the real shape the map draws for it, not a
---      distance from its center. An invisible quest-area frame (QuestPOIFrame) draws the areas of
---      every quest that has an item, then answers "which area is this point in?" for your position.
+--      distance from its center (DeckKit.Map.QuestArea).
 -- A grip chord slot (Controls > Grips, R5 at first) or any key bound to QUESTPAD_USE uses it. Items need a secure click,
 -- so the item, the button and its key only change out of combat; in combat it keeps what it had.
 -- It steps aside while the game shows its own Extra Action Button.
@@ -19,16 +18,12 @@ DeckKit.Chords.Offer("QUESTPAD_USE", { label = "Quest item", mirror = "QuestPadB
 local DEFAULTS = { enabled = true, byTarget = true, y = -190 }
 local ART = "Interface\\ExtraButton\\Default"
 local TICK = 0.25
-local REDRAW = 3 -- seconds
 local QUEST_TITLE_LINE = Enum.TooltipDataLineType and Enum.TooltipDataLineType.QuestTitle or 17
 
 local db = {}
 local button, area
 local items = {}      -- questID -> { link, icon, whenComplete }
 local itemsDirty = true
-local drawnKey        -- what the area frame last drew (map + quests); nil = draw again
-local drawnAt = 0     -- the area frame answers only after a frame has passed since drawing
-local requestedMap    -- map whose quest-area data we asked the game for
 local lastHit
 local current         -- questID shown on the button
 local previewUntil = 0 -- showing a sample (to place the button) until this time
@@ -78,40 +73,14 @@ local function TargetQuest()
     end
 end
 
--- The item-quest whose area you're standing in.
+-- The item-quest whose area you're standing in (DeckKit.Map.QuestArea: the real shape the map draws).
 local function AreaQuest()
-    local map = C_Map.GetBestMapForUnit("player")
-    if not map then return end
     local ids = {}
     for questID in pairs(items) do if Wanted(questID) then ids[#ids + 1] = questID end end
     if #ids == 0 then return end
-    table.sort(ids)
-    local key = map .. ":" .. table.concat(ids, ",")
-    if key ~= drawnKey then
-        -- The areas' shapes only exist once the game has loaded them for this map (the world map
-        -- asks the same way when it opens). Ask, then draw on a later tick.
-        if requestedMap ~= map then
-            requestedMap = map
-            if C_QuestLog.SetMapForQuestPOIs then C_QuestLog.SetMapForQuestPOIs(map) end
-            if QuestPOIUpdateIcons then QuestPOIUpdateIcons() end
-            ns.Debug("requested map", map)
-            return Wanted(current) and current or nil
-        end
-        area:SetMapID(map)
-        area:DrawNone()
-        for _, questID in ipairs(ids) do area:DrawBlob(questID, true) end
-        drawnKey, drawnAt = key, GetTime()
-        return Wanted(current) and current or nil -- ask again next tick, once it has drawn
-    end
-    if GetTime() == drawnAt then return Wanted(current) and current or nil end
-    local pos = C_Map.GetPlayerMapPosition(map, "player")
-    if not pos then return end
-    local x, y = pos:GetXY()
-    local questID = area:UpdateMouseOverTooltip(x, y)
-    -- The shapes can arrive after we drew (no event says so): while outside every area, draw again
-    -- now and then.
-    if not questID and GetTime() - drawnAt > REDRAW then drawnKey = nil end
-    if questID ~= lastHit then ns.Debug("area hit", tostring(questID), string.format("%.3f,%.3f", x, y)); lastHit = questID end
+    local questID, pending = area:At(ids)
+    if pending then return Wanted(current) and current or nil end -- can't tell yet: keep what's showing
+    if questID ~= lastHit then ns.Debug("area hit", tostring(questID)); lastHit = questID end
     return Wanted(questID) and questID or nil
 end
 
@@ -230,15 +199,7 @@ local function Create()
     end)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    area = CreateFrame("QuestPOIFrame", nil, UIParent)
-    area:SetSize(512, 512)
-    area:SetPoint("CENTER")
-    -- It must be shown to answer (a frame that has never been shown has no layout to test against);
-    -- fully transparent and not clickable, so nothing appears.
-    area:SetAlpha(0)
-    area:EnableMouse(false)
-    area:SetFrameStrata("BACKGROUND")
-    area:Show()
+    area = DeckKit.Map.QuestArea()
 
     Place()
 end
@@ -280,11 +241,9 @@ ticker:SetScript("OnUpdate", function(_, elapsed)
     if button then Update() end
 end)
 
-local function Dirty() itemsDirty = true; drawnKey = nil end
+local function Dirty() itemsDirty = true end
 ns.On("QUEST_LOG_UPDATE", Dirty)
 ns.On("BAG_UPDATE_DELAYED", Dirty)
-ns.On("ZONE_CHANGED_NEW_AREA", function() drawnKey = nil; requestedMap = nil end)
-ns.On("QUEST_POI_UPDATE", function() drawnKey = nil end) -- area data arrived or changed: draw again
 ns.On("PLAYER_TARGET_CHANGED", function() clock = TICK end) -- answer right away
 ns.On("UPDATE_BINDINGS", function() if button then Bind() end end)
 ns.On("PLAYER_REGEN_ENABLED", function() if button then clock = TICK; Bind() end end)

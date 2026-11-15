@@ -314,9 +314,14 @@ BINDING_NAME_DECKKIT_HIDE_RIGHT = "Hide / show the right side"
 --   DeckKit.Dictation.Claim()   "I report the real state": the grips stop driving the indicator now,
 --                               before the first state arrives (call it as your addon loads)
 --   DeckKit.Dictation.SetState("recording" | "transcribing" | "thinking" | "done" | "error"[, binding])
+--   DeckKit.Dictation.SetAssistant(name)   the voice assistant's name (DeckKitAfterDark's DeckAgent: "Decky"):
+--                               its chord (DECKKIT_ASSISTANT) then shows as the headphones and that name
 -- DeckKit doesn't know or care who calls it.
 ns.Dictation = {}
 function ns.Dictation.Claim() signalled = true end
+function ns.Dictation.SetAssistant(name)
+    ns.Chords.SetLabel("DECKKIT_ASSISTANT", "|A:voicechat-icon-headphone-pending:20:20|a " .. tostring(name))
+end
 function ns.Dictation.SetState(state, binding)
     signalled = true
     ns.Debug("dictation", state, binding)
