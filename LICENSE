@@ -31,6 +31,12 @@ fan-created content, generated with the assistance of artificial intelligence.
 The artwork is provided free of charge for personal, noncommercial use; the
 Steam library artwork for customizing Steam libraries.
 
+The grip chord glyphs are an exception: original pixel art drawn by Ben
+Fillmore, not AI-generated (deck-setup/glyphs/compact-press.png and
+compact-hold.png, and addons/DeckKit/media/chords-24.tga, which
+deck-setup/make-chord-glyphs.py builds from them). They are covered by the
+MIT License above, like the source code.
+
 Third-party intellectual property
 
 World of Warcraft(R), Warcraft(R), and associated names, characters, logos,
