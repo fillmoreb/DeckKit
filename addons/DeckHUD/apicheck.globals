@@ -3,3 +3,5 @@ LibStub
 # Older clients' quest trackers; Forever has ObjectiveTrackerFrame.
 QuestWatchFrame
 WatchFrame
+# DeckHUD's own status bar frame (StatusBar.lua), read by name from other files.
+DeckHUDStatusBar

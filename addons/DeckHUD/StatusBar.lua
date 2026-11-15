@@ -265,11 +265,23 @@ local function UpdateXP()
     xpRested:SetShown(extra > 0)
 end
 
+-- The readings shown in each group: with the compass in the middle, the middle ones (the clock) go to
+-- the front of the right side.
+local function Shown(group)
+    if not (ns.CompassOn and ns.CompassOn()) then return Slots(group) end
+    if group == "middle" then return {} end
+    if group == "left" then return Slots("left") end
+    local out = {}
+    for _, key in ipairs(Slots("middle")) do out[#out + 1] = key end
+    for _, key in ipairs(Slots("right")) do out[#out + 1] = key end
+    return out
+end
+
 local function Update()
     if not bar then return end
     for group, fs in pairs(texts) do
         local parts = {}
-        for _, key in ipairs(Slots(group)) do
+        for _, key in ipairs(Shown(group)) do
             local r = READINGS[key]
             if r then
                 local ok, text = pcall(r.text)
@@ -280,6 +292,7 @@ local function Update()
     end
     UpdateXP()
 end
+ns.StatusBarUpdate = Update
 
 -- Blizzard's XP and reputation bars, hidden by alpha while ours shows.
 local BLIZZARD_BARS = { "MainStatusTrackingBarContainer", "SecondaryStatusTrackingBarContainer" }
@@ -304,6 +317,7 @@ local function Apply()
     end
     BlizzardBars()
     if ns.Apply then ns.Apply() end -- the minimap moves under (or back up from) the bar
+    if ns.CompassApply then ns.CompassApply() end -- the compass moves into (or out of) the bar
 end
 ns.StatusBarApply = Apply
 
@@ -377,6 +391,35 @@ local rows = {
     { type = "toggle", label = "Status bar",
       hint = "A dark bar across the top of the screen with the readings below, and an XP line along it.",
       get = On, set = function(on) DB().statusBar = on; Apply() end },
+    { type = "toggle", label = "Compass",
+      hint = "In the middle of the bar: the way you face, with your active waypoint and its distance on it. "
+          .. "The middle readings move to the right side.",
+      get = function() return ns.CompassOn() end,
+      set = function(on) DB().compass = on; if ns.CompassApply then ns.CompassApply() end end },
+    { type = "range", label = "Compass: width", min = 240, max = 720, step = 40,
+      format = function(v) return v .. " px" end,
+      hint = "How long the compass strip is. Very wide, it can run into the readings either side.",
+      get = function() return DB().compassWidth or 360 end,
+      set = function(v) DB().compassWidth = v; if ns.CompassApply then ns.CompassApply() end end },
+    { type = "range", label = "Compass: view", min = 90, max = 270, step = 15,
+      format = function(v) return v .. "\194\176" end,
+      hint = "How much of the horizon the strip shows. Less: things move further as you turn, easier to line up. "
+          .. "More: a wider look around.",
+      get = function() return DB().compassView or 180 end,
+      set = function(v) DB().compassView = v; if ns.CompassApply then ns.CompassApply() end end },
+    { type = "toggle", label = "Compass: Blizzard's map pin",
+      hint = "The pin you place on the world map, as a dim gold pin on the compass.",
+      get = function() return DB().compassBlizzardPin ~= false end, set = function(on) DB().compassBlizzardPin = on end },
+    { type = "toggle", label = "Compass: guard directions",
+      hint = "The flag a city guard puts on your map when you ask the way.",
+      get = function() return DB().compassGuard ~= false end, set = function(on) DB().compassGuard = on end },
+    { type = "toggle", label = "Compass: party and raid",
+      hint = "Your group as dots in their class colors.",
+      get = function() return DB().compassGroup ~= false end, set = function(on) DB().compassGroup = on end },
+    { type = "toggle", label = "Compass: raid markers",
+      hint = "A group member wearing a raid marker shows as that marker. (Markers on enemies can't be shown: "
+          .. "the game only gives positions for your group.)",
+      get = function() return DB().compassRaidMarks ~= false end, set = function(on) DB().compassRaidMarks = on end },
     { type = "toggle", label = "Hide Blizzard's XP bar",
       hint = "While the status bar shows. Its XP line and reading take over.",
       get = HideXP, set = function(on) DB().statusHideXP = on; BlizzardBars() end },

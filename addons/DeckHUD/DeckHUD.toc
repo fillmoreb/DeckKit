@@ -8,6 +8,7 @@
 
 Minimap.lua
 StatusBar.lua
+Compass.lua
 Chat.lua
 Layout.lua
 FocusAuraSpells.lua
@@ -15,4 +16,5 @@ FocusAuras.lua
 Focus.lua
 ActionBars.lua
 LootRolls.lua
+Tooltip.lua
 Suggested.lua
