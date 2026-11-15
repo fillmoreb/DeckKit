@@ -33,6 +33,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   the game blames a random addon ("DeckHUD has been blocked..."). To hide something there, set its
   alpha only (see `DeckHUD/Chat.lua` NoLegend). With Gamepad UI on, Forever shows a button legend
   under the chat box whenever it has focus (`ChatFrameN.FloatingChatFrameinputLegend`, lowercase i).
+- `SetRotation` on an atlas piece turns its coordinates on the whole texture sheet (neighbouring art shows
+  through, and it undoes `SetTexCoord`): turn atlas art with 8-argument `SetTexCoord` on `info.file`
+  (`DeckHUD/Compass.lua`). Moving 1 px textures flicker from pixel snapping: `SetSnapToPixelGrid(false)`.
 - Old texture paths may be missing (e.g. `Interface\WorldMap\WorldMapCorpse`) and draw as nothing,
   with no error. Check with `tex:GetTextureFileID()` (nil = missing) or prefer atlases checked
   via `C_Texture.GetAtlasInfo`.
@@ -53,7 +56,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   under those names. This also holds while moving code into the DeckKit core.
 - Use `/deckkit` (and `/dkit`) for suite commands. `/deck` is taken by other Forever addons.
 - Each feature stays a separate addon on top of the **DeckKit core** (`addons/DeckKit`), which holds
-  the shared controller input (`Input.lua`), the window look (`Window.lua`), and in `Core.lua` the
+  the shared controller input (`Input.lua`), the window look (`Window.lua`), the waypoints
+  (`Waypoints.lua`, `DeckKit.Waypoints`: list, guidance, arrival; WayPad is only their controller front end,
+  DeckHUD's compass shows them), and in `Core.lua` the
   `DeckKit` global, per-module event buses, `DeckKit.TakeSticks` and `/deckkit`; `Override.lua` is
   `DeckKit.Override`, which shares pad buttons between modules. A module lists
   `## Dependencies: DeckKit` and starts its first file with
@@ -104,6 +109,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 - Stay agnostic of other addons: no code paths that know about a specific third-party addon
   (RestedXP, Questie, TomTom...). Use Blizzard APIs, generic mechanisms (e.g. hiding whatever sits
   along a screen edge) and common conventions (`GetMinimapShape`, LibDBIcon button names).
+  **Exception: Pawn** (Ben, 2026-11-15: "My addons can know about Pawn. Because I'm not willing to
+  duplicate pawn."). Use its public bag-addon API, `PawnShouldItemLinkHaveUpgradeArrow(link, true)`
+  (nil = ask again shortly), as an optional dependency (`## OptionalDeps: Pawn`); see `PackPad/Peek.lua`.
 - Credit borrowed code, in the file header and in `LICENSE`. `DeckKit/Input.lua` is adapted from
   BagPad's MIT-licensed `Input/Controller.lua`; `DeckKit/Override.lua` and
   `DeckSundries/WandShoot.lua` from Improved Forever's (MIT) `Override.lua` and `WandShoot.lua`.

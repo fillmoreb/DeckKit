@@ -16,7 +16,9 @@ move-folders:
   DeckKit/addons/DisenchantDeck: DisenchantDeck
   DeckKit/addons/HealPad: HealPad
   DeckKit/addons/MapDeck: MapDeck
+  DeckKit/addons/MarketDeck: MarketDeck
   DeckKit/addons/MenuReload: MenuReload
+  DeckKit/addons/PackPad: PackPad
   DeckKit/addons/QuestPad: QuestPad
   DeckKit/addons/WayPad: WayPad
 

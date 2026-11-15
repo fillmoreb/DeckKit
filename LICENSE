@@ -60,7 +60,9 @@ removed, open an issue and it will be investigated.
 
 Third-party code
 
-addons/DeckKit/Input.lua is adapted from BagPad's Input/Controller.lua, used under the MIT License:
+addons/DeckKit/Input.lua is adapted from BagPad's Input/Controller.lua, and addons/PackPad/Core.lua
+and Broom.lua follow BagPad's approach to Blizzard's combined bag frame (UI/Layout.lua,
+Core/NativeBags.lua, UI/CleanupButton.lua, Input/HeaderNav.lua), all used under the MIT License:
 
   MIT License
 
