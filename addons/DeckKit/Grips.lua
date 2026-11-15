@@ -8,7 +8,14 @@
 --                dictation tool's real state can report it instead with DeckKit.Dictation.SetState
 --                (below); from then on the grips no longer drive the indicator. A source that is
 --                installed calls DeckKit.Dictation.Claim() as it loads, so the grips never drive it
---                at all ("Listening" only ever means the tool really is recording).
+--                at all ("Listening" only ever means the tool really is recording). With a source like
+--                that, pressing the chord shows "Starting" (a still, gray mic) right away instead, until
+--                the tool's own "recording" arrives a moment later; letting go before then clears it (the
+--                tool won't start), and so does STARTING_TIMEOUT. From the press until the recording
+--                ends, the game's sound is muted (a setting): the Deck's own mic hears its speakers.
+--   Assistant    DECKKIT_ASSISTANT: the same "Starting" for a voice assistant's push-to-talk chord
+--                (another binding of the dictation tool's, e.g. DeckKitAfterDark's DeckAgent on L5+R5).
+--                It only shows the indicator: the tool itself sees the grips.
 --   Hiding a side  DECKKIT_HIDE_LEFT / _RIGHT: whatever sits along that screen edge, from any addon
 --                (see "Hiding a side" below), plus anything a module adds.
 --
@@ -21,7 +28,8 @@ ns.Grips = Grips
 
 local TRANSCRIBE_TIMEOUT = 12 -- seconds "Transcribing" can show without a chat message arriving
 local THINK_TIMEOUT = 60 -- seconds "Thinking" can show without an answer (done) arriving
-local DEFAULTS = { dictationIndicator = true, indicatorAlpha = 1 }
+local STARTING_TIMEOUT = 3 -- seconds "Starting" can show without the tool's "recording" arriving
+local DEFAULTS = { dictationIndicator = true, indicatorAlpha = 1, muteWhileDictating = true }
 
 local function Setting(key)
     local v = ns.db[key]
@@ -77,6 +85,9 @@ end
 -- those atlases, the game's Indicator-<color> light (a plain color for Error).
 local DOT_ICON = { Red = "voicechat-icon-mic", Yellow = "voicechat-icon-stt-on", Error = "voicechat-icon-stt-silenced" }
 local DOT_FALLBACK = { Red = { 0.9, 0.15, 0.15 }, Yellow = { 1, 0.82, 0 }, Green = { 0.2, 0.85, 0.3 }, Error = { 0.9, 0.15, 0.15 } }
+-- "Wait" (starting): the mic, gray and still.
+DOT_ICON.Wait, DOT_FALLBACK.Wait = DOT_ICON.Red, { 0.5, 0.5, 0.5 }
+local STILL = { Wait = true }
 
 local function Show(text, r, g, b, dot_, seconds)
     Box()
@@ -89,12 +100,13 @@ local function Show(text, r, g, b, dot_, seconds)
             dot:SetTexture("Interface\\COMMON\\Indicator-" .. dot_)
             if not dot:GetTexture() then local c = DOT_FALLBACK[dot_]; dot:SetColorTexture(c[1], c[2], c[3]) end
         end
+        dot:SetDesaturated(STILL[dot_] or false)
     end
     if timer then timer:Cancel(); timer = nil end
     label:SetText(text)
     label:SetTextColor(r, g, b)
     dot:SetShown(withDot)
-    if withDot then pulse:Play() else pulse:Stop() end
+    if withDot and not STILL[dot_] then pulse:Play() else pulse:Stop(); dot:SetAlpha(1) end
     box:SetWidth(label:GetStringWidth() + (withDot and 70 or 32))
     label:ClearAllPoints()
     if withDot then label:SetPoint("LEFT", dot, "RIGHT", 10, 0) else label:SetPoint("CENTER") end
@@ -117,9 +129,88 @@ end
 ------------------------------------------------------------------------
 
 local signalled = false -- something has reported the real state (SetState): follow that, not the grips
+local recordingAt = 0 -- when the tool last said "recording" (GetTime)
+local startingAt -- when "Starting" went up for the chord being held (nil: not starting)
+
+-- The game's sound goes quiet while you talk (the Deck's own mic hears its speakers): master volume
+-- fades to 0 from the chord press (FADE_DOWN) and back (FADE_UP) when the recording ends. The volume
+-- to go back to is kept in the saved variables too, so a reload or crash mid-dictation can't leave the
+-- game silent.
+local FADE_DOWN, FADE_UP = 0.25, 0.6
+local unmuteTo -- the volume from before (nil: not muted, or the fade back up has finished)
+local fader = CreateFrame("Frame")
+fader:Hide()
+
+local function Fade(to, seconds, onDone)
+    local from = tonumber(GetCVar("Sound_MasterVolume")) or 0
+    local t, step = 0, 0
+    fader:SetScript("OnUpdate", function(self, elapsed)
+        t, step = t + elapsed, step + elapsed
+        if t >= seconds then
+            self:Hide()
+            SetCVar("Sound_MasterVolume", to)
+            if onDone then onDone() end
+        elseif step >= 0.03 then
+            step = 0
+            SetCVar("Sound_MasterVolume", from + (to - from) * t / seconds)
+        end
+    end)
+    fader:Show()
+end
+
+local muted = false
+
+local function Mute()
+    if muted or not Setting("muteWhileDictating") then return end
+    muted = true
+    if not unmuteTo then -- (mid fade-up it's still the volume from before)
+        unmuteTo = GetCVar("Sound_MasterVolume")
+        ns.db.unmuteTo = unmuteTo
+    end
+    Fade(0, FADE_DOWN)
+end
+
+local function Unmute()
+    if not muted then return end
+    muted = false
+    Fade(tonumber(unmuteTo) or 1, FADE_UP, function() unmuteTo, ns.db.unmuteTo = nil, nil end)
+end
+
+ns.On("PLAYER_LOGIN", function()
+    if ns.db.unmuteTo then SetCVar("Sound_MasterVolume", ns.db.unmuteTo); ns.db.unmuteTo = nil end
+end)
+
+-- The chord went down, but the tool hasn't said it's recording yet: "Starting" (and quiet).
+local function Starting()
+    if GetTime() - recordingAt < 1 then return end -- the real state got here first
+    local at = GetTime()
+    startingAt = at
+    Mute()
+    if Setting("dictationIndicator") then
+        transcribing = false
+        Show("Starting", 0.75, 0.75, 0.75, "Wait", STARTING_TIMEOUT)
+    end
+    C_Timer.After(STARTING_TIMEOUT, function() -- the tool never started
+        if startingAt == at then startingAt = nil; Unmute() end
+    end)
+end
+
+-- The chord let go before the tool started recording (Decktation wants a short hold first): it won't.
+local function Released()
+    if not startingAt then return end
+    startingAt = nil
+    Unmute()
+    HideBox()
+end
+
+local function VoiceChord(down)
+    if down then Starting() else Released() end
+end
 
 local function Dictation(down)
-    if signalled or not Setting("dictationIndicator") then return end
+    if signalled then return VoiceChord(down) end
+    if down then Mute() else Unmute() end
+    if not Setting("dictationIndicator") then return end
     if down then
         transcribing = false
         Show("Listening", 1, 0.82, 0.2, "Red")
@@ -129,6 +220,8 @@ local function Dictation(down)
     end
 end
 ns.Chords.Offer("DECKKIT_DICTATION", { label = "Dictation", run = Dictation })
+ns.Chords.Offer("DECKKIT_ASSISTANT", { label = "Voice assistant",
+    run = function(down) if signalled then VoiceChord(down) end end })
 
 ------------------------------------------------------------------------
 -- Hiding a side
@@ -225,6 +318,13 @@ function ns.Dictation.Claim() signalled = true end
 function ns.Dictation.SetState(state, binding)
     signalled = true
     ns.Debug("dictation", state, binding)
+    if state == "recording" then
+        recordingAt, startingAt = GetTime(), nil
+        Mute()
+    else
+        startingAt = nil
+        Unmute()
+    end
     if not Setting("dictationIndicator") then return end
     if state == "recording" then
         transcribing = false
@@ -274,6 +374,11 @@ ns.Settings.Add("DeckKit", ns.TITLE, {
       hint = "\"Listening\" while the dictation chord is held, then \"Transcribing\".",
       get = function() return Setting("dictationIndicator") end,
       set = function(on) ns.db.dictationIndicator = on end },
+    { type = "toggle", label = "Mute the game while dictating", tab = "Chat", section = "Dictation", sectionOrder = 4,
+      hint = "The game goes quiet from the moment you press the dictation chord until you stop talking, so "
+          .. "the Deck's own mic doesn't hear the speakers. Sound comes back as soon as the recording ends.",
+      get = function() return Setting("muteWhileDictating") end,
+      set = function(on) ns.db.muteWhileDictating = on; if not on then Unmute() end end },
     { type = "range", label = "Indicator opacity", tab = "Chat", section = "Dictation", sectionOrder = 4,
       min = 0.2, max = 1, step = 0.1, format = function(v) return math.floor(v * 100 + 0.5) .. "%" end,
       hint = "How solid the Listening / Transcribing box is (and DeckKit's other short notices, which "

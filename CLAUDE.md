@@ -87,8 +87,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   start dictation: built into Decktation 0.3.24+. Decktation's status hook (its real state for the
   dictation indicator) lives in DeckKitAfterDark (it feeds the game from outside); DeckKit only
   offers `DeckKit.Dictation.SetState(state, binding)` and `DeckKit.Dictation.Claim()` (a real-state
-  source calls it as it loads, so the grips never show "Listening"; only the tool's own state does), and
-  must not depend on AfterDark.
+  source calls it as it loads, so the grips never show "Listening"; only the tool's own state does; the
+  chord then shows "Starting" until it arrives, and `DECKKIT_ASSISTANT` does the same for a voice
+  assistant's chord), and must not depend on AfterDark.
 - Module bindings go in the DeckKit section of Key Bindings: `category="BINDING_HEADER_DECKKIT"` in
   `Bindings.xml`, with the module's own `header`.
 - Gamepad input: secure actions (casting, using items) need SecureActionButtons and override
