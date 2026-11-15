@@ -1022,6 +1022,7 @@ end
 --   spec.title     the tab's label
 --   opts.title     the window's title (whose display it is: "Decky")
 --   opts.onReply, opts.onChange, opts.ticks    as for UI.Build
+--   opts.onClose(why)   the display went: "closed" (the player, or combat), "replaced" (a new one)
 -- Returns false in combat (windows can't take the pad then). A new display replaces the one up.
 
 local win -- { screen, tab, L }
@@ -1034,9 +1035,17 @@ function UI.ShowLayout(spec, opts)
     if not win then
         local screen = UI.NewScreen("DeckKitLayoutWindow", 560, 400, "")
         win = { screen = screen, tab = screen:AddTab("") }
+        screen.win:HookScript("OnHide", function()
+            local done = win.onClose
+            win.onClose = nil
+            if done then done("closed") end
+        end)
     end
     local s, tab = win.screen, win.tab
     if win.L then win.L:Release() end
+    local before = win.onClose
+    win.onClose = opts.onClose
+    if before and s.win:IsShown() then before("replaced") end
     local w = Clamp(Num(spec.width) or 560, 360, 900)
     local maxH = Clamp(Num(spec.height) or 600, 240, 700)
     s.title:SetText(opts.title or "DeckKit")

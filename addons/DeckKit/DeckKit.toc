@@ -16,6 +16,7 @@ Input.lua
 Window.lua
 UI.lua
 Conditions.lua
+JSON.lua
 Layout.lua
 Override.lua
 Settings.lua
