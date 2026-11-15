@@ -84,13 +84,32 @@ function Chords.Label(id)
 end
 
 ------------------------------------------------------------------------
--- Slots (DeckKitDB.chords = { ["L4+L5"] = { press = id, hold = id } })
+-- Slots: the account's (DeckKitDB.chords = { ["L4+L5"] = { press = id, hold = id } }), and on top of
+-- them each character's own changes (DeckKitCharDB.chords, the same shape; false = Nothing on this
+-- character), for things like class spells. Which a change goes to is the "Slot changes apply to"
+-- choice (DeckKitCharDB.chordScope: "all", the default, or "char").
 ------------------------------------------------------------------------
 
+local function CharSlots()
+    DeckKitCharDB = DeckKitCharDB or {}
+    DeckKitCharDB.chords = DeckKitCharDB.chords or {}
+    return DeckKitCharDB.chords
+end
+
+-- This character's own setting for a slot: an id, false (Nothing here), or nil (none: the account's).
+function Chords.Own(chord, gesture)
+    local c = DeckKitCharDB and DeckKitCharDB.chords and DeckKitCharDB.chords[chord]
+    if c then return c[gesture] end
+end
+
 function Chords.Get(chord, gesture)
+    local own = Chords.Own(chord, gesture)
+    if own ~= nil then return own or nil end
     local c = ns.db.chords and ns.db.chords[chord]
     return c and c[gesture]
 end
+
+function Chords.Scope() return DeckKitCharDB and DeckKitCharDB.chordScope == "char" and "char" or "all" end
 
 local Apply -- below
 
@@ -104,11 +123,34 @@ local function Changed()
     end
 end
 
+local function Store(t, chord, gesture, v)
+    local c = t[chord] or {}
+    c[gesture] = v
+    t[chord] = next(c) ~= nil and c or nil
+end
+
+-- Sets a slot (id, or nil for Nothing), for every character or just this one by the scope choice.
 function Chords.Set(chord, gesture, id)
     ns.db.chords = ns.db.chords or {}
-    local c = ns.db.chords[chord] or {}
-    c[gesture] = id
-    ns.db.chords[chord] = next(c) and c or nil
+    local mine = CharSlots()
+    if Chords.Scope() == "char" then
+        local account = ns.db.chords[chord] and ns.db.chords[chord][gesture]
+        if id == account then
+            Store(mine, chord, gesture, nil) -- the same as the account's: no change of its own
+        else
+            Store(mine, chord, gesture, id or false)
+        end
+    else
+        Store(ns.db.chords, chord, gesture, id)
+        Store(mine, chord, gesture, nil) -- so the change shows here too
+    end
+    Apply()
+    Changed()
+end
+
+-- This character back on the account's slots.
+function Chords.ClearOwn()
+    if DeckKitCharDB then DeckKitCharDB.chords = nil end
     Apply()
     Changed()
 end
@@ -403,6 +445,18 @@ local rows = {
           .. "Steam layout (deck-setup/make-chord-layout.py).",
       get = function() return Chords.Enabled() end,
       set = function(on) ns.db.chordsOff = not on or nil; Apply(); Changed() end },
+    { type = "choice", label = "Slot changes apply to",
+      hint = "All characters: the slots every character shares. This character: changes kept for this "
+          .. "character only, on top of the shared ones (class spells, say); those slots are marked.",
+      values = { { "all", "All characters" }, { "char", "This character" } },
+      get = function() return Chords.Scope() end,
+      set = function(v)
+          DeckKitCharDB = DeckKitCharDB or {}
+          DeckKitCharDB.chordScope = v == "char" and "char" or nil
+      end },
+    { type = "action", label = "Clear this character's slots", verb = "Clear", keepOpen = true,
+      hint = "This character goes back to the shared slots.",
+      run = function() Chords.ClearOwn(); ns.Print("This character is back on the shared grip slots.") end },
 }
 local GROUPS = { { 1, "Grips: one" }, { 2, "Grips: two together" }, { 3, "Grips: three or four together" } }
 -- One list for every slot row, filled in at login once the modules have made their offers.
@@ -420,7 +474,11 @@ for gi, group in ipairs(GROUPS) do
         if size == group[1] or (group[1] == 3 and size == 4) then
             for _, gesture in ipairs({ "press", "hold" }) do
                 rows[#rows + 1] = {
-                    type = "choice", label = Chords.Glyph(chord, gesture) .. "  " .. Chords.Describe(chord, gesture),
+                    type = "choice",
+                    label = function()
+                        local mark = Chords.Own(chord, gesture) ~= nil and "  |cff9d9d9d(this character)|r" or ""
+                        return Chords.Glyph(chord, gesture) .. "  " .. Chords.Describe(chord, gesture) .. mark
+                    end,
                     hint = HINT[gesture],
                     values = choices,
                     get = function() return Chords.Get(chord, gesture) or false end,
