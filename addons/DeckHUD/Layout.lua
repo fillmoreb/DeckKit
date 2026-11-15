@@ -11,7 +11,7 @@
 --   /deckkit layout restore             the newest backup, back into the active layout
 --   /deckkit layout backups             list them
 --
--- (Development, for now) the active layout's systems are recorded in DeckHUDDB.layoutDump at login.
+--   /deckkit layout dump                the active layout's systems, in chat (for working on this)
 local _, ns = ...
 
 local Layout = {}
@@ -369,6 +369,9 @@ ns.AddCommand("layout", function(arg)
     elseif cmd == "restore" then
         local ok, info = Layout.Restore()
         ns.Print(ok and ("Restored the layout backup from " .. info .. ". /reload to see it.") or ("Not restored: " .. info .. "."))
+    elseif cmd == "dump" then
+        local ok, lines = pcall(Layout.Dump)
+        for _, line in ipairs(ok and lines or { "dump failed: " .. tostring(lines) }) do ns.Print(line) end
     elseif cmd == "backups" then
         local list = ns.db.layoutBackups or {}
         if #list == 0 then return ns.Print("No layout backups yet.") end
@@ -443,10 +446,3 @@ Layout.MenuItems = {
           if ok then ReloadSoon("Layout from " .. info .. " restored.") else ns.Print("Not restored: " .. info .. ".") end
       end },
 }
-
-ns.On("PLAYER_LOGIN", function()
-    C_Timer.After(3, function()
-        local ok, dump = pcall(Layout.Dump)
-        ns.db.layoutDump = ok and dump or { "dump failed: " .. tostring(dump) }
-    end)
-end)

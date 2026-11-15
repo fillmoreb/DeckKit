@@ -6,7 +6,7 @@
 -- 2 px below it (5 px further left, 32 tall), ChatFrame2 (Combat Log) docked as a second tab.
 local _, ns = ...
 
-local DEFAULTS = { chatThin = true, chatTuck = true, chatNoLegend = true }
+ns.Defaults({ chatThin = true, chatTuck = true, chatNoLegend = true })
 local MARGIN = 4                -- gap to the left edge, in UIParent units (1 per pixel on the Deck)
 local BOTTOM = 4                -- the edit box's frame bottom...
 local BAR_GAP = 2               -- ...or this far above the XP bar, while that's along the bottom
@@ -128,13 +128,6 @@ local function Apply()
     NoLegend()
     Tuck()
 end
-
-ns.On("ADDON_LOADED", function(name)
-    if name ~= "DeckHUD" then return end
-    for k, v in pairs(DEFAULTS) do
-        if DeckHUDDB[k] == nil then DeckHUDDB[k] = v end
-    end
-end)
 
 ns.On("PLAYER_LOGIN", function()
     if not ChatFrame1 then return end

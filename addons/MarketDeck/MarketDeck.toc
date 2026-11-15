@@ -7,5 +7,7 @@
 ## Dependencies: DeckKit
 
 Core.lua
+Progress.lua
+Scan.lua
 Disenchant.lua
 Tooltip.lua

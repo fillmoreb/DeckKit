@@ -76,23 +76,35 @@ end
 -- Drawing
 ------------------------------------------------------------------------
 
+-- The mark: a lilac star (the art desaturated, then tinted) on a soft dark blot, the star's own shape in
+-- black and a quarter larger, so it shows on any icon. star.shadow is the blot. Also the bag peek's.
+function Marks.NewStar(parent)
+    local shadow = parent:CreateTexture(nil, "OVERLAY", nil, 5)
+    shadow:SetAtlas(MARK_ATLAS)
+    shadow:SetVertexColor(0, 0, 0, 0.9)
+    local star = parent:CreateTexture(nil, "OVERLAY", nil, 6)
+    star:SetAtlas(MARK_ATLAS)
+    star:SetDesaturated(true)
+    local lilac = DeckKit.COLORS.LILAC
+    star:SetVertexColor(lilac[1], lilac[2], lilac[3])
+    shadow:SetPoint("CENTER", star, "CENTER", 0, 0)
+    star.shadow = shadow
+    return star
+end
+
+function Marks.SizeStar(star, size)
+    star:SetSize(size, size)
+    star.shadow:SetSize(size * 1.25, size * 1.25)
+end
+
 local function Mark(button)
     local tex = marks[button]
     if not tex then
-        tex = button:CreateTexture(nil, "OVERLAY", nil, 6)
-        tex:SetAtlas(MARK_ATLAS)
-        tex:SetDesaturated(true)
-        tex:SetVertexColor(0.72, 0.48, 1.00) -- lilac, desaturated first; on a black shadow so it shows on any icon
-        tex:SetSize(MARK_SIZE, MARK_SIZE)
+        tex = Marks.NewStar(button)
+        Marks.SizeStar(tex, MARK_SIZE)
         tex:SetPoint("TOPRIGHT", button, "TOPRIGHT", 3, 3)
         marks[button] = tex
-        -- A soft dark blot under it: the star's own shape, black and a little larger.
-        local shadow = button:CreateTexture(nil, "OVERLAY", nil, 5)
-        shadow:SetAtlas(MARK_ATLAS)
-        shadow:SetVertexColor(0, 0, 0, 0.9)
-        shadow:SetSize(MARK_SIZE + 6, MARK_SIZE + 6)
-        shadow:SetPoint("CENTER", tex, "CENTER", 0, 0)
-        shadows[button] = shadow
+        shadows[button] = tex.shadow
     end
     return tex
 end

@@ -4,8 +4,8 @@
 --   Core.lua     WayPad's names for the core's waypoint functions, its own settings (WayPadDB)
 --   HandOff.lua  handing the waypoints to another waypoint addon instead
 --   Pins.lua     world map and minimap pins
---   Editor.lua   "Add waypoint": six digit slots dialed with the d-pad
---   Manager.lua  the waypoint list: make active, edit, remove, clear all
+--   Screen.lua   the window: the waypoint list (make active, edit, remove, clear all) and Add, two
+--                coordinate dials, as two tabs of one DeckKit screen
 --   Slash.lua    /waypad and /way
 local ADDON, ns = ...
 
@@ -15,11 +15,14 @@ local W = DeckKit.Waypoints
 ns.W = W
 ns.points = W.points -- the same live table (the core clears it in place, never replaces it)
 ns.player = W.player
-for _, name in ipairs({ "Readable", "MapInfo", "MapName", "Coords", "Describe", "PlayerPosition",
-    "WorldPosition", "TranslateToMap", "Facing", "Guide", "Find", "Active", "Changed", "Add", "Edit",
-    "SetActive", "Remove", "ClearAll", "StartTicker", "DrawnPoints" }) do
+for _, name in ipairs({ "Describe", "Guide", "Find", "Active", "Changed", "Add", "Edit", "SetActive", "Remove",
+    "ClearAll", "StartTicker", "DrawnPoints" }) do
     ns[name] = W[name]
 end
+-- Map helpers from the core (DeckKit.Map).
+local Map = DeckKit.Map
+ns.Readable, ns.MapInfo, ns.MapName, ns.Coords = DeckKit.Readable, Map.Info, Map.Name, Map.Coords
+ns.PlayerPosition, ns.TranslateToMap = Map.PlayerPosition, Map.Translate
 ns.ARRIVE_YARDS = W.ARRIVE_YARDS
 
 -- The changing values (the active index, the arrival, debug) are read from the core as ns.active etc.

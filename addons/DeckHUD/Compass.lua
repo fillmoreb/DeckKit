@@ -1,17 +1,23 @@
--- DeckHUD: the compass. A strip across the middle of the status bar, centered on the way you face,
--- showing half the horizon (90 degrees each side): ticks every 15 degrees and N, NE, E... slide past
--- as you turn, and the active waypoint (DeckKit.Waypoints) rides the strip at its bearing with its
--- distance in yards (just the number) under it; when it's behind you it waits at the nearer edge. "Arrived" shows in the middle
--- when you reach it. Replaces WayPad's old floating arrow.
+-- DeckHUD: the compass. A strip across the middle of the status bar, centered on the way you face (180
+-- degrees of horizon in 360 px to start; both set in Screen > Status bar): ticks every 15 degrees and
+-- N, NE, E... slide past as you turn, and a lilac pointer peeks out under the bar's middle (plum at
+-- rest, lilac as the waypoint comes within 45 degrees). On the strip:
+--   * the active waypoint (DeckKit.Waypoints): the gold pin, hanging below the bar, with its distance
+--     in yards under it (dropping clear of the pointer as it reaches the middle); "Arrived" when reached
+--   * Blizzard's map pin and a guard's directions (the flag), sized and hung like the pin
+--   * your group: class-colored dots, or the raid marker one wears
+-- Waypoint-like marks stay on the strip: out of view they wait at the nearer end, side by side (Park).
+-- Group dots fade toward the ends like the ticks. Each kind of mark is a menu toggle.
 --
 -- The strip isn't one long image: the ticks and letters are separate pieces placed each frame inside a
--- frame that clips them, so they stay crisp, and they fade out toward the ends. With the status bar
--- off the compass sits at the top of the screen on its own dark backing. The status bar's middle
--- readings (the clock) move to the front of its right side while the compass is on.
+-- frame that clips them (unsnapped from the pixel grid, so they glide), so they stay crisp. With the
+-- status bar off, the compass sits at the top of the screen on its own dark backing. The status bar's
+-- middle readings (the clock) move to the front of its right side while the compass is on.
+-- /deckkit compass test puts pretend party members on it.
 local _, ns = ...
 
 local WIDTH, HEIGHT = 360, 20 -- the strip (set in the menu: Size below); the status bar's height
-local POINTER = 63            -- the down pointer's width (half again the pair's 42)
+local POINTER = 63            -- the pointer's width
 local POINTER_TRIM = 17       -- how far up it sits: its art's clear space (15 at this size) plus the bit hidden behind the bar (2)
 local POINTER_LIGHT = math.pi / 4 -- it turns from plum to lilac as the pin comes within 45 degrees of the middle
 local YARDS_DROP = 10         -- how far the distance drops below the pin at the middle, to clear the pointer
@@ -20,15 +26,9 @@ local PPR = WIDTH / FOV       -- pixels per radian (from the two)
 local TICK_STEP = math.pi / 12 -- 15 degrees
 local MARK = 28               -- the waypoint pin (bigger than the bar: it hangs below it)
 local MARK_Y = -4             -- its center below the strip's, so its top stays on screen
-local CHEVRON = 42            -- the chevrons framing the middle: their height
-local CHEVRON_ATLAS = "covenantsanctum-renown-arrow"
-local CENTER = "down"         -- the middle's marker: "down" (one under the bar) or "pair" (each side of the pin)
-local CHEVRON_DIM = 0         -- their opacity while the waypoint is away from the middle
-local CHEVRON_FADE_TICKS = 3  -- they fade in as the pin comes within 3 ticks of the middle
-local CHEVRON_GAP = 6          -- from the middle to a chevron's inner edge
+local POINTER_ATLAS = "covenantsanctum-renown-arrow" -- the pointer's art (it points left as drawn)
 local TWO_PI = 2 * math.pi
-local LILAC = { 0.72, 0.48, 1.00 } -- the suite's accent (PackPad's marks, MarketDeck's bar glow)
-local PLUM = { 0.30, 0.13, 0.42 }  -- the pointer at rest: a dark plum (darker than MarketDeck's bar fill)
+local LILAC, PLUM = DeckKit.COLORS.LILAC, DeckKit.COLORS.PLUM -- the suite's accent; the pointer at rest
 
 local LETTERS = { -- bearing (counter-clockwise from north), text, cardinal
     { 0, "N", true }, { math.pi / 4, "NW" }, { math.pi / 2, "W", true }, { 3 * math.pi / 4, "SW" },
@@ -46,7 +46,7 @@ local function View() return DB() and DB().compassView or DEFAULT_VIEW end
 
 local W -- DeckKit.Waypoints
 local frame, clip, backing, ticks, letters, pin, yards, dist, note
-local chevrons, pointer = {}, nil
+local pointer
 local over -- the layer above the strip, not clipped (the pin, the pointer, big marks)
 
 -- An angle into (-pi, pi].
@@ -106,44 +106,25 @@ local function Create()
     over = CreateFrame("Frame", nil, frame)
     over:SetAllPoints()
     over:SetFrameLevel(clip:GetFrameLevel() + 5)
-    -- The middle's marker, in one of two styles (CENTER). The art is the covenant renown arrow (it points
-    -- left in the art), tinted lilac, turned with texture coordinates on the sheet: SetRotation on an
-    -- atlas piece turns its coordinates on the whole sheet, so the neighbouring art shows through.
-    local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(CHEVRON_ATLAS)
-    local function Chevron(coords, parent)
-        local chev = (parent or over):CreateTexture(nil, "OVERLAY", nil, 2)
-        if info then
-            chev:SetTexture(info.file)
-            chev:SetTexCoord(coords(info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord))
-        else
-            chev:SetColorTexture(1, 1, 1, 1)
-        end
-        chev:SetDesaturated(true) -- then tinted lilac, like the letters
-        chev:SetVertexColor(LILAC[1], LILAC[2], LILAC[3])
-        return chev
-    end
-    local aspect = info and info.width / info.height or 0.5
-    if CENTER == "pair" then
-        -- "pair" (a good possibility, kept): one each side pointing out, level with the pin (hanging below
-        -- the bar with it, cut off at the screen's top), unseen until the pin comes near (Chevrons below).
-        for _, side in ipairs({ -1, 1 }) do
-            local chev = Chevron(side < 0
-                and function(l, r, t, b) return l, t, l, b, r, t, r, b end  -- as drawn: pointing left
-                or function(l, r, t, b) return r, b, r, t, l, b, l, t end)  -- half way round: pointing right
-            chevrons[#chevrons + 1] = chev
-            chev:SetSize(CHEVRON * aspect, CHEVRON)
-            chev:SetPoint(side < 0 and "RIGHT" or "LEFT", frame, "CENTER", side * CHEVRON_GAP, MARK_Y)
-        end
+    -- The pointer: the renown arrow turned to point down, tinted, centered under the bar and behind it
+    -- (its own frame, a stratum below the bar; it still shows and hides with the compass), so it peeks
+    -- out from under the bar's bottom edge. Turned with texture coordinates on the sheet: SetRotation
+    -- on an atlas piece turns its coordinates on the whole sheet, so the neighbouring art shows through.
+    local behind = CreateFrame("Frame", nil, frame)
+    behind:SetAllPoints()
+    behind:SetFrameStrata("LOW")
+    pointer = behind:CreateTexture(nil, "OVERLAY", nil, 2)
+    local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(POINTER_ATLAS)
+    if info then
+        local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+        pointer:SetTexture(info.file)
+        pointer:SetTexCoord(r, t, l, t, r, b, l, b) -- a quarter turn counter-clockwise: left becomes down
+        pointer:SetSize(POINTER, POINTER * info.width / info.height) -- turned: the art's height runs across
     else
-        -- "down": one, pointing down, centered under the bar and behind it, so it peeks out from under
-        -- the bar's bottom edge. Its own frame, a stratum below the bar (it still shows and hides with
-        -- the compass).
-        local behind = CreateFrame("Frame", nil, frame)
-        behind:SetAllPoints()
-        behind:SetFrameStrata("LOW")
-        pointer = Chevron(function(l, r, t, b) return r, t, l, t, r, b, l, b end, behind) -- a quarter turn: down
-        pointer:SetSize(POINTER, POINTER * aspect) -- turned: the art's height runs across
+        pointer:SetColorTexture(1, 1, 1, 1)
+        pointer:SetSize(POINTER, POINTER / 2)
     end
+    pointer:SetDesaturated(true) -- tinted by Pointer() below
 
     pin = over:CreateTexture(nil, "OVERLAY", nil, 3)
     if not (C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("Waypoint-MapPin-Tracked")
@@ -190,18 +171,7 @@ local function At(region, x, y)
     region:SetPoint("CENTER", clip, "CENTER", x, y or 0)
 end
 
--- The chevrons, unseen until the pin comes within 3 ticks of the middle, then fading in to full
--- lilac as it reaches the middle.
-local function Chevrons(x)
-    local a = CHEVRON_DIM
-    if x then
-        local t = 1 - math.abs(x) / (CHEVRON_FADE_TICKS * TICK_STEP * PPR)
-        if t > 0 then a = CHEVRON_DIM + (1 - CHEVRON_DIM) * t end
-    end
-    for _, c in ipairs(chevrons) do c:SetAlpha(a) end
-end
-
--- The down pointer: plum, warming to lilac as the pin comes within 45 degrees of the middle (lilac when
+-- The pointer: plum, warming to lilac as the pin comes within 45 degrees of the middle (lilac when
 -- it's centered). x: the pin's offset in pixels, or nil (no pin on the strip).
 local function Pointer(x)
     local t = 0
@@ -215,8 +185,9 @@ end
 ------------------------------------------------------------------------
 -- Other marks on the strip: Blizzard's map pin, a guard's directions, party and raid members (with
 -- their raid marker when they wear one). Positions are read 10 times a second (Collect); the strip
--- places them every frame against the live facing. They show only while they're in view (no parking
--- at the edge, unlike the waypoint) and fade toward the ends like the ticks.
+-- places them every frame against the live facing. Blizzard's pin and the guard's flag behave like the
+-- waypoint (kept in view, waiting at the ends: Park); group members show only while in view and fade
+-- toward the ends like the ticks.
 --
 -- The game gives positions for group members only, so a raid marker on a mob can't be shown: only
 -- the ones party members wear.
@@ -246,19 +217,12 @@ local function AddFakes()
     end
 end
 
-local function Bearing(pmap, px, py, mapID, x, y)
-    local pc, pn, pw = W.WorldPosition(pmap, px, py)
-    local c, n, w = W.WorldPosition(mapID, x, y)
-    if not (pc and c) or pc ~= c then return end
-    local dN, dW = n - pn, w - pw
-    if dN == 0 and dW == 0 then return end
-    return math.atan2(dW, dN)
-end
+local Bearing = DeckKit.Map.Bearing
 
 local function Collect()
     wipe(marks)
     if Shows("compassGroup") then AddFakes() end
-    local pmap, px, py = W.PlayerPosition()
+    local pmap, px, py = DeckKit.Map.PlayerPosition()
     if not pmap then return end
     -- Blizzard's own map pin (the one you place on the world map).
     if Shows("compassBlizzardPin") and C_Map.HasUserWaypoint and C_Map.HasUserWaypoint() then
@@ -285,15 +249,11 @@ local function Collect()
         for i = 1, raid and 40 or 4 do
             local unit = (raid and "raid" or "party") .. i
             if UnitExists(unit) and not UnitIsUnit(unit, "player") then
-                local ok, pos = pcall(C_Map.GetPlayerMapPosition, pmap, unit)
-                if ok and pos then
-                    local ux, uy = pos:GetXY()
-                    local b = W.Readable(ux) and W.Readable(uy) and (ux ~= 0 or uy ~= 0)
-                        and Bearing(pmap, px, py, pmap, ux, uy)
-                    if b then
-                        local icon = Shows("compassRaidMarks") and GetRaidTargetIndex(unit)
-                        marks[#marks + 1] = { bearing = b, kind = icon and "marked" or "member", unit = unit, icon = icon }
-                    end
+                local ux, uy = DeckKit.Map.UnitPosition(unit, pmap)
+                local b = ux and Bearing(pmap, px, py, pmap, ux, uy)
+                if b then
+                    local icon = Shows("compassRaidMarks") and GetRaidTargetIndex(unit)
+                    marks[#marks + 1] = { bearing = b, kind = icon and "marked" or "member", unit = unit, icon = icon }
                 end
             end
         end
@@ -425,8 +385,23 @@ local function DrawMarks(facing, waypoint, elapsed)
     for i = nb + 1, #bigPool do bigPool[i]:Hide() end
 end
 
+-- The strip follows your facing smoothly: it eases toward it (SMOOTH per second, exponential) instead of
+-- jumping with each step of the camera, a short glide that still keeps up with a fast turn.
+local SMOOTH = 16
+local shownFacing
+
 local function Draw(_, elapsed)
-    local facing = W.Facing()
+    local facing = DeckKit.Map.Facing()
+    if facing then
+        if shownFacing then
+            shownFacing = shownFacing + Wrap(facing - shownFacing) * math.min(1, (elapsed or 0) * SMOOTH)
+        else
+            shownFacing = facing
+        end
+        facing = shownFacing
+    else
+        shownFacing = nil
+    end
     if not facing then
         for _, t in ipairs(ticks) do t.tex:Hide() end
         for _, l in ipairs(letters) do l.fs:Hide() end
@@ -452,7 +427,6 @@ local function Draw(_, elapsed)
     local wp = (not W.arrival and g and g.state == "ok" and g.bearing)
         and { x = -Wrap(g.bearing - facing) * PPR, size = MARK, id = "waypoint" } or nil
     DrawMarks(facing, wp, elapsed)
-    Chevrons(nil)
     Pointer(nil)
     if W.arrival then
         pin:Hide(); yards:Hide(); dist:Hide()
@@ -464,7 +438,6 @@ local function Draw(_, elapsed)
     if wp then
         local x, off = wp.px, wp.parked
         At(pin, x, MARK_Y)
-        Chevrons(not off and x or nil)
         -- The distance tucks under the pin, and drops away from it (clearing the pointer) as the pin
         -- comes to the middle, in step with the pointer's color.
         local near = Pointer(not off and x or nil)
@@ -478,7 +451,7 @@ local function Draw(_, elapsed)
         dist:Hide()
     elseif g and g.state == "far" then
         pin:Hide(); yards:Hide()
-        dist:SetText("|cff9d9d9dWaypoint in " .. W.MapName(g.point.mapID) .. "|r")
+        dist:SetText("|cff9d9d9dWaypoint in " .. DeckKit.Map.Name(g.point.mapID) .. "|r")
         dist:ClearAllPoints()
         dist:SetPoint("RIGHT", clip, "RIGHT", -4, 1)
         dist:Show()
@@ -501,7 +474,7 @@ ns.AddCommand("compass", function(msg)
             fakes = nil
             ns.Print("Compass test off.")
         else
-            local facing = W and W.Facing() or 0
+            local facing = DeckKit.Map.Facing() or 0
             fakes = {}
             for _, f in ipairs(FAKE) do
                 fakes[#fakes + 1] = { bearing = (facing or 0) + f[1], class = f[2], icon = f[3] }

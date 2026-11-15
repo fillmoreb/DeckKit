@@ -20,17 +20,8 @@ local isFocusMacro = {} -- macro name -> true / false
 -- The crossbar's buttons (not the Edit Mode copies), found once they exist.
 local function FindButtons()
     wipe(buttons)
-    local f = EnumerateFrames()
-    while f do
-        if not f:IsForbidden() then
-            local name = f:GetName()
-            if type(name) == "string" and not (issecretvalue and issecretvalue(name))
-                and string.find(name, "^GamepadMainActionBarFramePage") and string.find(name, "ActionButton%d+$")
-                and f.RangeIndicator then
-                buttons[#buttons + 1] = f
-            end
-        end
-        f = EnumerateFrames(f)
+    for _, f in ipairs(DeckKit.CrossbarButtons()) do
+        if f.RangeIndicator then buttons[#buttons + 1] = f end
     end
 end
 
@@ -79,7 +70,7 @@ local function Update()
         local spell = haveFocus and FocusSpell(button.action) or nil
         local inRange = nil
         if spell then inRange = C_Spell.IsSpellInRange(spell, "focus") end
-        if inRange ~= nil and not (issecretvalue and issecretvalue(inRange)) then
+        if DeckKit.Readable(inRange) then
             local d = Dot(button)
             d:SetTextColor(unpack(inRange and IN_RANGE or OUT_OF_RANGE))
             d:Show()

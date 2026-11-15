@@ -20,18 +20,8 @@ local function Find()
             if b and b.Name then labels[#labels + 1] = b.Name end
         end
     end
-    -- The crossbar's buttons have no global names to look up by number: walk the frames once.
-    local f = EnumerateFrames()
-    while f do
-        if not f:IsForbidden() then
-            local name = f:GetName()
-            if type(name) == "string" and not (issecretvalue and issecretvalue(name))
-                and string.find(name, "^GamepadMainActionBarFramePage") and string.find(name, "ActionButton%d+$")
-                and f.Name then
-                labels[#labels + 1] = f.Name
-            end
-        end
-        f = EnumerateFrames(f)
+    for _, f in ipairs(DeckKit.CrossbarButtons()) do
+        if f.Name then labels[#labels + 1] = f.Name end
     end
 end
 

@@ -1,4 +1,4 @@
--- The list.
+-- DisenchantDeck's window: the disenchantable items in your bags, and the ones you've hidden.
 --   Up/Down: select   A: disenchant   Y: hide (in Hidden: show again)   LB/RB: Disenchant <-> Hidden   B: close
 --
 -- Disenchanting is a protected action, so addon code can't start it. Each row is a secure button

@@ -1,4 +1,5 @@
--- The focus frame's aura row, for the "Name and health" look (Focus.lua): under the health bar,
+-- The focus frame's aura row, for the "Name and health" look (Focus.lua): above the frame (or under the
+-- health bar: LOOK.pos below),
 --   buffs              only the ones you tick (or all of them)
 --   your debuffs       on a friendly focus, the only one is a priest's Weakened Soul: when you can
 --                      shield them again
@@ -120,6 +121,15 @@ local function BuffFilters()
     return { includeSpellIDs = TickedIDs() }
 end
 
+-- The settings: filters and which groups show (when the containers are made, and as settings change).
+local function Configure()
+    if not container then return end
+    container:SetAuraGroupCandidateFilters("buffs", BuffFilters())
+    container:SetAuraGroupEnabled("buffs", BuffMode() ~= "none")
+    container:SetAuraGroupEnabled("mine", ShowMine())
+    dispelContainer:SetAuraGroupEnabled("dispel", ShowDispel())
+end
+
 local function Build()
     if container or not (C_UnitAuras and AuraContainerSortMethod and Enum.CustomAuraButtonDispelTypeTextureStyle) then
         return container
@@ -141,16 +151,8 @@ local function Build()
     dispelContainer:AddAuraGroup("dispel", "HARMFUL",
         GroupOptions(true, { processedAuraType = AuraUtil.AuraUpdateChangedType.Dispel }))
     dispelContainer:SetUnit("focus")
+    Configure() -- the saved choices, from the start
     return container
-end
-
--- Settings changed: filters and which groups show.
-local function Configure()
-    if not container then return end
-    container:SetAuraGroupCandidateFilters("buffs", BuffFilters())
-    container:SetAuraGroupEnabled("buffs", BuffMode() ~= "none")
-    container:SetAuraGroupEnabled("mine", ShowMine())
-    dispelContainer:SetAuraGroupEnabled("dispel", ShowDispel())
 end
 
 -- Shown with the compact focus frame, as wide as it: above it (top: the frame's border, else the
@@ -218,7 +220,7 @@ local function BuildWindow()
     panel:SetAllPoints()
     local W = WIDTH - 52
     local y = -12
-    local intro = UI.Description(panel, "What shows under the focus frame (with its Name and health look). "
+    local intro = UI.Description(panel, "What shows with the focus frame (its Name and health look). "
         .. "The game does the filtering, so it works in combat.", W)
     intro:SetPoint("TOPLEFT", 12, y)
     y = y - 40
@@ -267,4 +269,4 @@ function ns.OpenFocusAuras()
     screen:Show()
 end
 
-ns.AddCommand("focusauras", function() ns.OpenFocusAuras() end, "what shows under the focus frame")
+ns.AddCommand("focusauras", function() ns.OpenFocusAuras() end, "what shows with the focus frame")

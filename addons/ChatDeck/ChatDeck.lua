@@ -25,7 +25,7 @@ end
 -- Copy one line into the peek. Lines can hold values the game won't let addons read; skip those.
 local function Add(msg, r, g, b)
     if type(msg) ~= "string" then return end
-    if issecretvalue and issecretvalue(msg) then return end
+    if not DeckKit.Readable(msg) then return end
     pcall(text.AddMessage, text, msg, r or 1, g or 1, b or 1)
 end
 

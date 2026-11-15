@@ -103,6 +103,8 @@ end
 -- The cursor
 ------------------------------------------------------------------------
 
+-- The game's own gamepad chevron (SmartNavigationPointerTemplate, or a look-alike), for any DeckKit
+-- control or one a module adds to a Blizzard frame (PackPad's broom). UI.PlacePointer puts it on one.
 local function MakePointer(parent)
     local ok, p = pcall(CreateFrame, "Frame", nil, parent, "SmartNavigationPointerTemplate")
     if not (ok and p and p.Icon) then
@@ -133,6 +135,7 @@ local function PlacePointer(p, target)
     p:SetPoint("LEFT", target, "LEFT", -(CURSOR_W - 8), 0)
     p:Show()
 end
+UI.MakePointer, UI.PlacePointer = MakePointer, PlacePointer
 
 ------------------------------------------------------------------------
 -- The window ("screen"): title, tabs, body, footer with button prompts
@@ -349,6 +352,9 @@ function Screen:SelectTab(i, quiet)
     if not quiet then ns.Window.Tick() end
     local tab = self.tabs[i]
     if tab.onShow then tab.onShow(tab) end
+    -- Settings can change while the screen is closed (a grip chord toggling the cheat sheet, say):
+    -- every control shows its current value before anything is focused.
+    self:Refresh()
     -- Keep the tab's last focus, or start at its first control.
     local f = tab.focus
     if not (f and f:IsVisible()) then f = self:Focusables()[1] end
@@ -455,12 +461,13 @@ function Screen:Key(key)
         self:Refresh()
         return
     end
-    if key == "PADDLEFT" or key == "PADDRIGHT" then
-        -- Steppers and choices take left/right themselves.
+    if key == "PADDLEFT" or key == "PADDRIGHT" or key == "PADDUP" or key == "PADDDOWN" then
+        -- Steppers and choices take left/right themselves, dials up/down too. A control's handler
+        -- returns false when it doesn't use that press (a dial's last digit): the cursor moves on.
         local f = self:Focused()
-        local fn = f and f.dk and not IsDisabled(f) and (key == "PADDLEFT" and f.dk.left or f.dk.right)
-        if fn then
-            fn(f)
+        local name = ({ PADDLEFT = "left", PADDRIGHT = "right", PADDUP = "up", PADDDOWN = "down" })[key]
+        local fn = f and f.dk and not IsDisabled(f) and f.dk[name]
+        if fn and fn(f) ~= false then
             ns.Window.Tick()
             self:Refresh()
             return
@@ -821,6 +828,87 @@ function UI.Stepper(parent, width, opts)
     })
 end
 
+-- Dial: a number dialed digit by digit, like a combination lock ("45.2"): up/down turn the chosen digit
+-- (0-9, wrapping), left/right choose the digit, and past the first or last one the cursor moves on to
+-- the next control. The chosen digit is lit gold while the dial has focus. For numbers typed exactly,
+-- like map coordinates. opts: label (a caption above), digits (how many), point (digits after the
+-- decimal point, 0 for none), get() / set(n) with n the digits as a whole number (452 for "45.2"),
+-- activate + verb (what A does: a dial is usually the last step before saving).
+local DIAL_W, DIAL_H, DIAL_GAP = 34, 46, 4
+function UI.Dial(parent, opts)
+    local n, point = opts.digits or 3, opts.point or 0
+    local pointW = point > 0 and 10 or 0
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetSize(n * DIAL_W + (n - 1) * DIAL_GAP + pointW, DIAL_H + 18)
+    f.caption = Text(f, UI.Font.smallDim)
+    f.caption:SetPoint("TOPLEFT", 0, 0)
+    f.caption:SetText(opts.label or "")
+    f.slots = {}
+    for i = 1, n do
+        local slot = CreateFrame("Frame", nil, f)
+        slot:SetSize(DIAL_W, DIAL_H)
+        local x = (i - 1) * (DIAL_W + DIAL_GAP) + ((point > 0 and i > n - point) and pointW or 0)
+        slot:SetPoint("TOPLEFT", x, -18)
+        Fill(slot, 1, 1, 1, 0.07)
+        slot.lit = slot:CreateTexture(nil, "BORDER")
+        slot.lit:SetAllPoints()
+        slot.lit:SetColorTexture(1, 0.82, 0, 0.35)
+        slot.text = Text(slot, UI.Font.title, "CENTER")
+        local font = slot.text:GetFont()
+        if font then slot.text:SetFont(font, 30, "OUTLINE") end
+        slot.text:SetPoint("CENTER")
+        f.slots[i] = slot
+    end
+    if point > 0 then
+        local dot = Text(f, UI.Font.title, "CENTER")
+        local font = dot:GetFont()
+        if font then dot:SetFont(font, 30, "OUTLINE") end
+        dot:SetPoint("BOTTOM", f.slots[n - point], "BOTTOMRIGHT", (DIAL_GAP + pointW) / 2, 2)
+        dot:SetText(".")
+    end
+    f.pick = 1
+    local function Digits()
+        local v, out = math.max(0, math.floor(opts.get() + 0.5)), {}
+        for i = n, 1, -1 do out[i] = v % 10; v = math.floor(v / 10) end
+        return out
+    end
+    local function Turn(d)
+        local ds = Digits()
+        ds[f.pick] = (ds[f.pick] + d) % 10
+        local v = 0
+        for i = 1, n do v = v * 10 + ds[i] end
+        opts.set(v)
+    end
+    -- The screen calls these as focus arrives and leaves (it does for every control): they light the
+    -- chosen digit only while the dial has focus.
+    local focused = false
+    function f:LockHighlight() focused = true; self.dk.refresh(self) end
+    function f:UnlockHighlight() focused = false; self.dk.refresh(self) end
+    return Register(f, {
+        disabled = opts.disabled, reason = opts.reason, onFocus = opts.onFocus,
+        prompts = function()
+            local p = { { "DPAD_UD", "Change" }, { "DPAD_LR", "Digit" } }
+            if opts.activate then p[#p + 1] = { "A", opts.verb or "OK" } end
+            return p
+        end,
+        up = function() Turn(1) end,
+        down = function() Turn(-1) end,
+        left = function(self) if self.pick > 1 then self.pick = self.pick - 1 else return false end end,
+        right = function(self) if self.pick < n then self.pick = self.pick + 1 else return false end end,
+        activate = opts.activate and function() opts.activate() end,
+        refresh = function(self)
+            local on = not IsDisabled(self)
+            for i, d in ipairs(Digits()) do
+                local slot = self.slots[i]
+                slot.text:SetText(d)
+                local lit = focused and i == self.pick
+                slot.lit:SetShown(lit)
+                slot.text:SetTextColor(unpack((lit and { 1, 1, 1 }) or (on and { 0.8, 0.8, 0.8 }) or UI.Color.dim))
+            end
+        end,
+    })
+end
+
 -- Action: a row that does something (opens a window, applies a change). The A glyph at the right.
 function UI.Action(parent, width, opts)
     local f = Row(parent, width, opts.label)
@@ -852,82 +940,6 @@ function UI.StatusRow(parent, width, opts)
     end
     f:Update()
     return f
-end
-
--- Key binding for a game binding action (e.g. "CHATDECK_PEEK"), bound for real with SetBinding.
--- Only the back grips are offered: everything else on the pad belongs to the crossbar or the game.
-local BINDABLE = {}
-for _, g in ipairs(ns.GRIPS) do BINDABLE[g.key] = true end
-
-local function KeyName(key)
-    local g = UI.KeyGlyph[key]
-    if g and g:match("^[LR][345]$") then return Hex(UI.Color.gold) .. g .. "|r" end
-    return g and Glyph(g, 24) or key
-end
-
-local function ActionName(action)
-    local name = _G["BINDING_NAME_" .. action]
-    return name or action
-end
-
-function UI.KeyBinding(parent, width, opts)
-    local action = opts.action
-    local f = Row(parent, width, opts.label or ActionName(action))
-    f.value = Text(f, UI.Font.body, "RIGHT")
-    f.value:SetPoint("RIGHT", -10, 0)
-    local pending
-    local function Apply(key)
-        if InCombatLockdown() then ns.Print("can't change bindings in combat.") return end
-        for _, old in ipairs({ GetBindingKey(action) }) do SetBinding(old) end
-        if key then SetBinding(key, action) end
-        SaveBindings(GetCurrentBindingSet())
-    end
-    return Register(f, {
-        disabled = opts.disabled, reason = opts.reason, onFocus = opts.onFocus,
-        captureText = "Press a back grip (L4 R4 L5 R5)",
-        prompts = function()
-            local p = { { "A", "Bind" } }
-            if GetBindingKey(action) then p[#p + 1] = { "X", "Clear" } end
-            return p
-        end,
-        activate = function(self)
-            local screen = TabOf(self).screen
-            screen.mode, screen.capture = "capture", self
-            self.value:SetText(Hex(UI.Color.gold) .. "Press a button...|r")
-        end,
-        x = function() if GetBindingKey(action) then Apply(nil) end end,
-        captured = function(self, key)
-            local screen = TabOf(self).screen
-            if not BINDABLE[key] then
-                screen.footerLeft:SetText(Hex(UI.Color.bad) .. "Only the back grips (L4 R4 L5 R5) can be bound here.|r")
-                return
-            end
-            local current = GetBindingAction(key)
-            if current and current ~= "" and current ~= action then
-                pending = key
-                screen.mode, screen.capture = "confirm", self
-                self.dk.confirmText = "Replace " .. ActionName(current)
-                self.value:SetText(KeyName(key) .. Hex(UI.Color.gold) .. "  replaces " .. ActionName(current) .. "|r")
-                return
-            end
-            Apply(key)
-        end,
-        confirmed = function(_, yes)
-            if yes and pending then Apply(pending) end
-            pending = nil
-        end,
-        refresh = function(self)
-            RowEnabled(self)
-            local keys = { GetBindingKey(action) }
-            if #keys == 0 then
-                self.value:SetText(Hex(UI.Color.dim) .. "Not bound|r")
-            else
-                local parts = {}
-                for _, k in ipairs(keys) do parts[#parts + 1] = KeyName(k) end
-                self.value:SetText(table.concat(parts, "  "))
-            end
-        end,
-    })
 end
 
 -- Icon: an action-button-style square. Selected = the game's gold "checked" glow; a binding shows

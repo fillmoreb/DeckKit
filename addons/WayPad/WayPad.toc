@@ -10,6 +10,5 @@ Core.lua
 HandOff.lua
 Pins.xml
 Pins.lua
-Editor.lua
-Manager.lua
+Screen.lua
 Slash.lua

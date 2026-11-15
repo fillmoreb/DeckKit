@@ -24,7 +24,7 @@ end
 
 local function Keepable(msg)
     if type(msg) ~= "string" or msg == "" then return false end
-    if issecretvalue and issecretvalue(msg) then return false end
+    if not DeckKit.Readable(msg) then return false end
     return not msg:find("|K", 1, true)
 end
 

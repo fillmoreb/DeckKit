@@ -94,13 +94,8 @@ local function Cell(i)
         c.border = frame:CreateTexture(nil, "ARTWORK", nil, 2)
         c.border:SetTexture("Interface\\Common\\WhiteIconFrame")
         c.count = frame:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
-        c.shadow = frame:CreateTexture(nil, "OVERLAY", nil, 5)
-        c.shadow:SetAtlas("Bonus-Objective-Star")
-        c.shadow:SetVertexColor(0, 0, 0, 0.9)
-        c.star = frame:CreateTexture(nil, "OVERLAY", nil, 6)
-        c.star:SetAtlas("Bonus-Objective-Star")
-        c.star:SetDesaturated(true)
-        c.star:SetVertexColor(0.72, 0.48, 1.00)
+        c.star = ns.Marks.NewStar(frame) -- the bags' lilac star
+        c.shadow = c.star.shadow
         c.arrow = frame:CreateTexture(nil, "OVERLAY", nil, 4)
         c.arrow:SetAtlas("bags-greenarrow")
         cells[i] = c
@@ -222,12 +217,9 @@ local function Fill()
                 end
                 local marked = ns.Marks and ns.Marks.IsMarked(info.itemID)
                 if marked then
-                    c.star:SetSize(s * STAR, s * STAR)
+                    ns.Marks.SizeStar(c.star, s * STAR)
                     c.star:ClearAllPoints()
                     c.star:SetPoint("TOPRIGHT", c.bg, "TOPRIGHT", s * 0.08, s * 0.08)
-                    c.shadow:SetSize(s * STAR * 1.25, s * STAR * 1.25)
-                    c.shadow:ClearAllPoints()
-                    c.shadow:SetPoint("CENTER", c.star, "CENTER")
                 end
                 c.star:SetShown(marked)
                 c.shadow:SetShown(marked)

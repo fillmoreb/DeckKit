@@ -1,5 +1,5 @@
--- DeckHUD: interface tweaks for playing on the Deck. For now, the minimap: square, a thin border
--- (or none), in the top-right corner, without the buttons and frame art around its edge.
+-- DeckHUD's minimap: square, a thin border (or none), in the top-right corner, without the buttons
+-- and frame art around its edge.
 --
 -- The minimap is moved out of Blizzard's MinimapCluster (which holds the zone text, tracking,
 -- calendar, mail and the other edge buttons) onto UIParent, and the cluster is hidden. Addon
@@ -7,18 +7,16 @@
 -- Optionally it leaves room above the map for the Steam performance overlay's battery readout.
 --
 -- Settings live in the DeckKit menu (double-tap Menu, or /deckkit).
-local ADDON, ns = ...
-
-DeckKit.NewModule(ns, ADDON, "|cffe0c060DeckHUD|r")
+local _, ns = ...
 
 local DEFAULTS = { square = true, hideButtons = true, border = true, overlayRoom = true, matchTracker = true, size = 170 }
+ns.Defaults(DEFAULTS)
 local OVERLAY_PX = 30 -- screen pixels kept clear for the Steam battery overlay (it's about 26 tall)
 local MARGIN_PX = 4   -- gap to the screen edges
 local DIALOG_PX = 4   -- extra gap on the right for the dialog border
 local DIALOG_OUT = 3  -- how far the dialog border sits outside the map
 
-ns.db = {}
-local db = ns.db
+local function DB() return ns.db end
 
 -- Blizzard's minimap decorations: modern and classic names, whichever exist. MinimapCluster holds
 -- most of them; the rest sit on the minimap itself.
@@ -31,7 +29,7 @@ local DECOR = {
 local DECOR_KEYS = { "ZoomIn", "ZoomOut", "ZoomHitArea" } -- Minimap.<key>
 
 function GetMinimapShape() -- the convention minimap addons (and WayPad's pins) read
-    return db.square ~= false and "SQUARE" or "ROUND"
+    return DB().square ~= false and "SQUARE" or "ROUND"
 end
 
 ------------------------------------------------------------------------
@@ -44,7 +42,7 @@ local function KeepHidden(f)
     if type(f) ~= "table" or type(f.Hide) ~= "function" then return end
     if not hooked[f] then
         hooked[f] = true
-        local function again(self) if db.hideButtons ~= false then self:Hide() end end
+        local function again(self) if DB().hideButtons ~= false then self:Hide() end end
         hooksecurefunc(f, "Show", again)
         if f.SetShown then hooksecurefunc(f, "SetShown", function(self, on) if on then again(self) end end) end
     end
@@ -57,7 +55,7 @@ local function IsEdgeButton(f)
 end
 
 local function HideButtons()
-    if db.hideButtons == false then return end
+    if DB().hideButtons == false then return end
     for _, name in ipairs(DECOR) do KeepHidden(_G[name]) end
     for _, key in ipairs(DECOR_KEYS) do KeepHidden(Minimap[key]) end
     for _, child in ipairs({ Minimap:GetChildren() }) do
@@ -104,17 +102,17 @@ local function Holder()
 end
 
 local function Mask()
-    if db.square == false then return "Interface\\Masks\\CircleMaskScalable" end
+    if DB().square == false then return "Interface\\Masks\\CircleMaskScalable" end
     if cropPct <= 0 then return "Interface\\Buttons\\WHITE8X8" end
     return string.format("Interface\\AddOns\\DeckHUD\\masks\\crop_%02d", cropPct)
 end
 
 -- Border style: "dialog" (the classic tooltip edge, BACKDROP_TUTORIAL_16_16, edge only),
 -- "metal" (the thin metal frame of DeckKit windows: the SimplePanelTemplate nine-slice), "line"
--- (1 px dark edge) or false (none). Older saves only have db.border = false for none.
+-- (1 px dark edge) or false (none). Older saves only have border = false for none.
 local function BorderStyle()
-    if db.borderStyle ~= nil then return db.borderStyle end
-    if db.border == false then return false end
+    if DB().borderStyle ~= nil then return DB().borderStyle end
+    if DB().border == false then return false end
     return "dialog"
 end
 
@@ -122,7 +120,7 @@ end
 -- draws a "ring" glow along a circle, which cuts across a square map. Square: no ring. Round: the
 -- game's own look comes back on a /reload (the default values can't be read back).
 local function Blobs()
-    if db.square == false then return end
+    if DB().square == false then return end
     for _, kind in ipairs({ "Quest", "Task", "Arch" }) do
         local scalar, alpha = Minimap["Set" .. kind .. "BlobRingScalar"], Minimap["Set" .. kind .. "BlobRingAlpha"]
         if scalar then scalar(Minimap, 0) end
@@ -159,7 +157,7 @@ local function Shape()
             edgeSize = b and b.edgeSize or 16, tile = true, tileEdge = true })
         dialog:SetFrameLevel(Holder():GetFrameLevel() + 30)
     end
-    local style, square = BorderStyle(), db.square ~= false
+    local style, square = BorderStyle(), DB().square ~= false
     border:SetShown(square and style == "line")
     metal:SetShown(square and style == "metal")
     dialog:SetShown(square and style == "dialog")
@@ -171,11 +169,11 @@ local function Layout()
     -- Under the status bar while it shows (StatusBar.lua); else clear of the Steam overlay, if asked.
     local bar = ns.StatusBarHeight and ns.StatusBarHeight() or 0
     local top = bar > 0 and (bar + PixelsToUnits(MARGIN_PX))
-        or PixelsToUnits(MARGIN_PX + (db.overlayRoom ~= false and OVERLAY_PX or 0))
-    local size = db.size or DEFAULTS.size
+        or PixelsToUnits(MARGIN_PX + (DB().overlayRoom ~= false and OVERLAY_PX or 0))
+    local size = DB().size or DEFAULTS.size
     -- The dialog border sticks out past the map; keep it clear of the screen's right edge.
-    local inset = (db.square ~= false and BorderStyle() == "dialog") and PixelsToUnits(DIALOG_PX) or 0
-    local t = db.matchTracker ~= false and db.square ~= false and Tracker()
+    local inset = (DB().square ~= false and BorderStyle() == "dialog") and PixelsToUnits(DIALOG_PX) or 0
+    local t = DB().matchTracker ~= false and DB().square ~= false and Tracker()
     if not t then return size, size, margin + inset, top end
     local k = t:GetEffectiveScale() / UIParent:GetEffectiveScale()
     local w = (t:GetRight() - t:GetLeft()) * k
@@ -193,7 +191,7 @@ local function Place(force)
     placed.w, placed.h, placed.right, placed.top = w, h, right, top
     -- Round the cut up to a whole percent, so the map never reaches past h.
     cropPct = math.min(MAX_CROP, math.max(0, math.ceil((1 - h / w) * 100 - 0.001)))
-    if db.square == false then cropPct = 0 end
+    if DB().square == false then cropPct = 0 end
     local box = Holder()
     box:SetSize(w, w * (1 - cropPct / 100))
     box:ClearAllPoints()
@@ -233,7 +231,7 @@ local function ZoneTitle()
         zoneBar.text:SetPoint("RIGHT", -4, 0)
         zoneBar.text:SetWordWrap(false)
     end
-    zoneBar:SetShown(db.zoneTitle ~= false)
+    zoneBar:SetShown(DB().zoneTitle ~= false)
     local name = GetMinimapZoneText and GetMinimapZoneText() or GetZoneText()
     zoneBar.text:SetText(name or "")
     local pvp = C_PvP and C_PvP.GetZonePVPInfo and C_PvP.GetZonePVPInfo()
@@ -253,55 +251,15 @@ local function Apply()
 end
 ns.Apply = Apply
 
-------------------------------------------------------------------------
--- Inventory (for development): what's on and around the minimap at load, saved in DeckHUDDB.dump.
-------------------------------------------------------------------------
-
-local function Inventory(names)
-    local out = {}
-    local function add(parentName, f)
-        local ok, name = pcall(f.GetName, f)
-        local point = f.GetPoint and { f:GetPoint(1) } or {}
-        local rel = point[2]
-        table.insert(out, string.format("%s > %s [%s] shown=%s %dx%d at %s %s %s",
-            parentName, tostring(ok and name or "?"), f.GetObjectType and f:GetObjectType() or "?",
-            tostring(f.IsShown and f:IsShown()), math.floor(f.GetWidth and f:GetWidth() or 0), math.floor(f.GetHeight and f:GetHeight() or 0),
-            tostring(point[1]), rel and rel.GetName and tostring(rel:GetName()) or "?", tostring(point[3])))
-    end
-    for _, parentName in ipairs(names) do
-        local p = _G[parentName]
-        if p then
-            add("UIParent", p)
-            if p.GetChildren then for _, c in ipairs({ p:GetChildren() }) do add(parentName, c) end end
-            if p.GetRegions then for _, r in ipairs({ p:GetRegions() }) do add(parentName .. "(region)", r) end end
-        end
-    end
-    return out
-end
-
-------------------------------------------------------------------------
-
-ns.On("ADDON_LOADED", function(name)
-    if name ~= ADDON then return end
-    DeckHUDDB = DeckHUDDB or {}
-    for k, v in pairs(DEFAULTS) do
-        if DeckHUDDB[k] == nil then DeckHUDDB[k] = v end
-    end
-    db = DeckHUDDB
-    ns.db = db
-    local ok, dump = pcall(Inventory, { "MinimapCluster", "Minimap", "MinimapBackdrop" })
-    db.dump = ok and dump or { "inventory failed: " .. tostring(dump) }
-end)
-
 ns.On("PLAYER_LOGIN", function()
     Apply()
-    if db.zoom then Minimap:SetZoom(math.min(db.zoom, Minimap:GetZoomLevels() - 1)) end
+    if DB().zoom then Minimap:SetZoom(math.min(DB().zoom, Minimap:GetZoomLevels() - 1)) end
     -- Addons register their minimap buttons at different times.
     C_Timer.After(2, HideButtons)
     C_Timer.After(10, HideButtons)
     local LDBI = LibStub and LibStub("LibDBIcon-1.0", true)
     if LDBI and LDBI.RegisterCallback then
-        LDBI.RegisterCallback(ns, "LibDBIcon_IconCreated", function(_, button) if db.hideButtons ~= false then KeepHidden(button) end end)
+        LDBI.RegisterCallback(ns, "LibDBIcon_IconCreated", function(_, button) if DB().hideButtons ~= false then KeepHidden(button) end end)
     end
     -- Edit Mode (or anything else) moving the map back: put it where it belongs again.
     hooksecurefunc(Minimap, "SetPoint", function()
@@ -317,41 +275,41 @@ ns.On("UI_SCALE_CHANGED", function() if Minimap then Place(true) end end)
 ns.AddSettings({
     { type = "section", tab = "Screen", label = "Minimap", order = 3 },
     { type = "toggle", label = "Square minimap",
-      get = function() return db.square ~= false end,
-      set = function(on) db.square = on; Shape(); Place(true) end },
+      get = function() return DB().square ~= false end,
+      set = function(on) DB().square = on; Shape(); Place(true) end },
     { type = "toggle", label = "Zone name on the map",
       hint = "The zone or area you're in, across the top of the minimap, colored friendly / hostile / contested.",
-      get = function() return db.zoneTitle ~= false end,
-      set = function(on) db.zoneTitle = on; ZoneTitle() end },
+      get = function() return DB().zoneTitle ~= false end,
+      set = function(on) DB().zoneTitle = on; ZoneTitle() end },
     { type = "choice", label = "Border", values = { { "dialog", "Dialog" }, { "metal", "Thin metal" }, { "line", "Thin line" }, { false, "None" } },
       hint = "Dialog: the classic dialog box edge. Thin metal: the frame of DeckKit's windows. Thin line: a 1-pixel dark edge.",
       get = function() return BorderStyle() end,
-      set = function(v) db.borderStyle = v; Shape(); Place(true) end },
+      set = function(v) DB().borderStyle = v; Shape(); Place(true) end },
     { type = "toggle", label = "Hide buttons around the edge",
       hint = "Zone text, tracking, calendar, mail, zoom and addon buttons. Turning it off needs a /reload.",
-      get = function() return db.hideButtons ~= false end,
+      get = function() return DB().hideButtons ~= false end,
       set = function(on)
-          db.hideButtons = on
+          DB().hideButtons = on
           if on then HideButtons() else ns.Print("Type /reload to bring the minimap buttons back.") end
       end },
     { type = "toggle", label = "Leave room for the battery overlay",
       hint = "Moves the map down so the Steam performance overlay's battery doesn't cover it.",
-      get = function() return db.overlayRoom ~= false end,
-      set = function(on) db.overlayRoom = on; Place(true) end },
+      get = function() return DB().overlayRoom ~= false end,
+      set = function(on) DB().overlayRoom = on; Place(true) end },
     { type = "toggle", label = "As wide as the quest tracker",
       hint = "Lines the map up with the tracker below it; it gets shorter to fit above it.",
-      get = function() return db.matchTracker ~= false end,
-      set = function(on) db.matchTracker = on; Place(true) end },
+      get = function() return DB().matchTracker ~= false end,
+      set = function(on) DB().matchTracker = on; Place(true) end },
     { type = "range", label = "Size (when not matching the tracker)", min = 120, max = 260, step = 10,
-      get = function() return db.size or DEFAULTS.size end,
-      set = function(v) db.size = v; Place(true) end },
+      get = function() return DB().size or DEFAULTS.size end,
+      set = function(v) DB().size = v; Place(true) end },
     { type = "range", label = "Zoom", min = 0, max = 5, step = 1,
       hint = "0 is the widest view.",
       get = function() return Minimap:GetZoom() end,
       set = function(v)
           v = math.min(v, Minimap:GetZoomLevels() - 1)
           Minimap:SetZoom(v)
-          db.zoom = v
+          DB().zoom = v
       end },
     { type = "info", label = "Disable DeckHUD in the AddOns list for Blizzard's minimap." },
 })

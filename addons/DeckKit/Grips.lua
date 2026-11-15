@@ -348,13 +348,14 @@ function ns.Dictation.SetState(state, binding)
     end
 end
 
--- "Transcribing" ends when your own message shows up in chat.
+-- Without a real state source, "Transcribing" ends when your own message shows up in chat. With one
+-- (signalled), its "done" ends it: an unrelated line of yours in chat mustn't.
 local CHAT_EVENTS = { "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_EMOTE", "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER",
     "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER", "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER",
     "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER", "CHAT_MSG_WHISPER_INFORM", "CHAT_MSG_CHANNEL" }
 for _, event in ipairs(CHAT_EVENTS) do
     pcall(ns.On, event, function(_, author)
-        if transcribing and type(author) == "string" and author:match("^[^-]+") == UnitName("player") then
+        if transcribing and not signalled and type(author) == "string" and author:match("^[^-]+") == UnitName("player") then
             HideBox()
         end
     end)

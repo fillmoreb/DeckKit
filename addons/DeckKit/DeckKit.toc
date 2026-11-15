@@ -9,6 +9,7 @@
 ## OptionalDeps: DeckDev
 
 Core.lua
+Map.lua
 Waypoints.lua
 Debug.lua
 Input.lua

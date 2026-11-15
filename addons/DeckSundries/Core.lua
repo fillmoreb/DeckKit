@@ -1,7 +1,9 @@
 -- DeckSundries: small controller extras that don't need an addon of their own.
 --
---   Core.lua       settings
---   WandShoot.lua  Square fires your wand at an enemy instead of a melee swing
+--   Core.lua            settings
+--   WandShoot.lua       Square fires your wand at an enemy instead of a melee swing
+--   FriendsWhisper.lua  Y on a friend in the friends list makes them your /r target
+--   TargetMenu.lua      no target menu on Triangle in combat
 local ADDON, ns = ...
 
 DeckKit.NewModule(ns, ADDON, "|cffd9b38cDeckSundries|r")

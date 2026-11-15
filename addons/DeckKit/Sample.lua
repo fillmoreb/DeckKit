@@ -27,6 +27,7 @@ local state = {
     healBind = { "PADLTRIGGER", "PAD1" }, nextBind = nil,
     selected = { [1] = true, [2] = true }, binds = { [1] = { "PADDUP" }, [2] = { "PADDLEFT" } },
     list = { { "PADDUP" }, { "PADDDOWN" }, nil, { "PADDRIGHT" } },
+    range = 40, x = 452, y = 628,
 }
 
 local function Build()
@@ -188,7 +189,31 @@ local function Build()
     scroll:SetContentHeight(ly)
 
     ------------------------------------------------------------------
-    -- Tab 3: information only. Nothing takes the cursor.
+    -- Tab 3: numbers. A stepper for a value nudged up and down; dials for one typed digit by digit.
+    ------------------------------------------------------------------
+    local tn = screen:AddTab("Numbers")
+    local np = UI.Panel(tn.frame, "Numbers")
+    np:SetAllPoints()
+    local stepper = UI.Stepper(np, 420, { label = "Practice range", min = 10, max = 100, step = 5,
+        format = function(v) return v .. " yd" end,
+        get = function() return state.range end, set = function(v) state.range = v end })
+    stepper:SetPoint("TOPLEFT", 12, np.top)
+    local nd = UI.Description(np, "Dials: {DPAD_UD} turns a digit, {DPAD_LR} picks one; past the last "
+        .. "digit the cursor moves on to the next control. {A} does the dial's action.", W - 24)
+    nd:SetPoint("TOPLEFT", 12, np.top - UI.ROW_H - 16)
+    local said = UI.Status(np, 360)
+    local function Say() said:Set("Saved", string.format("%.1f, %.1f", state.x / 10, state.y / 10), UI.Color.gold) end
+    local dx = UI.Dial(np, { label = "X", digits = 3, point = 1, verb = "Save", activate = Say,
+        get = function() return state.x end, set = function(v) state.x = v end })
+    local dy = UI.Dial(np, { label = "Y", digits = 3, point = 1, verb = "Save", activate = Say,
+        get = function() return state.y end, set = function(v) state.y = v end })
+    dx:SetPoint("TOPLEFT", 12, np.top - UI.ROW_H - 70)
+    dy:SetPoint("LEFT", dx, "RIGHT", 40, 0)
+    said:SetPoint("TOPLEFT", dx, "BOTTOMLEFT", 0, -16)
+    said:Set("Saved", "nothing yet", UI.Color.dim)
+
+    ------------------------------------------------------------------
+    -- Tab 4: information only. Nothing takes the cursor.
     ------------------------------------------------------------------
     local t3 = screen:AddTab("Status")
     local info = UI.Panel(t3.frame, "HealPad")

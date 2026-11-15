@@ -1,15 +1,15 @@
--- Hand-off: one waypoint system at a time. WayPad's own (arrow, map and minimap pins, arrival),
+-- Hand-off: one waypoint system at a time. DeckKit's own (the compass, map and minimap pins, arrival),
 -- or another waypoint addon that speaks the common waypoint interface (TomTom's AddWaypoint /
 -- RemoveWaypoint / SetCrazyArrow, which other waypoint addons also provide). In hand-off mode
 -- WayPad is the controller front end: its d-pad editor and Manage window drive the other addon,
--- and WayPad's own arrow, pins and arrival handling stay off.
+-- and DeckKit's guiding, pins and arrival handling stay off (DeckKit.Waypoints.SetHandOff).
 --
 -- DeckKit's list stays the record of what you added (Manage and MapDeck read it). The other addon
 -- only ever gets WayPad's own waypoints added and removed; whatever else it has is left alone.
 -- Asking it to add a waypoint that already exists hands back the existing one, so WayPad needs
 -- no ids of its own and nothing breaks across reloads.
 --
--- "Waypoints go to" (DeckKit menu, WayPad page): Auto (the other addon if one is installed),
+-- "Waypoints go to" (DeckKit menu, Map & travel > Waypoints): Auto (the other addon if one is installed),
 -- WayPad, or the other addon.
 local _, ns = ...
 

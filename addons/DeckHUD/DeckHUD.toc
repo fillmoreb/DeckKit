@@ -1,11 +1,12 @@
 ## Interface: 16001
 ## Title: DeckHUD
-## Notes: Interface tweaks for playing on the Deck: a square minimap in the top-right corner, a thin chat frame tucked into the bottom-left. Settings: double-tap Menu or /deckkit
+## Notes: Interface tweaks for playing on the Deck: a status bar with a compass, a square minimap, a thin chat frame, Edit Mode layouts, a slim focus frame, compact loot rolls. Settings: double-tap Menu or /deckkit
 ## Version: @project-version@
 ## Author: Ben Fillmore
 ## SavedVariables: DeckHUDDB
 ## Dependencies: DeckKit
 
+Core.lua
 Minimap.lua
 StatusBar.lua
 Compass.lua

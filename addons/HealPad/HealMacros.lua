@@ -132,18 +132,82 @@ local function Body(spell)
     return "#showtooltip " .. spell.name .. "\n" .. cast .. spell.name
 end
 
--- Macro names are at most 16 characters.
-local function MacroName(spell) return spell.name:sub(1, 16) end
+-- Macro names are at most 16 characters. A long name is cut short; when that would give two spells the
+-- same name (Greater Blessing of Might / of Wisdom), the clashing ones are shortened to initials and
+-- the last word ("GBo Might"), and a number if even that clashes. Names come from every spell the
+-- window offers, not just the ticked ones, so a spell gets the same name whichever you make, run to run.
+local MAX_NAME = 16
+local function Shorten(name)
+    local words = {}
+    for w in name:gmatch("%S+") do words[#words + 1] = w end
+    if #words < 2 then return name:sub(1, MAX_NAME) end
+    local initials = ""
+    for i = 1, #words - 1 do initials = initials .. words[i]:sub(1, 1) end
+    return (initials .. " " .. words[#words]):sub(1, MAX_NAME)
+end
 
--- Makes or updates a character macro for each spell. Returns made, updated, skipped (no room).
-local function Make(spells)
-    local made, updated, skipped = 0, 0, 0
+local function MacroNames(spells) -- spell name -> macro name
+    local count, names, used = {}, {}, {}
     for _, spell in ipairs(spells) do
-        local name = MacroName(spell)
-        local index = GetMacroIndexByName(name)
-        if index and index > 0 then
+        local cut = spell.name:sub(1, MAX_NAME)
+        count[cut] = (count[cut] or 0) + 1
+    end
+    for i, spell in ipairs(spells) do
+        local name = spell.name:sub(1, MAX_NAME)
+        if count[name] > 1 then name = Shorten(spell.name) end
+        local base, n = name, 2
+        while used[name] do
+            name = base:sub(1, MAX_NAME - #tostring(n)) .. n
+            n = n + 1
+        end
+        used[name], names[spell.name] = true, name
+    end
+    return names
+end
+
+-- Whether a macro body is HealPad's for this spell: a focus-aimed /cast line ending in the spell's name
+-- (or, for a buff set, a focus-aimed /castsequence). The #showtooltip line doesn't count.
+local function Casts(body, spell)
+    if type(body) ~= "string" then return false end
+    for line in body:gmatch("[^\n]+") do
+        if line:find("[@focus,help", 1, true) then
+            if spell.sequence then
+                if line:find("^/castsequence ") then return true end
+            elseif line:find("^/cast ") and line:sub(-#spell.name) == spell.name then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- This character's macro with that name (account macros are never touched), and whether it's HealPad's
+-- macro for this spell (a focus-aimed cast of it): only those are updated; anything else with the name
+-- is left be.
+local function CharacterMacro(name, spell)
+    local _, character = GetNumMacros()
+    local first = MAX_ACCOUNT_MACROS or 120
+    for i = first + 1, first + (character or 0) do
+        local macroName, _, body = GetMacroInfo(i)
+        if macroName == name then
+            return i, Casts(body, spell)
+        end
+    end
+end
+
+-- Makes or updates a character macro for each chosen spell (named among all the offered ones). Returns
+-- made, updated, skipped (no room), taken (a macro of yours already has that name).
+local function Make(chosenSpells, allSpells)
+    local made, updated, skipped, taken = 0, 0, 0, 0
+    local names = MacroNames(allSpells)
+    for _, spell in ipairs(chosenSpells) do
+        local name = names[spell.name]
+        local index, ours = CharacterMacro(name, spell)
+        if index and ours then
             EditMacro(index, name, nil, Body(spell))
             updated = updated + 1
+        elseif index then
+            taken = taken + 1
         else
             local _, count = GetNumMacros()
             if count < MAX_CHARACTER and pcall(CreateMacro, name, "INV_MISC_QUESTIONMARK", Body(spell), true) then
@@ -153,7 +217,7 @@ local function Make(spells)
             end
         end
     end
-    return made, updated, skipped
+    return made, updated, skipped, taken
 end
 
 ------------------------------------------------------------------------
@@ -210,9 +274,10 @@ local function Build()
     rows = {}
     makeButton = UI.Button(panel, 220, { label = "Make the macros", run = function()
         if InCombatLockdown() then ns.Print("can't make macros in combat.") return end
-        local made, updated, skipped = Make(Chosen())
+        local made, updated, skipped, taken = Make(Chosen(), spells)
         local msg = string.format("heal macros: %d new, %d updated", made, updated)
         if skipped > 0 then msg = msg .. string.format(", %d skipped (WoW's %d character macros are full)", skipped, MAX_CHARACTER) end
+        if taken > 0 then msg = msg .. string.format(", %d left alone (a macro of yours already has the name)", taken) end
         ns.Print(msg .. ".")
         summary:SetText(msg .. ".")
     end })

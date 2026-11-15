@@ -209,3 +209,22 @@ CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
         end
     end
 end)
+
+-- The crossbar's action buttons (Forever's gamepad action bar, not its Edit Mode copies), for modules
+-- that decorate them (HealPad's range dots, DeckHUD's macro names). They have no global names to look
+-- up by number, so this walks every frame: call it once they exist (a moment after login), not often.
+function ns.CrossbarButtons()
+    local list = {}
+    local f = EnumerateFrames()
+    while f do
+        if not f:IsForbidden() then
+            local name = f:GetName()
+            if type(name) == "string" and ns.Readable(name)
+                and name:find("^GamepadMainActionBarFramePage") and name:find("ActionButton%d+$") then
+                list[#list + 1] = f
+            end
+        end
+        f = EnumerateFrames(f)
+    end
+    return list
+end

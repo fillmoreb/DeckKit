@@ -4,6 +4,14 @@ local _, ns = ...
 local Window = {}
 ns.Window = Window
 
+-- The suite's accent colors (r, g, b), for anything that marks "DeckKit's": lilac for marks and
+-- highlights (PackPad's item marks, the compass's letters and pointer), plum its dark partner (the
+-- compass pointer at rest, MarketDeck's progress fill). Art is desaturated first, then tinted.
+ns.COLORS = {
+    LILAC = { 0.72, 0.48, 1.00 },
+    PLUM = { 0.30, 0.13, 0.42 },
+}
+
 -- Controller button glyphs: the game's own prompt art (atlases), Xbox style, which is how the
 -- Deck's controller shows up. Newer atlas names first, then the older set. Atlas list from
 -- Improved Forever's Pad.lua (MIT License, Copyright (c) 2026 markg).

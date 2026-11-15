@@ -7,6 +7,10 @@
 -- every other key reaches the game as normal. The controller's mapped state is also polled each
 -- frame, as a backup and to repeat a held D-pad direction. Each press is handled once.
 --
+-- One window owns the pad at a time: opening a DeckKit window closes the one that had it (as the game's
+-- own panels replace each other), so a press never drives two windows. Small helpers that only add a
+-- button to someone else's window (PackPad's broom) pass { shared = true } and stay out of it.
+--
 -- Never call into Blizzard's gamepad systems: that taints the player's bindings.
 -- Propagation can't change in combat, so windows close when combat starts.
 local _, ns = ...
@@ -54,10 +58,17 @@ end
 local Handler = {}
 Handler.__index = Handler
 
+local owner -- the window handler that has the pad now
+
+-- Whether a DeckKit window has the pad now (shared helpers stand down while one does).
+function Input.Owned() return owner ~= nil end
+
 -- window: the frame whose visibility turns input on and off.
 -- handlers: key ("PADDUP", "PAD1", ...) -> function(). Unlisted keys reach the game.
-function Input.New(window, handlers)
-    local h = setmetatable({ window = window, handlers = handlers, pressed = {}, polled = {}, held = {} }, Handler)
+-- opts.shared: don't take the pad from (or close) other windows.
+function Input.New(window, handlers, opts)
+    local h = setmetatable({ window = window, handlers = handlers, pressed = {}, polled = {}, held = {},
+        shared = opts and opts.shared }, Handler)
 
     local catcher = CreateFrame("Frame", nil, UIParent)
     catcher:SetFrameStrata("TOOLTIP")
@@ -70,7 +81,7 @@ function Input.New(window, handlers)
             SetPropagate(catcher, not h.draining[key])
             return
         end
-        local handled = h.handlers[key] ~= nil
+        local handled = h.handlers[key] ~= nil and not (h.shared and owner) -- a window has the pad: not ours
         SetPropagate(catcher, not handled)
         if handled then h:Handle(key) end
     end)
@@ -95,7 +106,7 @@ function Input.New(window, handlers)
             return
         end
         local pad = KEYS[key]
-        local handled = pad and h.handlers[pad] ~= nil
+        local handled = pad and h.handlers[pad] ~= nil and not (h.shared and owner) -- as for pad buttons
         SetPropagate(catcher, not handled)
         if handled then h.handlers[pad]() end
     end)
@@ -123,6 +134,7 @@ function Handler:Release(key)
 end
 
 function Handler:Poll(elapsed)
+    if self.shared and owner then return end -- a window has the pad
     -- The game menu opened on top (Menu button, then Game Menu): it needs the pad, so close the
     -- window, as the game's own panels do. Polled, not hooked: hooks on its frames taint.
     if GameMenuFrame and GameMenuFrame:IsShown() and not InCombatLockdown() then
@@ -149,6 +161,11 @@ function Handler:Poll(elapsed)
 end
 
 function Handler:Start()
+    if not self.shared then
+        local previous = owner
+        owner = self
+        if previous and previous ~= self and previous.window:IsShown() then previous.window:Hide() end
+    end
     self.draining = nil
     wipe(self.pressed)
     wipe(self.polled)
@@ -173,6 +190,7 @@ end
 -- it's released: its press already counted, and letting it through would make the game act on
 -- it too (A = jump). Everything else reaches the game right away.
 function Handler:Stop()
+    if owner == self then owner = nil end
     wipe(self.held)
     local draining = {}
     for key in pairs(self.handlers) do

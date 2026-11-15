@@ -23,36 +23,9 @@ local playerArrow
 local mapID, homeMap -- shown map; the map you're standing in
 local layerW, layerH = 1, 1
 
-local function Readable(v)
-    return v ~= nil and not (issecretvalue and issecretvalue(v))
-end
-
-local function MapInfo(id)
-    local ok, info = pcall(C_Map.GetMapInfo, id)
-    return ok and info or nil
-end
-
--- A point on one map, on another (parent or child). nil when it's off that map.
-local function Translate(fromMap, x, y, toMap)
-    if fromMap == toMap then return x, y end
-    local ok, minX, maxX, minY, maxY = pcall(C_Map.GetMapRectOnMap, fromMap, toMap)
-    if ok and Readable(minX) and Readable(maxY) and maxX > minX and maxY > minY then
-        x, y = minX + x * (maxX - minX), minY + y * (maxY - minY)
-    else
-        ok, minX, maxX, minY, maxY = pcall(C_Map.GetMapRectOnMap, toMap, fromMap)
-        if not (ok and Readable(minX) and Readable(maxY) and maxX > minX and maxY > minY) then return end
-        x, y = (x - minX) / (maxX - minX), (y - minY) / (maxY - minY)
-    end
-    if x < 0 or x > 1 or y < 0 or y > 1 then return end
-    return x, y
-end
-
-local function UnitPos(unit, onMap)
-    local ok, pos = pcall(C_Map.GetPlayerMapPosition, onMap, unit)
-    if not (ok and pos) then return end
-    local x, y = pos:GetXY()
-    if Readable(x) and Readable(y) and (x ~= 0 or y ~= 0) then return x, y end
-end
+local Readable = DeckKit.Readable
+local MapInfo, Translate = DeckKit.Map.Info, DeckKit.Map.Translate
+local function UnitPos(unit, onMap) return DeckKit.Map.UnitPosition(unit, onMap) end
 
 -- Your corpse, on whichever map we ask about (zone or continent). Blizzard's map draws it as a tombstone.
 local function CorpsePos(onMap)
@@ -517,7 +490,14 @@ local function Create()
         markerClock = markerClock + elapsed
         if markerClock > 0.5 then -- party and waypoints move less often
             markerClock = 0
-            DrawMarkers()
+            -- Walked into another zone while holding the peek: show that one instead.
+            local here = C_Map.GetBestMapForUnit("player")
+            if Readable(here) and here ~= homeMap then
+                homeMap, mapID = here, here
+                Render()
+            else
+                DrawMarkers()
+            end
         end
     end)
     frame:SetScript("OnSizeChanged", function() if frame:IsShown() then Render() end end)

@@ -120,6 +120,9 @@ local EVERYTHING_HINT = "Turns every suggestion above on, frees the grip keys, a
 
 table.insert(items, { type = "action", label = "Apply everything suggested", keepOpen = true,
     hint = EVERYTHING_HINT, run = ApplyEverything })
+table.insert(items, { type = "info", label = "Switching one off puts back what you had before." })
+for _, item in ipairs(ns.Layout and ns.Layout.MenuItems or {}) do table.insert(items, item) end -- Undo the last layout change
+ns.AddSettings(items)
 
 if DeckKit.Setup then
     DeckKit.Setup.AddStep({

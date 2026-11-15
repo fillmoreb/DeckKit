@@ -26,7 +26,6 @@ local DEFAULT_HINT = {
     choice = "{DPAD_LR} steps through the choices; {A} shows them all.",
     range = "{DPAD_LR} changes it.",
     action = "{A} does it.",
-    binding = "{A}, then press a back grip (L4 R4 L5 R5). {X} clears it.",
 }
 
 local function BuildTab(tabName, sections)
@@ -55,8 +54,8 @@ local function BuildTab(tabName, sections)
     dFrom:SetFontObject(UI.Font.smallDim)
     dFrom:SetPoint("BOTTOMLEFT", 14, 12)
 
-    local function Details(item, label)
-        label = label or item.label
+    local function Details(item)
+        local label = item.label
         if type(label) == "function" then label = label() end
         dHead:SetText(ns.Window.Glyphs(label or ""))
         dText:SetText(ns.Window.Glyphs(item.hint or DEFAULT_HINT[item.type] or ""))
@@ -77,7 +76,7 @@ local function BuildTab(tabName, sections)
         y = y + 34
         for _, item in ipairs(section.rows) do
             local f, h2
-            local focus = function(self) Details(item, self and self.dkLabel) end
+            local focus = function() Details(item) end
             local opts = { label = item.label, get = item.get, set = item.set, onFocus = focus,
                 disabled = item.disabled, reason = item.reason }
             if item.type == "toggle" then
@@ -97,12 +96,6 @@ local function BuildTab(tabName, sections)
                     C_Timer.After(0, item.run)
                 end
                 f = UI.Action(content, W, opts)
-            elseif item.type == "binding" then
-                if _G["BINDING_NAME_" .. item.action] then
-                    opts.action, opts.label = item.action, item.label
-                    f = UI.KeyBinding(content, W, opts)
-                    f.dkLabel = _G["BINDING_NAME_" .. item.action]
-                end
             elseif item.type == "status" then
                 f = UI.StatusRow(content, W, item)
                 statuses[#statuses + 1] = f

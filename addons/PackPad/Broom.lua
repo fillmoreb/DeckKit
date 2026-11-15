@@ -41,16 +41,6 @@ local function OnBottomRow()
     return current ~= nil and ns.bottomRow ~= nil and ns.bottomRow[current] == true
 end
 
--- The game's chevron, placed as DeckKit's windows place it (the tip just over the control's left edge).
-local CURSOR_H, CURSOR_W = 56, 34
-local function MakePointer()
-    local ok, p = pcall(CreateFrame, "Frame", nil, holder, "SmartNavigationPointerTemplate")
-    if not (ok and p and p.Icon) then return nil end
-    p.Icon:SetFrameStrata("FULLSCREEN_DIALOG")
-    p:Hide()
-    return p
-end
-
 local function BlizzardPointer(alpha)
     local p = SmartNavigation and SmartNavigation.Pointer
     if p then p:SetAlpha(alpha) end
@@ -62,12 +52,7 @@ local function Highlight(on)
         BlizzardPointer(0)
         if leftItem and leftItem.SetHighlightLocked then leftItem:SetHighlightLocked(false) end
         button:LockHighlight()
-        if pointer then
-            pointer:SetScale(math.max(0.45, math.min(1, SIZE * 1.25 / CURSOR_H)))
-            pointer:ClearAllPoints()
-            pointer:SetPoint("LEFT", button, "LEFT", -(CURSOR_W - 8), 0)
-            pointer:Show()
-        end
+        if pointer then DeckKit.UI.PlacePointer(pointer, button) end -- the game's chevron, as DeckKit's windows place it
         button:GetScript("OnEnter")(button)
     else
         button:UnlockHighlight()
@@ -133,21 +118,22 @@ function Broom.Create()
     end)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    pointer = MakePointer()
+    pointer = DeckKit.UI.MakePointer(holder)
 
     armed = CreateFrame("Frame", nil, UIParent)
     armed:Hide()
-    ns.Input.New(armed, { PADDDOWN = Select })
+    ns.Input.New(armed, { PADDDOWN = Select }, { shared = true }) -- a button on Blizzard's bag window
     selected = CreateFrame("Frame", nil, UIParent)
     selected:Hide()
     local stay = function() end
     ns.Input.New(selected, { PADDDOWN = stay, PADDLEFT = stay, PADDRIGHT = stay, PADDUP = Leave, PAD2 = Leave,
-        PAD1 = Clean })
+        PAD1 = Clean }, { shared = true })
 
     -- Arms on the top row, drops the selection if the bags lose focus or a fight starts.
     watcher = CreateFrame("Frame", nil, holder)
     watcher:SetScript("OnUpdate", function()
-        local ok = not InCombatLockdown() and BagsHaveFocus()
+        -- Not while a DeckKit window has the pad: its presses aren't the bags'.
+        local ok = not InCombatLockdown() and BagsHaveFocus() and not ns.Input.Owned()
         if selected:IsShown() then
             if not ok then Leave() end
         else

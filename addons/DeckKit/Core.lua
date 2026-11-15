@@ -8,6 +8,7 @@
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
 --   Chords.lua    grip chords: the four back grips, alone or together, pressed or held (secure slots)
 --   Grips.lua     what the grip actions do: peeks, the dictation indicator, hiding a side
+--   Map.lua       map positions, world positions, bearings, facing (DeckKit.Map)
 --   Waypoints.lua the waypoints (DeckKit.Waypoints): list, guidance, arrival; WayPad is their front end
 --   Debug.lua     ns.Debug / ns.Logger: forward to DeckDev (the dev addon) when it's installed
 --
@@ -73,6 +74,12 @@ end)
 
 function ns.Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(ns.TITLE .. ": " .. msg)
+end
+
+-- Whether addon code may use a value: the game hands out "secret" values (unit names, positions,
+-- chat lines in combat or instances) that can be shown but not compared or computed with.
+function ns.Readable(v)
+    return v ~= nil and not (issecretvalue and issecretvalue(v))
 end
 
 ------------------------------------------------------------------------

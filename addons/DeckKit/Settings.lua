@@ -9,7 +9,6 @@
 --       { type = "action", label = "Add a waypoint", verb = "Add", run = function() ... end },
 --         (keepOpen = true runs it straight from the A press instead of after closing the menu:
 --          needed for anything Forever only allows from a key press, like ReloadUI)
---       { type = "binding", action = "WAYPAD_ADD" },          -- a back-grip binding (unused: the grips are grip chords now)
 --       { type = "status", label = "Reload UI", get = function() return text, color end },
 --       { type = "info",   label = "Plain text that explains something." },
 --   })

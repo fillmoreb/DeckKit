@@ -56,14 +56,19 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   under those names. This also holds while moving code into the DeckKit core.
 - Use `/deckkit` (and `/dkit`) for suite commands. `/deck` is taken by other Forever addons.
 - Each feature stays a separate addon on top of the **DeckKit core** (`addons/DeckKit`), which holds
-  the shared controller input (`Input.lua`), the window look (`Window.lua`), the waypoints
-  (`Waypoints.lua`, `DeckKit.Waypoints`: list, guidance, arrival; WayPad is only their controller front end,
-  DeckHUD's compass shows them), and in `Core.lua` the
-  `DeckKit` global, per-module event buses, `DeckKit.TakeSticks` and `/deckkit`; `Override.lua` is
-  `DeckKit.Override`, which shares pad buttons between modules. A module lists
+  the shared controller input (`Input.lua`: one window owns the pad at a time), the window look and the
+  suite's colors (`Window.lua`, `DeckKit.COLORS` lilac/plum), the UI kit (`UI.lua`, including
+  `UI.MakePointer`/`UI.PlacePointer` for the game's chevron), map maths (`Map.lua`, `DeckKit.Map`:
+  positions, world positions, bearings, facing), the waypoints (`Waypoints.lua`, `DeckKit.Waypoints`:
+  list, guidance, arrival; WayPad is only their controller front end, DeckHUD's compass shows them), and
+  in `Core.lua` the `DeckKit` global, per-module event buses, `DeckKit.Readable` (secret-value check),
+  `DeckKit.TakeSticks` and `/deckkit`; `Override.lua` is `DeckKit.Override`, which shares pad buttons
+  between modules, and `DeckKit.CrossbarButtons()`. A module lists
   `## Dependencies: DeckKit` and starts its first file with
   `DeckKit.NewModule(ns, ADDON, "<colored title>")`, which sets `ns.Print`, `ns.On`, `ns.Input`,
-  `ns.Window`, `ns.Override`, `ns.AddCommand` and `ns.TITLE`. Shared behavior gets fixed once, in the core. Never copy core code into
+  `ns.Window`, `ns.Override`, `ns.AddCommand` and `ns.TITLE`. A module with several files gives each
+  file one job and lists them in its first file's header (DeckHUD/Core.lua, MarketDeck/Core.lua).
+  Shared behavior gets fixed once, in the core. Never copy core code into
   a module.
 - Never bind a pad button directly from a module. Claim it with
   `ns.Override.Set(key, id, { when = "[macro conditions]", priority = n, macro = "..." })`; the core
@@ -107,8 +112,12 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   skip the wraps, so test with a real key press (an override binding plus xdotool) and bisect with
   `owner:SetAttribute("dbg", ...)` markers read back from insecure code. `HealPad` is the example.
 - Stay agnostic of other addons: no code paths that know about a specific third-party addon
-  (RestedXP, Questie, TomTom...). Use Blizzard APIs, generic mechanisms (e.g. hiding whatever sits
-  along a screen edge) and common conventions (`GetMinimapShape`, LibDBIcon button names).
+  (RestedXP, Questie...). Use Blizzard APIs, generic mechanisms (e.g. hiding whatever sits
+  along a screen edge) and common conventions (`GetMinimapShape`, LibDBIcon button names). Shared
+  interfaces many addons speak count as conventions: WayPad's hand-off talks TomTom's waypoint API
+  (`AddWaypoint` / `RemoveWaypoint` / `SetCrazyArrow`, which other waypoint addons provide too).
+  Standing down for an addon that does the same job is fine too (PackPad's `CONFLICTS` bag addons):
+  a list of names, never code that works with them.
   **Exception: Pawn** (Ben, 2026-11-15: "My addons can know about Pawn. Because I'm not willing to
   duplicate pawn."). Use its public bag-addon API, `PawnShouldItemLinkHaveUpgradeArrow(link, true)`
   (nil = ask again shortly), as an optional dependency (`## OptionalDeps: Pawn`); see `PackPad/Peek.lua`.
@@ -117,14 +126,14 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   `DeckSundries/WandShoot.lua` from Improved Forever's (MIT) `Override.lua` and `WandShoot.lua`.
 - Module commands go under `/deckkit <name>` (`ns.AddCommand`), not new slash commands.
 - Module settings go in the DeckKit menu (`ns.AddSettings`, see `DeckKit/Settings.lua`): toggles,
-  choices, ranges, actions, key bindings, status and info rows. The menu is grouped by topic, not by
+  choices, ranges, actions, status and info rows. The menu is grouped by topic, not by
   addon: start each call with a `{ type = "section", tab = ..., label = ... }` row (tabs: Controls,
   Screen, Map & travel, Healing, Tools); actions a player triggers with a button are offered to
   the grip chord slots (`ns.Chords.Offer`, below), not given their own binding rows. Everything a player can change should be
   reachable there with the controller alone. Use `{A}`, `{MENU}`, `{LB}`, `{DPAD_LR}`... tokens for
   button icons.
 - DeckKit windows are built from `DeckKit/UI.lua` (screen with tabs and footer prompts, panels,
-  checkbox, switch, selector, stepper, action, key binding, icon grid, scrolling list; the game's
+  checkbox, switch, selector, stepper, dial, action, key binding, icon grid, scrolling list; the game's
   own pointer as the cursor). `DeckKit/Sample.lua` (`/deckkit sample`) shows every element; keep it
   in step when adding one. `/deckkit sample <PADKEY ...>` replays presses for testing.
 - Edit Mode positions and settings: change them through `DeckHUD/Layout.lua` (`C_EditMode`,
@@ -187,8 +196,8 @@ when Ben asks for a release; pushing a tag publishes to CurseForge.
 - To check the zip without releasing: Actions > Release > Run workflow builds it with no upload and
   keeps it as a build artifact.
 
+## Repository layout
 
 - `addons/<Name>/`: one folder per addon (`.toc`, Lua, optional `Bindings.xml`).
-- `deck-setup/`: Battle.net launcher script and Steam shortcut tooling for the Deck.
-- `patches/`: local patches to other people's addons and Decky plugins. Re-apply them after those
-  projects update.
+- `deck-setup/`: Battle.net launcher script and Steam shortcut tooling for the Deck, and the generators
+  for the grip chord layout and glyphs, the minimap masks and the focus aura spell list.

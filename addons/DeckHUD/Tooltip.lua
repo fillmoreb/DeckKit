@@ -1,7 +1,7 @@
 -- DeckHUD: the mouseover tooltip (players, NPCs, objects under Forever's gamepad reticle, where the hidden
--- cursor sits) is drawn by DeckHUD instead, at the top of the screen, centered just under the status
--- bar's clock (or the screen's top edge with the status bar off), see-through by the Opacity setting:
--- out of the way, and still there at a glance.
+-- cursor sits) is drawn by DeckHUD instead, at the top of the screen, centered under the status bar,
+-- clear of the compass's pointer and pin (or at the screen's top edge with the status bar off),
+-- see-through by the Opacity setting: out of the way, and still there at a glance.
 --
 -- The game's own tooltip keeps doing all the work, unseen: Blizzard (and any addon adding lines or
 -- colors, e.g. class-colored names) builds it as usual, and DeckHUD's card copies its lines, colors,
@@ -181,7 +181,7 @@ end)
 ns.AddSettings({
     { type = "section", tab = "Screen", label = "Tooltips", order = 7 },
     { type = "choice", label = "Mouseover tooltip",
-      values = { { "top", "Top, under the clock" }, { "blizzard", "Blizzard's corner" } },
+      values = { { "top", "Top of the screen" }, { "blizzard", "Blizzard's corner" } },
       hint = "Where the tooltip for players, NPCs and objects under the reticle shows. Item and button "
           .. "tooltips keep their own places.",
       get = function() return On() and "top" or "blizzard" end,

@@ -28,86 +28,19 @@ W.debug = false
 
 local db -- DeckKitCharDB
 
-------------------------------------------------------------------------
--- Helpers
-------------------------------------------------------------------------
+local Map = ns.Map
+local Readable = ns.Readable
 
-local function Readable(v)
-    return type(v) == "number" and not (issecretvalue and issecretvalue(v))
-end
-W.Readable = Readable
-
-function W.MapInfo(mapID)
-    if not (mapID and C_Map and C_Map.GetMapInfo) then return end
-    local ok, info = pcall(C_Map.GetMapInfo, mapID)
-    if ok and type(info) == "table" then return info end
-end
-
-function W.MapName(mapID)
-    local info = W.MapInfo(mapID)
-    return info and info.name or ("map " .. tostring(mapID))
-end
-
-function W.Coords(x, y)
-    return string.format("%.1f, %.1f", x * 100, y * 100)
-end
-
+-- "Name (45.2, 62.8 in Elwynn Forest)": a waypoint in words.
 function W.Describe(p)
-    local s = W.Coords(p.x, p.y) .. " in " .. W.MapName(p.mapID)
+    local s = Map.Coords(p.x, p.y) .. " in " .. Map.Name(p.mapID)
     if p.label then s = p.label .. " (" .. s .. ")" end
     return s
 end
 
--- The player's map and position (0..1), the same ones Blizzard's coordinates use.
-function W.PlayerPosition()
-    if not (C_Map and C_Map.GetBestMapForUnit and C_Map.GetPlayerMapPosition) then return end
-    local mapID = C_Map.GetBestMapForUnit("player")
-    if not Readable(mapID) then return end
-    local ok, pos = pcall(C_Map.GetPlayerMapPosition, mapID, "player")
-    if not ok or not pos then return end
-    local x, y = pos:GetXY()
-    if not Readable(x) or not Readable(y) or (x == 0 and y == 0) then return end
-    return mapID, x, y
-end
-
--- World position in yards: world X runs north, world Y runs west.
-function W.WorldPosition(mapID, x, y)
-    if not (C_Map and C_Map.GetWorldPosFromMapPos and CreateVector2D) then return end
-    local ok, continent, pos = pcall(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(x, y))
-    if not ok or not Readable(continent) or not pos then return end
-    local north, west = pos:GetXY()
-    if not Readable(north) or not Readable(west) then return end
-    return continent, north, west
-end
-
--- A point of one map on another map: a parent (zone -> continent) or a child (zone -> city).
-function W.TranslateToMap(fromMap, x, y, toMap)
-    if fromMap == toMap then return x, y end
-    if not (C_Map and C_Map.GetMapRectOnMap) then return end
-    local tx, ty
-    local ok, minX, maxX, minY, maxY = pcall(C_Map.GetMapRectOnMap, fromMap, toMap)
-    if ok and Readable(minX) and Readable(maxY) and maxX > minX and maxY > minY then
-        tx, ty = minX + x * (maxX - minX), minY + y * (maxY - minY)
-    else
-        ok, minX, maxX, minY, maxY = pcall(C_Map.GetMapRectOnMap, toMap, fromMap)
-        if ok and Readable(minX) and Readable(maxY) and maxX > minX and maxY > minY then
-            tx, ty = (x - minX) / (maxX - minX), (y - minY) / (maxY - minY)
-        end
-    end
-    if not tx or tx < 0 or tx > 1 or ty < 0 or ty > 1 then return end
-    return tx, ty
-end
-
--- Which way you face: radians counter-clockwise from north, or nil where the game won't say.
-function W.Facing()
-    if not GetPlayerFacing then return end
-    local ok, f = pcall(GetPlayerFacing)
-    if ok and Readable(f) then return f end
-end
-
 local function WorldOf(p)
     if not p.continent then
-        p.continent, p.north, p.west = W.WorldPosition(p.mapID, p.x, p.y)
+        p.continent, p.north, p.west = Map.WorldPosition(p.mapID, p.x, p.y)
     end
     return p.continent, p.north, p.west
 end
@@ -122,12 +55,12 @@ local player = {} -- refreshed once per tick
 W.player = player
 
 local function ReadPlayer()
-    player.mapID, player.x, player.y = W.PlayerPosition()
+    player.mapID, player.x, player.y = Map.PlayerPosition()
     player.continent, player.north, player.west = nil, nil, nil
     if player.mapID then
-        player.continent, player.north, player.west = W.WorldPosition(player.mapID, player.x, player.y)
+        player.continent, player.north, player.west = Map.WorldPosition(player.mapID, player.x, player.y)
     end
-    player.facing = W.Facing()
+    player.facing = Map.Facing()
 end
 
 function W.Guide(p)
@@ -259,6 +192,7 @@ function W.Remove(i)
     table.remove(W.points, i)
     if W.active == i then
         W.active = #W.points > 0 and #W.points or nil -- the newest left
+        if W.active then Tell("Activated", W.points[W.active]) end -- a hand-off target points at it too
     elseif W.active and W.active > i then
         W.active = W.active - 1
     end
@@ -305,7 +239,7 @@ local function PlayArrival()
 end
 
 local function DebugLine(g)
-    local function f(v) return Readable(v) and string.format("%.3f", v) or tostring(v) end
+    local function f(v) return type(v) == "number" and Readable(v) and string.format("%.3f", v) or tostring(v) end
     ns.Print(string.format("waypoints: me map=%s pos=%s,%s world=%s/%s,%s facing=%s | target %s | yd=%s bearing=%s angle=%s",
         tostring(player.mapID), f(player.x), f(player.y), tostring(player.continent), f(player.north), f(player.west),
         f(player.facing), g and g.point and W.Describe(g.point) or "none", f(g and g.yards), f(g and g.bearing),
@@ -322,7 +256,7 @@ local function TickBody()
     local g = p and W.Guide(p)
     if g and g.state == "ok" and g.yards <= W.ARRIVE_YARDS then
         PlayArrival()
-        W.arrival = { label = p.label or W.Coords(p.x, p.y), untilTime = GetTime() + W.ARRIVED_SHOWN }
+        W.arrival = { label = p.label or Map.Coords(p.x, p.y), untilTime = GetTime() + W.ARRIVED_SHOWN }
         W.Remove(W.active)
         p = W.Active()
         g = p and W.Guide(p)
@@ -384,7 +318,7 @@ function WayPad_GetPoints() return W.points, W.active end
 function WayPad_Add(mapID, x, y, label)
     if type(mapID) ~= "number" or type(x) ~= "number" or type(y) ~= "number" then return nil, "bad arguments" end
     if x < 0 or x > 1 or y < 0 or y > 1 then return nil, "coordinates are 0-1" end
-    if not W.MapInfo(mapID) then return nil, "unknown map " .. mapID end
+    if not Map.Info(mapID) then return nil, "unknown map " .. mapID end
     if label ~= nil and type(label) ~= "string" then label = tostring(label) end
     return W.Add(mapID, x, y, label)
 end
