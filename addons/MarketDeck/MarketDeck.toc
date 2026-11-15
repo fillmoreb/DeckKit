@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: MarketDeck
+## Notes: Auction house prices with nothing to press: a snapshot when you open the auction house, and prices (auction, vendor, disenchant) in item tooltips. /deckkit market
+## Version: @project-version@
+## Author: Ben Fillmore
+## SavedVariables: MarketDeckDB
+## Dependencies: DeckKit
+
+Core.lua
+Disenchant.lua
+Tooltip.lua

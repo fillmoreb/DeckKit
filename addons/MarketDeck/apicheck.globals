@@ -1,0 +1,4 @@
+# From the required dependency, deployed alongside.
+DeckKit
+# Blizzard_AuctionHouseUI, load-on-demand: only there once the auction house has opened.
+AuctionHouseFrame
