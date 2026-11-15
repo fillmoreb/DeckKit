@@ -5,9 +5,11 @@
 ## X-Curse-Project-ID: 1795170
 ## Author: Ben Fillmore
 ## SavedVariables: DeckKitDB
+## SavedVariablesPerCharacter: DeckKitCharDB
 ## OptionalDeps: DeckDev
 
 Core.lua
+Waypoints.lua
 Debug.lua
 Input.lua
 Window.lua

@@ -7,7 +7,6 @@
 -- /way list | clear
 --
 -- /waypad          the waypoint list        /waypad add     the Add Waypoint window
--- /waypad move     unlock the arrow to drag /waypad reset   put the arrow back
 -- /waypad debug    print the position math once a second (again to stop)
 local _, ns = ...
 
@@ -16,30 +15,8 @@ function WayPad_ToggleEditor() ns.Editor.Toggle() end
 function WayPad_ToggleManager() ns.Manager.Toggle() end
 DeckKit.Chords.OfferPress("WAYPAD_ADD", WayPad_ToggleEditor, "Add waypoint")
 DeckKit.Chords.OfferPress("WAYPAD_MANAGE", WayPad_ToggleManager, "Waypoint list")
--- For MapDeck (and later the DeckKit suite): the live waypoint list and which one is active.
-function WayPad_GetPoints() return ns.points, ns.active end
--- For other addons. Waypoints are tables { id, mapID, x, y, label } (x, y 0-1); refer to them by id,
--- which stays the same while the list shifts.
--- WayPad_Add: add a waypoint and make it the active one. Returns the new waypoint, or nil and why not.
-function WayPad_Add(mapID, x, y, label)
-    if type(mapID) ~= "number" or type(x) ~= "number" or type(y) ~= "number" then return nil, "bad arguments" end
-    if x < 0 or x > 1 or y < 0 or y > 1 then return nil, "coordinates are 0-1" end
-    if not ns.MapInfo(mapID) then return nil, "unknown map " .. mapID end
-    if label ~= nil and type(label) ~= "string" then label = tostring(label) end
-    return ns.Add(mapID, x, y, label)
-end
--- WayPad_Get(id): the waypoint with that id, or nil (removed, or never there).
-function WayPad_Get(id)
-    local _, p = ns.Find(id)
-    return p
-end
--- WayPad_Remove(id): removes it; true if it was there.
-function WayPad_Remove(id)
-    local i = ns.Find(id)
-    if not i then return false end
-    ns.Remove(i)
-    return true
-end
+-- WayPad_GetPoints, WayPad_Add, WayPad_Get and WayPad_Remove (for other addons) are in the core now:
+-- DeckKit/Waypoints.lua.
 
 ------------------------------------------------------------------------
 -- Zones by name
@@ -175,20 +152,12 @@ local function WayPadSlash(msg)
         List()
     elseif cmd == "clear" then
         Way("clear")
-    elseif cmd == "move" then
-        ns.Arrow.SetUnlocked(not ns.Arrow.unlocked)
-        ns.Print(ns.Arrow.unlocked and "Arrow unlocked: drag it, then /waypad move again to lock."
-            or "Arrow locked.")
-        ns.StartTicker()
-    elseif cmd == "reset" then
-        ns.Arrow.Reset()
-        ns.Print("Arrow moved back to the top of the screen.")
     elseif cmd == "debug" then
         ns.debug = not ns.debug
         ns.Print("Debug " .. (ns.debug and "on" or "off") .. ".")
         ns.StartTicker()
     else
-        ns.Print("/waypad (list window), add, move, reset, debug  ·  /way [zone] x y [label], list, clear")
+        ns.Print("/waypad (list window), add, debug  ·  /way [zone] x y [label], list, clear")
     end
 end
 
@@ -224,6 +193,4 @@ ns.AddSettings({
       run = function() ns.Editor.Open() end },
     { type = "action", label = "Manage waypoints", hint = "Make one active, edit or remove them.",
       run = function() ns.Manager.Toggle() end },
-    { type = "action", label = "Reset the arrow position", hint = "Puts the arrow back at the top of the screen.",
-      run = function() ns.Arrow.Reset(); ns.Print("Arrow moved back to the top of the screen.") end },
 })

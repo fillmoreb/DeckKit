@@ -4,7 +4,7 @@
 -- WayPad is the controller front end: its d-pad editor and Manage window drive the other addon,
 -- and WayPad's own arrow, pins and arrival handling stay off.
 --
--- WayPad's list stays the record of what you added (Manage and MapDeck read it). The other addon
+-- DeckKit's list stays the record of what you added (Manage and MapDeck read it). The other addon
 -- only ever gets WayPad's own waypoints added and removed; whatever else it has is left alone.
 -- Asking it to add a waypoint that already exists hands back the existing one, so WayPad needs
 -- no ids of its own and nothing breaks across reloads.
@@ -54,7 +54,7 @@ local function Drop(t, p)
     if uid then t:RemoveWaypoint(uid) end
 end
 
--- Called by Core.lua as waypoints change (each a no-op in WayPad mode).
+-- Called by the core (DeckKit.Waypoints) as waypoints change (each a no-op in WayPad mode).
 function HandOff.Added(p)
     local t = HandOff.Active()
     if t then Ref(t, p, true) end -- the new one becomes the target, as in WayPad
@@ -93,11 +93,7 @@ function HandOff.SetMode(mode)
     ns.Changed()
 end
 
--- What WayPad itself draws: nothing while another addon has the waypoints.
-function ns.DrawnPoints()
-    if HandOff.Active() then return {} end
-    return ns.points
-end
+DeckKit.Waypoints.SetHandOff(HandOff) -- the core tells HandOff of each change, and stands back while it's active
 
 -- At login, hand over the waypoints WayPad already has (after the other addon has set itself up).
 -- Ones it saved itself are found, not duplicated.

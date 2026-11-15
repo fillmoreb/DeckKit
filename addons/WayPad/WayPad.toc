@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: WayPad
-## Notes: Controller-first waypoints: dial in coordinates with the d-pad, follow a floating arrow, see them on the map and minimap. /waypad, /way
+## Notes: Controller-first waypoints: dial in coordinates with the d-pad, follow the compass in the status bar, see them on the map and minimap. /waypad, /way
 ## Version: @project-version@
 ## Author: Ben Fillmore
 ## SavedVariablesPerCharacter: WayPadDB
@@ -8,7 +8,6 @@
 
 Core.lua
 HandOff.lua
-Arrow.lua
 Pins.xml
 Pins.lua
 Editor.lua

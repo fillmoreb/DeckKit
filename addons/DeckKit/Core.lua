@@ -8,6 +8,7 @@
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
 --   Chords.lua    grip chords: the four back grips, alone or together, pressed or held (secure slots)
 --   Grips.lua     what the grip actions do: peeks, the dictation indicator, hiding a side
+--   Waypoints.lua the waypoints (DeckKit.Waypoints): list, guidance, arrival; WayPad is their front end
 --   Debug.lua     ns.Debug / ns.Logger: forward to DeckDev (the dev addon) when it's installed
 --
 -- Each feature addon lists "## Dependencies: DeckKit" and starts with
