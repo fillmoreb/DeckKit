@@ -217,7 +217,7 @@ local function Build()
     -- would send it. Checks tick themselves from your bags and quest log.
     ------------------------------------------------------------------
     local tl = screen:AddTab("Layout")
-    local said2 = UI.Status(tl.frame, 400)
+    local said2 = UI.Status(tl.frame, 250)
     said2:SetPoint("BOTTOMLEFT", 4, 0)
     said2:Set("Reply", "nothing yet", UI.Color.dim)
     local ticks = {} -- your own ticks, kept while the sample is (an owner saves them for real)
@@ -252,10 +252,31 @@ local function Build()
     }
     local function Reply(v) said2:Set("Reply", v, UI.Color.gold) end
     UI.Build(tl.frame, SPEC, { width = W, height = 442 - 30, onReply = Reply, ticks = ticks })
-    local alone = UI.Action(tl.frame, 260, { label = "Open it in a window of its own", verb = "Open",
-        run = function() UI.ShowLayout(SPEC, { title = "Sample display", ticks = ticks,
+    -- The same spec in each of the hosts a display can have (Displays.lua).
+    local asTracker = UI.Action(tl.frame, 190, { label = "As a tracker", verb = "Show",
+        run = function()
+            if UI.TrackerShown() then UI.HideTracker() else UI.ShowTracker(SPEC, { ticks = ticks }) end
+        end })
+    asTracker:SetPoint("BOTTOMRIGHT", 0, 0)
+    local asCard = UI.Action(tl.frame, 190, { label = "As a card", verb = "Show",
+        run = function() UI.ShowCard(SPEC, { ticks = ticks }) end })
+    asCard:SetPoint("RIGHT", asTracker, "LEFT", -6, 0)
+    -- The window gets a second page (LB/RB): the other pieces.
+    local PAGES = { type = "pages", footer = SPEC.footer, items = { SPEC, {
+        type = "list", title = "More pieces", items = {
+            { type = "section", title = "Spells", items = {
+                { type = "spell", id = 2061 }, { type = "spell", id = 139 } } },
+            { type = "section", title = "People", items = {
+                { type = "npc", name = "Dalar Dawnweaver", title = "Sepulcher", map = 1421, x = 44.2, y = 39.8 },
+                { type = "npc", name = "Bethor Iceshard", map = 1458, x = 84.2, y = 17.4 } } },
+            { type = "section", title = "Money", items = {
+                { type = "money", text = "Repairs", copper = 4382 },
+                { type = "money", text = "Your gold", copper = GetMoney and GetMoney() or 0 } } },
+        } } } }
+    local asWindow = UI.Action(tl.frame, 190, { label = "As a window", verb = "Open",
+        run = function() UI.ShowLayout(PAGES, { title = "Sample display", ticks = ticks,
             onReply = function(v) ns.Print("Sample display: replied " .. tostring(v)) end }) end })
-    alone:SetPoint("BOTTOMRIGHT", 0, 0)
+    asWindow:SetPoint("RIGHT", asCard, "LEFT", -6, 0)
 
     ------------------------------------------------------------------
     -- Tab 5: information only. Nothing takes the cursor.
@@ -277,7 +298,7 @@ local function Build()
     local h3 = UI.Heading(info, "Grip chord glyphs")
     h3:SetPoint("TOPLEFT", 12, iy)
     iy = iy - 30
-    -- ns.Chords.Glyph(chord, gesture, size): inline markup for any text. Held grips lit, a bar for a hold.
+    -- ns.Chords.Glyph(chord, gesture, size): inline markup for any text. Held grips lilac, a bar for a hold.
     local samples = UI.Description(info, ns.Chords.Glyph("L4") .. " L4    " .. ns.Chords.Glyph("L4", "hold")
         .. " L4 held    " .. ns.Chords.Glyph("L4+L5") .. " L4+L5    " .. ns.Chords.Glyph("R4+L5+R5", "hold")
         .. " R4+L5+R5 held    " .. ns.Chords.Glyph("L4+R4+L5+R5") .. " all four", W - 24)

@@ -18,6 +18,7 @@ UI.lua
 Conditions.lua
 JSON.lua
 Layout.lua
+Displays.lua
 Override.lua
 Settings.lua
 Menu.lua

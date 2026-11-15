@@ -181,6 +181,21 @@ local function Place()
     button:SetPoint("CENTER", UIParent, "CENTER", 0, db.y or DEFAULTS.y)
 end
 
+-- The button's cue: which grip chord (or key) uses it. Glyphs are plain text: fine in combat too.
+local CUE = 24
+function ns.ShowCue()
+    if not button then return end
+    local chord, gesture = DeckKit.Chords.Find("QUESTPAD_USE")
+    if chord then
+        button.hotkey:SetText(DeckKit.Chords.Glyph(chord, gesture, CUE))
+        return
+    end
+    local key = GetBindingKey("QUESTPAD_USE")
+    button.hotkey:SetText(key and GetBindingText(key, true) or "")
+end
+DeckKit.Chords.OnChange(function() ns.ShowCue() end)
+ns.On("UPDATE_BINDINGS", function() ns.ShowCue() end)
+
 local function Create()
     button = CreateFrame("Button", "QuestPadButton", UIParent, "SecureActionButtonTemplate")
     button:SetSize(52, 52)
@@ -199,6 +214,11 @@ local function Create()
     button.cooldown:SetAllPoints(button.icon)
     button.count = button:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
     button.count:SetPoint("BOTTOMRIGHT", -3, 3)
+    -- What uses it, in the corner as an action button shows its key: the grip chord's glyph (the slot set
+    -- to Quest item), else the key bound to QUESTPAD_USE.
+    button.hotkey = button:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmallGray")
+    button.hotkey:SetPoint("TOPRIGHT", -1, -1) -- on the icon's face, clear of the frame art
+    ns.ShowCue()
     button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
 
     button:SetScript("OnEnter", function(self)

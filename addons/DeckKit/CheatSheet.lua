@@ -9,8 +9,8 @@ local Chords, UI = ns.Chords, ns.UI
 local Sheet = {}
 ns.CheatSheet = Sheet
 
-local GLYPH, PAD, ROW_GAP, MARGIN = 28, 10, 2, 8
-local GESTURES = { "press", "hold" }
+local GLYPH, PAD, ROW_GAP, MARGIN = 24, 10, 4, 8 -- glyphs 1:1 at 24
+local GESTURES = Chords.GESTURES
 
 -- Where it can sit: name, label, which side it's on (for hiding a side), and how to anchor it.
 local SPOTS = {

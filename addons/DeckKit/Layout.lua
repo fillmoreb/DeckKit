@@ -4,7 +4,9 @@
 --
 --   local L = UI.Build(parent, spec, { width = 600, height = 380, onReply = fn(value, node) })
 --   L.height          how tall it came out (with opts.height it scrolls inside that instead)
---   L:Update()        re-read everything live (done for you as the game changes and twice a second)
+--   L:Update()        re-read everything live (done for you as the game changes and twice a second;
+--                     opts.onUpdate(L) after each)
+--   L:AllDone()       every check in it ticked
 --   L:Release()       take it down (its frames go back to be reused)
 --
 -- parent sits in a screen's tab (UI.NewScreen): focusable pieces join that tab's d-pad order, the footer
@@ -14,6 +16,9 @@
 --   list      { type = "list", items = {...} }                      one under another
 --   section   { type = "section", title = "Rewards", items = {...} }  a gold heading, then its items
 --   row       { type = "row", items = {...} }                       side by side, centered on one line
+--   pages     { type = "pages", items = { page, page } }            a window's tabs (LB/RB), each page a
+--                                                                   list with a `title` (its tab label);
+--                                                                   elsewhere they stack as sections
 -- Pieces:
 --   text      { type = "text", text = "...", style = "dim" }        wraps; styles: body (default), dim,
 --                                                                   small, heading, good, bad, gold;
@@ -35,6 +40,11 @@
 --                                                                   active waypoint, hold Y for its map
 --                                                                   (centered, over the window)
 --   icon      { type = "icon", icon = 136243, size = 22 }
+--   spell     { type = "spell", id = 2061 }                         icon + name; hold Y for its tooltip
+--   npc       { type = "npc", name = "Dalar Dawnweaver", title = "Sepulcher", map = 1421, x = 43.4,
+--               y = 40.9 }                                          a person; with a place, a waypoint
+--                                                                   too (A sets it, hold Y for the map)
+--   money     { type = "money", copper = 12345, text = "Repairs" }  gold / silver / copper
 --   button    { type = "button", text = "Ready", buttons = { a = { reply = "ready" } } }
 --   space     { type = "space", width = 12 }                        no width: takes the spare room in a row
 --                                                                   (pushes what follows to the right)
@@ -304,7 +314,10 @@ widgets.check = {
         return f
     end,
     set = function(f, node)
-        f:SetSize(30, ROW_H)
+        -- The game's checks are shorter (a row of them and text, a tracker's, stays compact); a row with
+        -- taller pieces (an item) is as tall as those anyway.
+        local h = node.toggle and ROW_H or 22
+        f:SetSize(30, h)
         f.box:Show()
         if node.toggle then
             f.box:SetTexture("Interface\\Buttons\\UI-CheckBox-Up")
@@ -315,12 +328,12 @@ widgets.check = {
             f.check:SetSize(26, 26)
         else
             if not f.box:SetAtlas("checkbox-minimal") then f.box:SetTexture("Interface\\Buttons\\UI-CheckBox-Up") end
-            f.box:SetSize(16, 16)
+            f.box:SetSize(20, 20) -- a size up from the tracker's 14: it read faint on the window's dark rows
             if not f.check:SetAtlas("Tracker-Check") then f.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check") end
             f.check:SetSize(18, 18)
         end
         widgets.check.update(f, node)
-        return ROW_H
+        return h
     end,
     update = function(f, node)
         local done = CheckDone(node)
@@ -436,13 +449,101 @@ widgets.waypoint = {
         local zone = m and ns.Map.Name(m) or "?"
         f.text:SetText(node.label and Glyphs(tostring(node.label))
             or string.format("%.1f, %.1f", Num(node.x) or 0, Num(node.y) or 0))
-        f.zone:SetText(node.label and zone or "")
+        f.zone:SetText((node.label and w >= 400) and zone or "") -- narrow (a card, a tracker): the label gets the room
         if not node.label then f.text:SetText(zone .. "  " .. UI.Hex(UI.Color.dim) .. f.text:GetText() .. "|r") end
         widgets.waypoint.update(f, node)
         return ROW_H
     end,
     update = function(f, node) f.dist:SetText(Distance(node)) end,
     peek = function(f, node) UI.ShowMap(node, f) end,
+    onBlur = function() UI.HideMap() end,
+}
+
+-- Money: copper as the game writes it, gold / silver / copper with the coin icons.
+widgets.money = {
+    make = function(parent)
+        local f = CreateFrame("Frame", nil, parent)
+        f.label = Text(f, UI.Font.body)
+        f.label:SetPoint("LEFT", 6, 0)
+        f.text = Text(f, UI.Font.body, "RIGHT")
+        f.text:SetPoint("RIGHT", -6, 0)
+        return f
+    end,
+    set = function(f, node, w)
+        f:SetSize(w, 24)
+        f.label:SetText(node.text and Glyphs(tostring(node.text)) or "")
+        local c = math.max(0, math.floor(Num(node.copper) or 0))
+        local money = GetMoneyString and GetMoneyString(c, true)
+        if not money then
+            money = string.format("%dg %ds %dc", math.floor(c / 10000), math.floor(c / 100) % 100, c % 100)
+        end
+        f.text:SetText(money)
+        if not node.text then f.text:ClearAllPoints(); f.text:SetPoint("LEFT", 6, 0) end
+        return 24
+    end,
+}
+
+-- Spell: its icon and name (the game's, from its ID); hold Y for its tooltip.
+local SpellName, SpellIcon = C_Spell.GetSpellName, C_Spell.GetSpellTexture
+widgets.spell = {
+    focus = function() return true end,
+    actions = function() return { y = "peek" } end,
+    make = function(parent)
+        local f = Focusable(parent)
+        f.icon = f:CreateTexture(nil, "ARTWORK")
+        f.icon:SetSize(ICON, ICON)
+        f.icon:SetPoint("LEFT", 6, 0)
+        f.text = Text(f, UI.Font.body)
+        f.text:SetPoint("LEFT", f.icon, "RIGHT", 8, 0)
+        f.text:SetPoint("RIGHT", -6, 0)
+        return f
+    end,
+    set = function(f, node, w)
+        f:SetSize(w, ROW_H)
+        local id = Num(node.id)
+        local ok, name = pcall(SpellName, id)
+        local okI, icon = pcall(SpellIcon, id)
+        f.text:SetText((ok and name) or node.text or ("Spell " .. tostring(id)))
+        f.icon:SetTexture((okI and icon) or 134400)
+        f.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        return ROW_H
+    end,
+    peek = function(f, node)
+        local id = Num(node.id)
+        if not id then return end
+        TipBeside(f)
+        if pcall(GameTooltip.SetSpellByID, GameTooltip, id) and GameTooltip:NumLines() > 0 then
+            GameTooltip:Show()
+        else
+            GameTooltip:Hide()
+        end
+    end,
+    onBlur = HideTip,
+}
+
+-- NPC: a person, by name (and title), and where: with a place it's a waypoint too (A sets it, hold Y for
+-- the map), with the gossip bubble for a pin.
+widgets.npc = {
+    focus = function() return true end,
+    actions = function(node) return PointOf(node) and { a = "waypoint", y = "peek" } or nil end,
+    make = function(parent)
+        local f = widgets.waypoint.make(parent)
+        f.pin:SetTexture("Interface\\GossipFrame\\GossipGossipIcon")
+        f.pin:SetTexCoord(0, 1, 0, 1)
+        return f
+    end,
+    set = function(f, node, w)
+        f:SetSize(w, ROW_H)
+        local name = Glyphs(tostring(node.name or node.label or "?"))
+        if node.title then name = name .. "  " .. UI.Hex(UI.Color.dim) .. "<" .. tostring(node.title) .. ">|r" end
+        f.text:SetText(name)
+        local m = Num(node.map)
+        f.zone:SetText((m and w >= 400) and ns.Map.Name(m) or "")
+        widgets.npc.update(f, node)
+        return ROW_H
+    end,
+    update = function(f, node) f.dist:SetText(PointOf(node) and Distance(node) or "") end,
+    peek = function(f, node) if PointOf(node) then UI.ShowMap(node, f) end end,
     onBlur = function() UI.HideMap() end,
 }
 
@@ -521,7 +622,9 @@ end
 
 local function Label(a, node)
     if a.reply ~= nil then return a.label or "Choose" end
-    if a.run == "peek" or a.run == "map" then return node.type == "waypoint" and "Map (hold)" or "Tooltip (hold)" end
+    if a.run == "peek" or a.run == "map" then
+        return (node.type == "waypoint" or node.type == "npc") and "Map (hold)" or "Tooltip (hold)"
+    end
     if a.run == "toggle" then return CheckDone(a.target or node) and "Untick" or "Tick" end
     return VERB[a.run] or a.run
 end
@@ -541,8 +644,9 @@ local function Run(f, a)
     elseif a.run == "waypoint" then
         local p = PointOf(node)
         if p then
-            ns.Waypoints.Add(p.mapID, p.x, p.y, node.label)
-            ns.Print("Waypoint set: " .. (node.label and (node.label .. ", ") or "") .. ns.Map.Name(p.mapID) .. ".")
+            local label = node.label or node.name
+            ns.Waypoints.Add(p.mapID, p.x, p.y, label)
+            ns.Print("Waypoint set: " .. (label and (label .. ", ") or "") .. ns.Map.Name(p.mapID) .. ".")
         end
     elseif a.run == "peek" or a.run == "map" then
         peekOn = true -- until the button is let go (EndPeek)
@@ -646,6 +750,18 @@ function Layout:Place(node, parent, x, y, w, path)
     path = path or "1"
     node._path = path
     local t = node.type
+    if t == "pages" then
+        -- Outside a window (a card, a tracker, a window that doesn't page): one after another, each
+        -- page's title a heading.
+        local h = 0
+        for i, page in ipairs(type(node.items) == "table" and node.items or {}) do
+            local sec = { type = "section", title = page.title, items = page.items or { page } }
+            if page.type ~= "list" and page.type ~= "section" then sec.items = { page } end
+            local ch = self:Place(sec, parent, x, y - h, w, path .. "." .. i)
+            if ch > 0 then h = h + ch + GAP_Y end
+        end
+        return h
+    end
     if t == "list" or t == "section" then
         local h = 0
         if t == "section" and node.title then
@@ -746,7 +862,19 @@ function Layout:Update()
             if p.f and p.node.type ~= "check" then p.f:SetAlpha(done and 0.5 or 1) end
         end
     end
-    if self.screenRefresh then self.screenRefresh() end
+    if self.opts.onUpdate then self.opts.onUpdate(self) end
+end
+
+-- Every check in it ticked (and at least one): a tracker's list finished.
+function Layout:AllDone()
+    local any = false
+    for _, f in ipairs(self.frames) do
+        if f.kind == "check" then
+            if not CheckDone(f.node) then return false end
+            any = true
+        end
+    end
+    return any
 end
 
 function Layout:Release()
@@ -999,7 +1127,7 @@ function UI.ShowMap(node, beside)
     if not peek then MakePeek() end
     if not DrawArt(p.mapID) then UI.HideMap() return end
     peek.node = node
-    peek.title:SetText(node.label or ns.Map.Name(p.mapID))
+    peek.title:SetText(node.label or node.name or ns.Map.Name(p.mapID))
     peek:ClearAllPoints()
     peek:SetPoint("CENTER", UIParent, "CENTER", 0, 30)
     peek:Show()
@@ -1012,62 +1140,4 @@ function UI.HideMap()
         peek:Hide()
         peek.node = nil
     end
-end
-
-------------------------------------------------------------------------
--- A layout in a window of its own (an assistant's display): UI.ShowLayout(spec, opts)
-------------------------------------------------------------------------
---   spec.width     how wide (default 560: room for tooltips beside it on the Deck's screen), 360-900
---   spec.height    the most it grows to (default 600); shorter content gets a shorter window
---   spec.title     the tab's label
---   opts.title     the window's title (whose display it is: "Decky")
---   opts.onReply, opts.onChange, opts.ticks    as for UI.Build
---   opts.onClose(why)   the display went: "closed" (the player, or combat), "replaced" (a new one)
--- Returns false in combat (windows can't take the pad then). A new display replaces the one up.
-
-local win -- { screen, tab, L }
-
-local function Clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
-
-function UI.ShowLayout(spec, opts)
-    opts = opts or {}
-    if InCombatLockdown() then return false end
-    if not win then
-        local screen = UI.NewScreen("DeckKitLayoutWindow", 560, 400, "")
-        win = { screen = screen, tab = screen:AddTab("") }
-        screen.win:HookScript("OnHide", function()
-            local done = win.onClose
-            win.onClose = nil
-            if done then done("closed") end
-        end)
-    end
-    local s, tab = win.screen, win.tab
-    if win.L then win.L:Release() end
-    local before = win.onClose
-    win.onClose = opts.onClose
-    if before and s.win:IsShown() then before("replaced") end
-    local w = Clamp(Num(spec.width) or 560, 360, 900)
-    local maxH = Clamp(Num(spec.height) or 600, 240, 700)
-    s.title:SetText(opts.title or "DeckKit")
-    tab.title = spec.title or "Details"
-    s:LayoutTabs()
-    local bodyW, bodyMax = w - 28, maxH - UI.SCREEN_CHROME
-    local build = { width = bodyW, height = bodyMax, onReply = opts.onReply, onChange = opts.onChange, ticks = opts.ticks }
-    local L = UI.Build(tab.frame, spec, build)
-    -- Shorter than the most it may be: the window shrinks to fit (built again at that height).
-    local need = L.height + (L.footerH > 0 and L.footerH + 10 or 0) + 4
-    if need < bodyMax then
-        L:Release()
-        build.height = need
-        L = UI.Build(tab.frame, spec, build)
-        maxH = need + UI.SCREEN_CHROME
-    end
-    win.L = L
-    s.win:SetSize(w, maxH)
-    if s.win:IsShown() then s:SelectTab(1, true) else s:Show() end
-    return true
-end
-
-function UI.HideLayout()
-    if win and win.screen.win:IsShown() then win.screen:Hide() end
 end

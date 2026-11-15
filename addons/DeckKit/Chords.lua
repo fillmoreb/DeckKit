@@ -109,6 +109,19 @@ function Chords.Get(chord, gesture)
     return c and c[gesture]
 end
 
+Chords.GESTURES = { "press", "hold" }
+
+-- The first slot set to action `id` (chord order, press before hold): chord, gesture; nil when none is
+-- or chords are off. For showing a chord on what it does (QuestPad's button), as a key shows on a button.
+function Chords.Find(id)
+    if not Chords.Enabled() then return end
+    for _, chord in ipairs(Chords.LIST) do
+        for _, gesture in ipairs(Chords.GESTURES) do
+            if Chords.Get(chord, gesture) == id then return chord, gesture end
+        end
+    end
+end
+
 function Chords.Scope() return DeckKitCharDB and DeckKitCharDB.chordScope == "char" and "char" or "all" end
 
 local Apply -- below
@@ -366,22 +379,27 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ------------------------------------------------------------------------
--- Describing a slot: a glyph (media/chords.tga, made by deck-setup/make-chord-glyphs.py) and words
+-- Describing a slot: a glyph (media/chords-24.tga, made by deck-setup/make-chord-glyphs.py) and words
 ------------------------------------------------------------------------
 
-local GLYPHS = "Interface\\AddOns\\DeckKit\\media\\chords"
+-- The chord glyph: Ben's 24 px pixel art (media/chords-24.tga, made by deck-setup/make-chord-glyphs.py from
+-- his drawings in deck-setup/glyphs/): the Deck's back grips, held ones lilac and the others dark gray,
+-- outlined; a hold adds a bar along the bottom. 8 x 4 cells of 24 px (cell n = the grips held, bit 1 L4,
+-- 2 R4, 4 L5, 8 R5, + 16 for a hold), padded to 256 x 128. Drawn at 24 it's 1:1 on the Deck's screen (a
+-- UI unit is a screen pixel there).
+local SHEET, CELL, SHEET_W, SHEET_H = "Interface\\AddOns\\DeckKit\\media\\chords-24", 24, 256, 128
 
--- Inline markup for a chord's glyph, for any FontString: the Deck's back, held grips lit, a bar
--- under it for a hold.
+-- Inline markup for a chord's glyph, for any FontString. size: 24 unless a spot needs otherwise (1:1 at 24).
 function Chords.Glyph(chord, gesture, size)
-    size = size or 22
+    size = size or CELL
     local mask = 0
     for j, g in ipairs(GRIPS) do
         if ("+" .. chord .. "+"):find("+" .. g.name .. "+", 1, true) then mask = mask + 2 ^ (j - 1) end
     end
     local n = mask + (gesture == "hold" and 16 or 0)
-    local x, y = (n % 8) * 64, math.floor(n / 8) * 64
-    return string.format("|T%s:%d:%d:0:0:512:256:%d:%d:%d:%d|t", GLYPHS, size, size, x, x + 64, y, y + 64)
+    local x, y = (n % 8) * CELL, math.floor(n / 8) * CELL
+    return string.format("|T%s:%d:%d:0:0:%d:%d:%d:%d:%d:%d|t", SHEET, size, size, SHEET_W, SHEET_H,
+        x, x + CELL, y, y + CELL)
 end
 
 function Chords.Describe(chord, gesture)
@@ -404,6 +422,7 @@ local function Summary()
 end
 
 -- What a slot can hold: every offer, then the action bar buttons. Built when the menu is.
+-- What a slot can hold, as { {id, label}, ... } (the menu's list; deckctl chords resolves names with it).
 local function Choices()
     local list = { { false, "Nothing" } }
     local ids = {}
@@ -429,6 +448,14 @@ local function Choices()
         end
     end
     return list
+end
+
+Chords.Choices = function() return Choices() end
+
+-- A shared slot's own value, whatever this character has on top (deckctl chords; the menu's "shared").
+function Chords.Shared(chord, gesture)
+    local c = ns.db.chords and ns.db.chords[chord]
+    return c and c[gesture]
 end
 
 local HINT = {
@@ -463,7 +490,22 @@ local GROUPS = { { 1, "Grips: one" }, { 2, "Grips: two together" }, { 3, "Grips:
 local choices = {}
 local function FillChoices()
     wipe(choices)
-    for i, c in ipairs(Choices()) do choices[i] = c end
+    local listed = {}
+    for i, c in ipairs(Choices()) do
+        choices[i] = c
+        listed[c[1]] = true
+    end
+    -- A slot set to something this character doesn't have (a shared slot's spell another class knows)
+    -- shows by name, marked, not as its raw id.
+    for _, chord in ipairs(Chords.LIST) do
+        for _, gesture in ipairs(Chords.GESTURES) do
+            local id = Chords.Get(chord, gesture)
+            if id and not listed[id] then
+                listed[id] = true
+                choices[#choices + 1] = { id, Chords.Label(id) .. "  |cff9d9d9d(not known)|r" }
+            end
+        end
+    end
 end
 ns.On("PLAYER_LOGIN", FillChoices)
 ns.On("SPELLS_CHANGED", function() if IsLoggedIn() then FillChoices() end end)

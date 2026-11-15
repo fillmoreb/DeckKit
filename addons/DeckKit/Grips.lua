@@ -222,12 +222,8 @@ end
 ns.Chords.Offer("DECKKIT_DICTATION", { label = "Dictation", run = Dictation })
 ns.Chords.Offer("DECKKIT_ASSISTANT", { label = "Voice assistant",
     run = function(down) if signalled then VoiceChord(down) end end })
--- DeckDev's log strip (the dev tool from ~/Projects/AddonTools, an optional dependency): on and off from a
--- grip slot, offered only when DeckDev is installed.
-if DeckDev and DeckDev.SetOn and DeckDev.IsOn then
-    ns.Chords.Offer("DECKKIT_DEBUG_STRIP", { label = "Debug strip",
-        run = function(down) if down then DeckDev.SetOn(not DeckDev.IsOn()) end end })
-end
+-- (DeckDev's debug strip chord is DeckDev's own: it offers it to the slots itself, AddonTools'
+-- addons/DeckDev/Chord.lua.)
 
 ------------------------------------------------------------------------
 -- Hiding a side
