@@ -64,3 +64,30 @@ print(("plan: Grom'gol -> Orgrimmar, bound in Orgrimmar: %.0f s (without the hea
 C_Item.GetItemCooldown = function() return GetTime() - 10, 3600 end
 local cooling = assert(api.Plan(GROMGOL, ORGRIMMAR_FLIGHTS, { faction = "Horde" }))
 check(cooling.legs[1].mode ~= "teleport", "a Hearthstone on cooldown isn't used: " .. describe(cooling))
+
+-- Measured walks: the same trip with its walks searched on the walking maps (following roads). Straight-line
+-- estimates only ever undersell a walk, so the measured trip is no shorter, and the plan ends with nothing estimated.
+-- The frame-sliced searches run here by hand: Path.after is the next-frame hook PathJobs schedules through.
+local frames = {}
+ns.Path.after = function(fn) frames[#frames + 1] = fn end
+local function measured(from, to, opts)
+    local got
+    local handle = assert(api.PlanMeasured(from, to, opts, function(p, why) got = p or why end))
+    local spins = 0
+    while got == nil and #frames > 0 and spins < 200000 do
+        table.remove(frames, 1)()
+        spins = spins + 1
+    end
+    check(type(got) == "table", "a measured plan: " .. tostring(got))
+    return got, spins
+end
+local estimate = assert(api.Plan(VALLEY, SENTINEL_HILL, { name = "Sentinel Hill", faction = "Horde", teleports = false }))
+local real, spins = measured(VALLEY, SENTINEL_HILL, { name = "Sentinel Hill", faction = "Horde", teleports = false })
+check(real.measured, "every walk the plan uses is measured")
+check(real.seconds >= estimate.seconds - 1, ("measured is no shorter than the estimate: %.0f s against %.0f s"):format(
+    real.seconds, estimate.seconds))
+local lastEstimate, lastReal = estimate.legs[#estimate.legs], real.legs[#real.legs]
+check(lastReal.seconds >= lastEstimate.seconds, ("the walk from Grom'gol, measured: %.0f s against %.0f s estimated"):format(
+    lastReal.seconds, lastEstimate.seconds))
+print(("plan: measured: %.0f s (%.1f min) against %.0f s estimated, %d frames of searching\n%s"):format(
+    real.seconds, real.seconds / 60, estimate.seconds, spins, describe(real)))

@@ -30,8 +30,14 @@ and API on it.
    same route, 148 frames at 2 ms (3.4 s, mostly first decodes of the tiles it crosses).
 4. **The floor rule** (`Routing/Floor.lua`, ported with step 3, not wired yet): candidate surfaces kept while the map
    connects them, and tiles decoded ahead under the frame budget (no 47 ms first read).
-5. **The planner** (`Routing/Planner.lua`): walks joined with flights, boats, zeppelins, lifts, the tram, portals and
-   the hearthstone, with the timetables.
+5. **The planner** — done. `Routing/Planner.lua`, `Transport/Model.lua`, `Timetable.lua` and `Teleports.lua` ported
+   whole; ForeverNav's own `Services.lua` (what they call on), `Context.lua` (the planner's options, flight points
+   learned from the flight master's map) and `Steps.lua` (each leg in words). `v1.Plan` (16 ms in game) and
+   `v1.PlanMeasured`: walk legs start as straight-line estimates, so it measures the walks the plan uses, plans again,
+   and repeats until nothing is estimated (Durotar to Westfall: 13.4 min estimated, 16.7 measured; it tries the
+   Ratchet boat on the way and rejects it). The Hearthstone and teleports count from where you stand; the bind point's
+   place is learned where you bind or land. Not yet: the ride observer (without a sighting a ride's wait is half its
+   period), party mages' portals.
 6. **Route tests**: Durotar to Westfall (zeppelin), the Undercity's rings and lifts, Thunder Bluff's lifts, a
    Stormwind canal walk, the Deeprun Tram, a flight the character hasn't found.
 7. **The API** for DeckKit: a route's legs (text, method, seconds), the next turn's position for a compass to aim

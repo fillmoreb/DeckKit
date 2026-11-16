@@ -34,6 +34,15 @@
 --       baked walks or the straight line: v1.Walk measures one. Plans in the caller's frame (a few ms).
 --       Reasons: "invalid", "no route".
 --
+--   ForeverNav.v1.PlanMeasured(from, to, opts, callback) -> handle | nil, reason
+--       The same plan with its walks measured: v1.Plan's walk legs from `from` and to `to` are estimates (the
+--       straight line, never longer than the real walk), so this plans, measures the walks that plan uses with the
+--       walking search (following roads unless opts.roads is false), plans again with them, and repeats until the
+--       plan it picks uses only measured walks (at most 4 rounds; plan.measured says whether it got there). A measured
+--       walk that's longer can make another way the quickest, which is then measured in turn. Calls
+--       callback(plan) or callback(nil, reason) with plan as v1.Plan's; takes a few seconds of frame-sliced work.
+--       handle:Cancel() drops it.
+--
 -- v1 only grows: new functions and fields may appear, nothing is renamed or removed.
 local _, ns = ...
 
@@ -109,13 +118,8 @@ local function place(p)
         and { map = p.map, x = p.x, y = p.y } or nil
 end
 
-function v1.Plan(from, to, opts)
-    local a, b = place(from), place(to)
-    if not a or not b then return nil, "invalid" end
-    local options = ns.Context.Options(a, b, opts)
-    local plan = ns.Planner.Plan(options)
-    if not plan or not plan.legs or #plan.legs == 0 then return nil, "no route" end
-    local goalName = opts and opts.name
+-- A planner's plan as the API returns it.
+local function Public(plan, options, goalName)
     local out = { seconds = (plan.arrive - options.now) / 1000, legs = {} }
     for i, leg in ipairs(plan.legs) do
         leg.next = plan.legs[i + 1]
@@ -129,6 +133,67 @@ function v1.Plan(from, to, opts)
         }
     end
     return out
+end
+
+function v1.Plan(from, to, opts)
+    local a, b = place(from), place(to)
+    if not a or not b then return nil, "invalid" end
+    local options = ns.Context.Options(a, b, opts)
+    local plan = ns.Planner.Plan(options)
+    if not plan or not plan.legs or #plan.legs == 0 then return nil, "no route" end
+    return Public(plan, options, opts and opts.name)
+end
+
+local MEASURE_ROUNDS = 4
+
+local function spot(p)
+    return { x = p.x, y = p.y, z = p.z }
+end
+
+function v1.PlanMeasured(from, to, opts, callback)
+    local a, b = place(from), place(to)
+    if not a or not b or type(callback) ~= "function" then return nil, "invalid" end
+    local hazards = not (opts and opts.roads == false) and ROADS or nil
+    local water = opts and opts.waterWalking or false
+    local walks, rounds, jobs, cancelled = {}, 0, {}, false
+    local function round()
+        rounds = rounds + 1
+        local options = ns.Context.Options(a, b, opts)
+        options.walks = walks
+        local plan = ns.Planner.Plan(options)
+        if not plan or not plan.legs or #plan.legs == 0 then
+            callback(nil, "no route")
+            return
+        end
+        local pending = {}
+        for _, leg in ipairs(plan.pendingWalks or {}) do
+            if leg.from.map == leg.to.map then pending[#pending + 1] = leg end
+        end
+        if #pending == 0 or rounds >= MEASURE_ROUNDS then
+            local out = Public(plan, options, opts and opts.name)
+            out.measured = #pending == 0
+            callback(out)
+            return
+        end
+        local left = #pending
+        jobs = {}
+        for _, leg in ipairs(pending) do
+            jobs[#jobs + 1] = Path.FindCost(leg.from.map, spot(leg.from), spot(leg.to), function(cost)
+                if cancelled then return end
+                -- Measured: its running yards, or false when there's no walk at all (the planner drops the edge).
+                walks[#walks + 1] = { from = leg.from, to = leg.to, cost = type(cost) == "number" and cost or false }
+                left = left - 1
+                if left == 0 then round() end
+            end, water, hazards)
+        end
+    end
+    round()
+    return {
+        Cancel = function()
+            cancelled = true
+            for _, job in ipairs(jobs) do Path.Cancel(job) end
+        end,
+    }
 end
 
 ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })

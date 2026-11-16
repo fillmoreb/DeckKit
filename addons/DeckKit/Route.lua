@@ -59,15 +59,13 @@ local function Point(pt, label, fallbackMap)
         continent = pt.map, north = pt.x, west = pt.y }
 end
 
-local function Plan(p, key)
-    lastPlan = GetTime()
-    route = { key = key, at = 1, none = true }
-    local me = ns.Waypoints.player
-    local continent, north, west = Map.WorldPosition(p.mapID, p.x, p.y)
-    if not (me.continent and continent) then return end
-    local planned = Api().Plan({ map = me.continent, x = me.north, y = me.west }, { map = continent, x = north, y = west },
-        { name = p.label })
-    -- No route, or nothing better than walking straight there: guide to the waypoint itself.
+local measuring -- the measured plan under way (ForeverNav.v1.PlanMeasured), to cancel when replaced
+
+-- Fills `route` from a plan: its legs as steps. No route, or nothing better than walking straight there: none (the
+-- waypoint itself is guided to).
+local function Apply(planned, p)
+    route.none = true
+    route.steps = nil
     if not planned or #planned.legs <= 1 then return end
     route.none = nil
     route.steps = {}
@@ -80,7 +78,33 @@ local function Plan(p, key)
         }
     end
     route.seconds = planned.seconds
-    if ns.Debug then ns.Debug(string.format("route: %d steps to %s", #route.steps, tostring(p.label or p.mapID))) end
+end
+
+-- Plans at once with the walks estimated (straight lines: the compass and DeckAgent answer straight away), then
+-- measures them (v1.PlanMeasured: a few seconds of frame-sliced searching) and takes the measured plan if the waypoint
+-- is still the same. The estimate never overstates a walk, so the measured trip is the same or longer, and can take
+-- another way when the first one's walks turn out long.
+local function Plan(p, key)
+    lastPlan = GetTime()
+    route = { key = key, at = 1, none = true }
+    if measuring then measuring.Cancel() measuring = nil end
+    local me = ns.Waypoints.player
+    local continent, north, west = Map.WorldPosition(p.mapID, p.x, p.y)
+    if not (me.continent and continent) then return end
+    local api = Api()
+    local from, to = { map = me.continent, x = me.north, y = me.west }, { map = continent, x = north, y = west }
+    Apply(api.Plan(from, to, { name = p.label }), p)
+    if ns.Debug then ns.Debug(string.format("route: %s to %s (estimated)", route.none and "none" or #route.steps .. " steps",
+        tostring(p.label or p.mapID))) end
+    if not api.PlanMeasured then return end
+    local mine = route
+    measuring = api.PlanMeasured(from, to, { name = p.label, roads = R.FollowRoads() }, function(planned)
+        if route ~= mine or not planned then return end -- replaced by a newer plan, or no route after all
+        measuring = nil
+        Apply(planned, p)
+        route.at, route.best, route.measured = 1, nil, planned.measured
+        if ns.Debug then ns.Debug(string.format("route: measured, %.0f s", planned.seconds)) end
+    end)
 end
 
 -- Yards from the player to a point, or nil when it's on another continent or the player has no position here.
@@ -245,12 +269,13 @@ function R.Walk()
 end
 
 -- Waypoint `p`'s route, for other addons (DeckAgent tells the player how the trip goes): { seconds, steps =
--- { { text, method, seconds }, ... }, at (the step they're on) }, or nil when it has none (no ForeverNav, routing
+-- { { text, method, seconds }, ... }, at (the step they're on), measured (true once its walks were measured: before
+-- that, the times are estimates that may run short) }, or nil when it has none (no ForeverNav, routing
 -- off, not planned yet, or walking straight there is the way). A waypoint just added was planned as it was added
 -- (Waypoints.Add runs a tick), unless that was in combat.
 function R.Summary(p)
     if not (p and route and route.key == KeyOf(p) and not route.none) then return nil end
-    local out = { seconds = route.seconds, at = route.at, steps = {} }
+    local out = { seconds = route.seconds, at = route.at, measured = route.measured or false, steps = {} }
     for i, s in ipairs(route.steps) do
         out.steps[i] = { text = s.text, method = s.method, seconds = s.seconds }
     end
@@ -268,7 +293,8 @@ function R.Describe()
     if not R.Enabled() then return "Routing is off (Map & travel > Waypoints)." end
     if not route then return "No route (no active waypoint, or not planned yet)." end
     if route.none then return "Walking straight to the waypoint is the way." end
-    local lines = { string.format("Route, %d steps:", #route.steps) }
+    local lines = { string.format("Route, %d steps, %.0f min (%s):", #route.steps, (route.seconds or 0) / 60,
+        route.measured and "walks measured" or "walks estimated") }
     for i, s in ipairs(route.steps) do
         lines[#lines + 1] = string.format("%s%d. %s", i == route.at and "> " or "  ", i, s.text)
     end
