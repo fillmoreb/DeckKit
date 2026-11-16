@@ -62,7 +62,10 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   `UI.Build`, `UI.ShowLayout`, the hold-Y map peek and `UI.DrawMapArt`, which MapDeck draws with too), live
   game conditions (`Conditions.lua`, `DeckKit.Conditions`: quest taken, items carried...), map maths (`Map.lua`, `DeckKit.Map`:
   positions, world positions, bearings, facing), the waypoints (`Waypoints.lua`, `DeckKit.Waypoints`:
-  list, guidance, arrival; WayPad is only their controller front end, DeckHUD's compass shows them), and
+  list, guidance, arrival; WayPad is only their controller front end, DeckHUD's compass shows them), their
+  routes (`Route.lua`, `DeckKit.Route`: with MapzerothLib installed, a far waypoint is guided leg by leg,
+  the guidance carries the step, and `Route.Summary(p)` gives other addons the trip; DeckAgent's
+  `set_waypoint` returns it), and
   in `Core.lua` the `DeckKit` global, per-module event buses, `DeckKit.Readable` (secret-value check),
   `DeckKit.TakeSticks` and `/deckkit`; `Override.lua` is `DeckKit.Override`, which shares pad buttons
   between modules, and `DeckKit.CrossbarButtons()`. A module lists
@@ -125,6 +128,13 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   **Exception: Pawn** (Ben, 2026-11-15: "My addons can know about Pawn. Because I'm not willing to
   duplicate pawn."). Use its public bag-addon API, `PawnShouldItemLinkHaveUpgradeArrow(link, true)`
   (nil = ask again shortly), as an optional dependency (`## OptionalDeps: Pawn`); see `PackPad/Peek.lua`.
+  **Exception: game-data libraries** (Ben, 2026-11-15). Addons whose job is supplying game data we'd
+  otherwise have to rebuild, like Pawn's stat weights, can be used through their public API as optional
+  dependencies. Call their API; never copy their code or data into DeckKit. For travel routing:
+  **MapzerothLib** (`MapzerothLib.v1.RouteTo(mapID, x, y, name)`), the library half of Mapzeroth, split
+  out in Ben's fork (~/Projects/Mapzeroth, proposed upstream as tr0tsky0/Mapzeroth#29). FarstriderLib
+  was tried first and dropped: Forever's data in it lacks the Orgrimmar–Grom'gol zeppelin. Everything else
+  stays agnostic.
 - Credit borrowed code, in the file header and in `LICENSE`. `DeckKit/Input.lua` is adapted from
   BagPad's MIT-licensed `Input/Controller.lua`; `DeckKit/Override.lua` and
   `DeckSundries/WandShoot.lua` from Improved Forever's (MIT) `Override.lua` and `WandShoot.lua`.

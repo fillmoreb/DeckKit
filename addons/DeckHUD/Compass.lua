@@ -48,7 +48,7 @@ local function Width() return DB() and DB().compassWidth or DEFAULT_WIDTH end
 local function View() return DB() and DB().compassView or DEFAULT_VIEW end
 
 local W -- DeckKit.Waypoints
-local frame, clip, backing, ticks, letters, pin, yards, dist, note
+local frame, clip, backing, ticks, letters, pin, yards, dist, note, step
 local pointer
 local over -- the layer above the strip, not clipped (the pin, the pointer, big marks)
 
@@ -145,6 +145,12 @@ local function Create()
     if font then dist:SetFont(font, 10, "OUTLINE") end
     note = clip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     note:SetPoint("CENTER", clip, "CENTER", 0, 1)
+    -- The route's current step, when the waypoint has a route (DeckKit.Route): one line under the pointer.
+    step = over:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local sfont = step:GetFont()
+    if sfont then step:SetFont(sfont, 11, "OUTLINE") end
+    step:SetPoint("TOP", pointer or frame, "BOTTOM", 0, pointer and 4 or -2)
+    step:Hide()
 end
 
 local function Place()
@@ -475,7 +481,20 @@ end
 local SMOOTH = 16
 local shownFacing
 
+-- The route's step under the pointer: shown whenever the waypoint has one, whatever else the strip shows.
+local function Step(g)
+    if not step then return end
+    local leg = not W.arrival and g and g.leg
+    if leg then
+        step:SetText(leg.text)
+        step:Show()
+    else
+        step:Hide()
+    end
+end
+
 local function Draw(_, elapsed)
+    Step(W.guide)
     local facing = DeckKit.Map.Facing()
     if facing then
         if shownFacing then

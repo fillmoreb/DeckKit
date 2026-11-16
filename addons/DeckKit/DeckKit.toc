@@ -6,11 +6,12 @@
 ## Author: Ben Fillmore
 ## SavedVariables: DeckKitDB
 ## SavedVariablesPerCharacter: DeckKitCharDB
-## OptionalDeps: DeckDev
+## OptionalDeps: DeckDev, MapzerothLib
 
 Core.lua
 Map.lua
 Waypoints.lua
+Route.lua
 Debug.lua
 Input.lua
 Window.lua

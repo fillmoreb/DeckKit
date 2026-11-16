@@ -189,6 +189,11 @@ ns.AddSettings({
               ns.Print("No TomTom-compatible waypoint addon is installed, so WayPad keeps its own waypoints.")
           end
       end },
+    { type = "toggle", label = "Plan routes with Mapzeroth",
+      hint = "With MapzerothLib installed, a far waypoint is reached by legs (walk to the zeppelin, take it, walk"
+          .. " on) and the compass shows each step. Off: it points straight at the waypoint.",
+      get = function() return DeckKit.Route.Enabled() end,
+      set = function(on) DeckKit.Route.SetEnabled(on) end },
     { type = "action", label = "Add a waypoint", hint = "Dial in the coordinates with the d-pad.",
       run = function() ns.Editor.Open() end },
     { type = "action", label = "Manage waypoints", hint = "Make one active, edit or remove them.",

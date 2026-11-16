@@ -49,6 +49,9 @@ end
 -- Guidance: where a point is, relative to the player
 --   state: "ok", "far" (another continent), "nopos" (can't read position here)
 --   yards, bearing (radians counter-clockwise from north), angle (counter-clockwise from facing)
+-- W.guide, what the displays show, is the active waypoint's; or, while it has a route (Route.lua, MapzerothLib), the
+-- current leg's: its point is where that leg goes, `leg` says what it is ({ text, method, ride, index, count }) and
+-- `goal` is the waypoint's own guidance. Arriving is always the waypoint's.
 ------------------------------------------------------------------------
 
 local player = {} -- refreshed once per tick
@@ -262,6 +265,13 @@ local function TickBody()
         g = p and W.Guide(p)
     end
     if W.arrival and GetTime() > W.arrival.untilTime then W.arrival = nil end
+    -- A waypoint across the world: guide to the route's current leg instead (Route.lua).
+    local leg = p and ns.Route and ns.Route.Leg(p)
+    if leg then
+        local lg = leg.point and W.Guide(leg.point) or { state = "none" }
+        lg.leg, lg.goal = leg, g
+        g = lg
+    end
     W.guide = g
     Each(tickFns, g)
     if W.debug and GetTime() >= debugNext then
