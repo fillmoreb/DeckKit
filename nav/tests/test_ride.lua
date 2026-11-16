@@ -76,3 +76,35 @@ check(math.abs(zeppelin.wait * 1000 - toDepart) <= 3000, ("the wait matches the 
     zeppelin.wait, toDepart / 1000))
 print(("ride: after the sighting, the zeppelin's wait is %.0f s (half its period would be %.0f s)"):format(zeppelin.wait,
     route.period / 2000))
+
+-- Self-consistency (Drift.lua): each new ride of a route is compared with the sighting it replaces (a ride's own
+-- refinement, recorded twice within it, is not a second ride). A second ride on
+-- the same schedule an hour later drifts by nothing; a third whose loop runs 40 s behind is logged as 40 s off.
+local Drift = ns.Drift
+check(Drift.ShardOf("Creature-0-4372-0-11-3100-0000ABCDEF") == "4372-0-11", "a creature GUID's shard")
+check(Drift.ShardOf("Player-6794-01D644D4") == nil, "a player GUID names no shard")
+local function ride(epoch, startClock, shardName)
+    Drift.SetShard(shardName)
+    for phase = board.depart, arrive, 1000 do
+        clock = startClock + (phase - board.depart)
+        local map, x, y = At(phase % route.period)
+        if map then
+            PLAYER = { map = map, x = x, y = y }
+            -- The loop runs from `epoch`: phase `phase` falls at epoch + phase (plus whole loops).
+            clock = epoch + phase + math.floor((startClock - epoch) / route.period + 1) * route.period
+            ns.TravelTick()
+        end
+    end
+    for _ = 1, 40 do clock = clock + 1000; ns.TravelTick() end
+end
+ride(EPOCH, clock + 3600000, "4372-0-11")
+ride(EPOCH + 40000, clock + 3600000, "4372-0-12")
+local summary = api.Drift()
+check(summary.count == 2, "two rides compared with what they replaced, the rides' own refinements left out: " .. summary.count)
+local same, shifted = summary.entries[summary.count - 1], summary.entries[summary.count]
+check(math.abs(same.drift) <= 3, ("the same schedule an hour later: %.1f s off"):format(same.drift))
+check(math.abs(shifted.drift - 40) <= 3, ("a loop running 40 s behind: %.1f s off"):format(shifted.drift))
+check(shifted.shard == "4372-0-12" and shifted.before == "4372-0-11", "the shard on each side is kept")
+check(summary.otherShard.count >= 1 and summary.otherShard.worst >= 37, "and counted as a different shard's ride")
+print(("ride: drift log: same schedule %.1f s, shifted %.1f s; different shards %d (worst %.0f s)"):format(same.drift,
+    shifted.drift, summary.otherShard.count, summary.otherShard.worst))

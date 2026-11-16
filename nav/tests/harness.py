@@ -28,6 +28,11 @@ function GetServerTime() return 1794700000 + math.floor(_py_clock() / 1000) end
 function UnitFactionGroup() return FACTION or "Horde" end
 function GetUnitSpeed() return 0, 7 end
 function geterrorhandler() return function(e) error(e, 2) end end
+function strsplit(sep, text)
+    local out = {}
+    for part in (text .. sep):gmatch("(.-)" .. sep:gsub("%p", "%%%0")) do out[#out + 1] = part end
+    return unpack(out)
+end
 -- Where the player stands: tests set PLAYER = { x, y, map }.
 function UnitPosition() if PLAYER then return PLAYER.x, PLAYER.y, 0, PLAYER.map end end
 function UnitOnTaxi() return false end

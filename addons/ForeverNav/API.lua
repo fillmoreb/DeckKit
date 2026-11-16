@@ -54,6 +54,12 @@
 --       The height of the floor the player stands on, while followed and once it's known (nil until then, or while
 --       the surfaces they may be on are on different floors). Pass it as `from.z` to v1.Walk and v1.Plan.
 --
+--   ForeverNav.v1.Drift() -> { count, entries, sameShard, otherShard, otherSession }
+--       Whether ride sightings hold (Drift.lua): each time a ride replaced an earlier sighting of the same route, how
+--       far off the old one was (entries[i].drift, seconds, against the loop's period), the time between the rides
+--       (gap), and the shard and session on each side. The groups give how many and the worst drift: rides on the
+--       same shard, on different shards, and in different sessions.
+--
 -- v1 only grows: new functions and fields may appear, nothing is renamed or removed.
 local _, ns = ...
 
@@ -250,6 +256,10 @@ function v1.PlayerFloor()
     local x, y, _, map = ns.JourneyPosition()
     if not (x and y and map) then return nil end
     return ns.Floor.Height(map, x, y)
+end
+
+function v1.Drift()
+    return ns.Drift.Summary()
 end
 
 ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })
