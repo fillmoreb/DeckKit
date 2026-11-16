@@ -77,6 +77,31 @@ function ns.JourneyPosition()
 end
 ns.PlayerPosition = ns.JourneyPosition
 
+-- The dock nearest the player and its yards (upstream's, as written): Floor.lua lets the floor go within a lift's reach,
+-- since a lift changes floor without moving you. A lift's two landings tie on the map; the lower id wins.
+local dockX, dockY, dockMap, nearestDock, nearestYards
+function ns.NearestDock()
+    local x, y, _, map = ns.JourneyPosition()
+    if not x then
+        return nil
+    end
+    if x == dockX and y == dockY and map == dockMap then
+        return nearestDock, nearestYards
+    end
+    local nearest, yards
+    for dockID, dock in pairs(ns.Docks) do
+        if dock.map == map then
+            local distance = math.sqrt((dock.x - x) ^ 2 + (dock.y - y) ^ 2)
+            if not yards or distance < yards or (distance == yards and dockID < nearest) then
+                nearest, yards = dockID, distance
+            end
+        end
+    end
+    dockX, dockY, dockMap = x, y, map
+    nearestDock, nearestYards = nearest, yards
+    return nearest, yards
+end
+
 -- The travel clock: listeners sampled once a second while something needs watching (a hearthstone's landing, for
 -- now). Upstream keeps its own awake while you move, ride or follow a journey; ForeverNav only needs the minute after
 -- a cast, so WakeTravel keeps it going for TRAVEL_AWAKE seconds.

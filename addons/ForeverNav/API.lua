@@ -22,7 +22,7 @@
 --   ForeverNav.v1.Plan(from, to[, opts]) -> plan | nil, reason
 --       The quickest way from one point to another anywhere in the world, as this character: walks joined with
 --       flights (between the flight points it has found), boats, zeppelins, lifts, the tram and portals, with each
---       ride's wait from the timetables. from and to are { map, x, y }. opts: name (the destination's name in the
+--       ride's wait from the timetables. from and to are { map, x, y[, z] } (z picks the floor, as for v1.Walk). opts: name (the destination's name in the
 --       steps), faction ("Horde"/"Alliance", default the player's), walkSpeed (yards a second, default the player's),
 --       assumeFlights (true: every flight point counts as found), otherFaction (the other side's boats too),
 --       teleports (false: leave out the Hearthstone and teleport spells; they count only when `from` is where the
@@ -42,6 +42,17 @@
 --       walk that's longer can make another way the quickest, which is then measured in turn. Calls
 --       callback(plan) or callback(nil, reason) with plan as v1.Plan's; takes a few seconds of frame-sliced work.
 --       handle:Cancel() drops it.
+--
+--   ForeverNav.v1.Follow(owner, on)
+--       Follow the player's floor while you need walks from where they stand (owner: your addon's name; on false to
+--       stop). The client gives no height, and where surfaces stack (a city under ruins, a bridge over a road) a walk
+--       from a bare x, y starts on the cheapest surface near it: a roof, a ledge, the wrong level. Followed, ForeverNav
+--       keeps the surfaces the player can be on as they move (the walking map's connections rule the others out) and
+--       decodes the map around them ahead of time. Shortest Path Forever's Routing/Floor.lua does the work.
+--
+--   ForeverNav.v1.PlayerFloor() -> z | nil
+--       The height of the floor the player stands on, while followed and once it's known (nil until then, or while
+--       the surfaces they may be on are on different floors). Pass it as `from.z` to v1.Walk and v1.Plan.
 --
 -- v1 only grows: new functions and fields may appear, nothing is renamed or removed.
 local _, ns = ...
@@ -115,7 +126,7 @@ end
 
 local function place(p)
     return type(p) == "table" and type(p.map) == "number" and type(p.x) == "number" and type(p.y) == "number"
-        and { map = p.map, x = p.x, y = p.y } or nil
+        and { map = p.map, x = p.x, y = p.y, z = type(p.z) == "number" and p.z or nil } or nil
 end
 
 -- A planner's plan as the API returns it.
@@ -194,6 +205,51 @@ function v1.PlanMeasured(from, to, opts, callback)
             for _, job in ipairs(jobs) do Path.Cancel(job) end
         end,
     }
+end
+
+-- Following the player's floor: sampled every FOLLOW_SECONDS after moving at least a yard, while anyone follows.
+local FOLLOW_SECONDS = 0.25
+local followers, followFrame = {}, nil
+local lastX, lastY, lastMap, since = nil, nil, nil, 0
+
+local function FollowTick(_, elapsed)
+    since = since + elapsed
+    if since < FOLLOW_SECONDS then return end
+    since = 0
+    local x, y, _, map = ns.JourneyPosition()
+    if not (x and y and map) then
+        ns.Floor.Forget()
+        lastMap = nil
+        return
+    end
+    -- Standing still with the floor known: nothing to do. Unknown (the first sample waited for its tiles to decode),
+    -- sample again even without moving.
+    if map == lastMap and (x - lastX) ^ 2 + (y - lastY) ^ 2 < 1 and ns.Floor.Height(map, x, y) then return end
+    lastX, lastY, lastMap = x, y, map
+    ns.Floor.Sample(map, x, y)
+end
+
+function v1.Follow(owner, on)
+    if type(owner) ~= "string" or owner == "" then return false end
+    followers[owner] = on and true or nil
+    if next(followers) then
+        if not followFrame and CreateFrame then
+            followFrame = CreateFrame("Frame")
+            followFrame:SetScript("OnUpdate", FollowTick)
+        end
+        if followFrame and followFrame.Show then followFrame:Show() end
+    else
+        if followFrame and followFrame.Hide then followFrame:Hide() end
+        lastMap = nil
+        ns.Floor.Forget()
+    end
+    return true
+end
+
+function v1.PlayerFloor()
+    local x, y, _, map = ns.JourneyPosition()
+    if not (x and y and map) then return nil end
+    return ns.Floor.Height(map, x, y)
 end
 
 ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })

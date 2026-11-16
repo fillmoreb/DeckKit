@@ -28,8 +28,11 @@ and API on it.
    Headless: Valley of Trials to Orgrimmar's flight master 2,862 yd (x1.26 the straight line, no water), to the
    Crossroads 2,088 yd over the Southfury bridge (8 yd wet), every corner on a surface. In game through v1.Walk: the
    same route, 148 frames at 2 ms (3.4 s, mostly first decodes of the tiles it crosses).
-4. **The floor rule** (`Routing/Floor.lua`, ported with step 3, not wired yet): candidate surfaces kept while the map
-   connects them, and tiles decoded ahead under the frame budget (no 47 ms first read).
+4. **The floor rule** — done. `Routing/Floor.lua` (ported) wired by `v1.Follow(owner, on)` and `v1.PlayerFloor()`:
+   while followed, the player's floor is sampled as they move (4 times a second after a yard), the tiles around them
+   decoded ahead under the frame budget; walks and plans from the player start on it. Along the Undercity's lower
+   ring the followed floor stays within 1.8 yd of the walk's own height, never the ruins above or the canals below.
+   DeckKit follows while it has a walk to draw.
 5. **The planner** — done. `Routing/Planner.lua`, `Transport/Model.lua`, `Timetable.lua` and `Teleports.lua` ported
    whole; ForeverNav's own `Services.lua` (what they call on), `Context.lua` (the planner's options, flight points
    learned from the flight master's map) and `Steps.lua` (each leg in words). `v1.Plan` (16 ms in game) and

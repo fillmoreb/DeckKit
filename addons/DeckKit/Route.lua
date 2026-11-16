@@ -92,7 +92,8 @@ local function Plan(p, key)
     local continent, north, west = Map.WorldPosition(p.mapID, p.x, p.y)
     if not (me.continent and continent) then return end
     local api = Api()
-    local from, to = { map = me.continent, x = me.north, y = me.west }, { map = continent, x = north, y = west }
+    local from = { map = me.continent, x = me.north, y = me.west, z = api.PlayerFloor and api.PlayerFloor() or nil }
+    local to = { map = continent, x = north, y = west }
     Apply(api.Plan(from, to, { name = p.label }), p)
     if ns.Debug then ns.Debug(string.format("route: %s to %s (estimated)", route.none and "none" or #route.steps .. " steps",
         tostring(p.label or p.mapID))) end
@@ -197,9 +198,25 @@ function R.FollowRoads()
     return not (ns.db and ns.db.walkRoads == false)
 end
 
+-- While there's a walk to keep, ForeverNav follows the player's floor, so walks and plans from where they stand start
+-- on the floor they're on, not the cheapest surface near them (a roof, the ruins over the Undercity).
+local following = false
+local function Follow(on)
+    if following == on then return end
+    local api = NavApi()
+    if api and api.Follow then api.Follow("DeckKit", on) end
+    following = on
+end
+
+local function MyFloor()
+    local api = NavApi()
+    return api and api.PlayerFloor and api.PlayerFloor() or nil
+end
+
 local function DropWalk()
     if walking and walking.handle then walking.handle.Cancel() end
     walk, walking = nil, nil
+    Follow(false)
 end
 
 -- Yards from the player to the path, and the corner after the nearest stretch of it (the next one to walk to).
@@ -227,6 +244,7 @@ function R.UpdateWalk(g)
         DropWalk()
         return
     end
+    Follow(true)
     local roads = R.FollowRoads()
     local key = string.format("%d:%.0f:%.0f:%s", target.continent, target.north, target.west, roads and "r" or "")
     local again = false
@@ -243,7 +261,7 @@ function R.UpdateWalk(g)
     if walking and walking.handle then walking.handle.Cancel() end
     local asked = { key = key }
     walking = asked
-    asked.handle = api.Walk(me.continent, { x = me.north, y = me.west }, { x = target.north, y = target.west },
+    asked.handle = api.Walk(me.continent, { x = me.north, y = me.west, z = MyFloor() }, { x = target.north, y = target.west },
         function(route)
             if walking ~= asked then return end                             -- a newer ask replaced this one
             walking = nil
