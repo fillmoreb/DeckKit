@@ -19,6 +19,7 @@ Routing\PathJobs.lua
 Routing\Floor.lua
 Transport\Model.lua
 Transport\Timetable.lua
+Transport\Teleports.lua
 Routing\Planner.lua
 Context.lua
 Steps.lua

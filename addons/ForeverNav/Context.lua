@@ -1,7 +1,8 @@
 -- What a plan starts from: the planner's options (adapted from Shortest Path Forever's Core/PlanContext.lua Options, by
 -- Cillian Berragan, GPL-3.0-or-later), and the flight points this character knows, learned from the flight master's
 -- map the way its Transport/Taxi.lua scans it (slots CURRENT or REACHABLE are known; a map's nodes not listed on it
--- are forgotten). Teleports, a party mage's portals and the ride you're on are not read yet: plans don't use them.
+-- are forgotten). The hearthstone and teleports come from Transport/Teleports.lua (upstream's, ported). A party mage's
+-- portals and the ride you're on are not read yet: plans don't use them.
 local _, ns = ...
 
 local Context = {}
@@ -21,13 +22,19 @@ end
 
 -- The planner's options from `from` to `to` ({ map, x, y }: instance map and UnitPosition's x north, y west).
 -- opts (optional): faction ("Horde"/"Alliance", default the player's), walkSpeed (yards a second, default the
--- player's), assumeFlights (true: every flight point counts as known), otherFaction.
+-- player's), assumeFlights (true: every flight point counts as known), otherFaction, teleports (false: no hearthstone
+-- or teleport spells; they're used from where you stand only, as upstream does: from anywhere else, pass false).
 function Context.Options(from, to, opts)
     opts = opts or {}
+    local now = ns.NowMs()
+    local teleports, ready
+    if opts.teleports ~= false then teleports, ready = ns.UsableTeleports(now) end
     return {
         from = from,
         to = to,
-        now = ns.NowMs(),
+        now = now,
+        teleports = teleports,
+        teleportReady = ready,
         walkSpeed = opts.walkSpeed or Context.RunSpeed(),
         faction = opts.faction or UnitFactionGroup("player"),
         otherFaction = opts.otherFaction or ns.db.otherFaction or false,

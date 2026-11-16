@@ -24,9 +24,12 @@
 --       flights (between the flight points it has found), boats, zeppelins, lifts, the tram and portals, with each
 --       ride's wait from the timetables. from and to are { map, x, y }. opts: name (the destination's name in the
 --       steps), faction ("Horde"/"Alliance", default the player's), walkSpeed (yards a second, default the player's),
---       assumeFlights (true: every flight point counts as found), otherFaction (the other side's boats too).
+--       assumeFlights (true: every flight point counts as found), otherFaction (the other side's boats too),
+--       teleports (false: leave out the Hearthstone and teleport spells; they count only when `from` is where the
+--       player stands, so pass false for a plan from anywhere else).
 --       plan.seconds is the whole trip; plan.legs[i] = { mode ("walk", "flight", "boat", "zeppelin", "lift",
---       "tram", "portal", "passage", "teleport"), text ("Take the zeppelin to Grom'gol"), from and to { map, x, y },
+--       "tram", "portal", "passage", "teleport"), text ("Take the zeppelin to Grom'gol", "Hearth to Orgrimmar"),
+--       from and to { map, x, y },
 --       seconds (the leg itself), wait (seconds waiting for a ride before it) }. A walk's time is estimated from the
 --       baked walks or the straight line: v1.Walk measures one. Plans in the caller's frame (a few ms).
 --       Reasons: "invalid", "no route".

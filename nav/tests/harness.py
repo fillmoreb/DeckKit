@@ -28,6 +28,20 @@ function GetServerTime() return 1794700000 + math.floor(_py_clock() / 1000) end
 function UnitFactionGroup() return FACTION or "Horde" end
 function GetUnitSpeed() return 0, 7 end
 function geterrorhandler() return function(e) error(e, 2) end end
+-- A character with no bind point and no teleports; tests that need them set their own.
+function canaccessvalue() return true end
+function GetBindLocation() return nil end
+C_Item = { GetItemCount = function() return 0 end, GetItemCooldown = function() return 0, 0 end }
+C_SpellBook = { IsSpellKnown = function() return false end }
+C_Spell = { GetSpellInfo = function() return nil end, GetSpellCooldown = function() return nil end }
+-- A frame that takes event registrations and scripts and does nothing with them: tests drive the code directly.
+function CreateFrame()
+    local f = {}
+    for _, m in ipairs({ "RegisterEvent", "RegisterUnitEvent", "UnregisterEvent", "SetScript", "Hide", "Show" }) do
+        f[m] = function() end
+    end
+    return f
+end
 C_EncodingUtil = {
     DecodeBase64 = function(s) return _py_b64(s) end,
     DecompressString = function(s, method) return _py_inflate(s) end,

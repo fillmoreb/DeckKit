@@ -8,6 +8,7 @@ local ADDON, ns = ...
 local DEFAULTS = {
     otherFaction = false,      -- plan with the other faction's boats and zeppelins too
     hearthMinimumSavings = 0,  -- seconds a Hearthstone must save over not using it (the planner's floor is 20)
+    teleports = true,          -- plan with the hearthstone and the teleports this character knows
 }
 local CHAR_DEFAULTS = function() return { taxi = {}, taxiNames = {} } end
 
@@ -63,6 +64,44 @@ function ns.NowMs()
         offset = lead
     end
     return (GetTime() + offset) * 1000
+end
+
+-- Where the player stands: x north, y west (yards), z (nil: the client gives no height), and the instance map; nil
+-- where the client gives no position (inside an instance). Upstream's PlayerPosition and JourneyPosition, in one.
+local readable = canaccessvalue or function() return true end
+function ns.JourneyPosition()
+    local x, y, _, map = UnitPosition("player")
+    if readable(x) and readable(y) and readable(map) and x and y and map then
+        return x, y, nil, map
+    end
+end
+ns.PlayerPosition = ns.JourneyPosition
+
+-- The travel clock: listeners sampled once a second while something needs watching (a hearthstone's landing, for
+-- now). Upstream keeps its own awake while you move, ride or follow a journey; ForeverNav only needs the minute after
+-- a cast, so WakeTravel keeps it going for TRAVEL_AWAKE seconds.
+local TRAVEL_AWAKE = 75
+local travelListeners, travelTicker, awakeUntil = {}, nil, 0
+function ns.OnTravelTick(fn)
+    travelListeners[#travelListeners + 1] = fn
+end
+
+local function TravelTick()
+    for _, fn in ipairs(travelListeners) do
+        local ok, err = pcall(fn)
+        if not ok then geterrorhandler()(err) end
+    end
+    if GetTime() > awakeUntil and travelTicker then
+        travelTicker:Cancel()
+        travelTicker = nil
+    end
+end
+
+function ns.WakeTravel()
+    awakeUntil = GetTime() + TRAVEL_AWAKE
+    if not travelTicker and C_Timer and C_Timer.NewTicker then
+        travelTicker = C_Timer.NewTicker(1, TravelTick)
+    end
 end
 
 -- Upstream's: a route of the other faction is planned only with otherFaction on.

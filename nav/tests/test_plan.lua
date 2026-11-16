@@ -42,3 +42,25 @@ print(("plan: the same with every flight point found: %.0f s\n%s"):format(flying
 
 -- Nonsense in, a reason out.
 check(select(2, api.Plan({ map = 1 }, SENTINEL_HILL)) == "invalid", "a point without coordinates: invalid")
+
+-- The Hearthstone: bound in Orgrimmar (where the hearth last set you down: Teleports.lua keeps it), from Grom'gol to
+-- Orgrimmar's flight master it hearths instead of riding the zeppelin back.
+canaccessvalue = function() return true end
+GetBindLocation = function() return "Orgrimmar" end
+C_Item = { GetItemCount = function(item) return item == 6948 and 1 or 0 end, GetItemCooldown = function() return 0, 0 end }
+C_SpellBook = { IsSpellKnown = function() return false end }
+C_Spell = { GetSpellInfo = function() return { castTime = 10000 } end, GetSpellCooldown = function() return { startTime = 0, duration = 0 } end }
+ns.charDB.bind = { name = "Orgrimmar", map = 1, x = 1630, y = -4440 }
+local GROMGOL = { map = 0, x = -12464.0, y = 231.6 }                        -- the zeppelin's dock at Grom'gol
+local ORGRIMMAR_FLIGHTS = { map = 1, x = 1677.59, y = -4315.71 }
+local home = assert(api.Plan(GROMGOL, ORGRIMMAR_FLIGHTS, { name = "Orgrimmar's flight master", faction = "Horde" }))
+check(home.legs[1].mode == "teleport", "Grom'gol to Orgrimmar starts with the Hearthstone: " .. describe(home))
+check(home.legs[1].text == "Hearth to Orgrimmar", "and says so: " .. home.legs[1].text)
+local rode = assert(api.Plan(GROMGOL, ORGRIMMAR_FLIGHTS, { name = "Orgrimmar's flight master", faction = "Horde", teleports = false }))
+check(rode.seconds > home.seconds, ("without it the trip is longer: %.0f s against %.0f s"):format(rode.seconds, home.seconds))
+print(("plan: Grom'gol -> Orgrimmar, bound in Orgrimmar: %.0f s (without the hearth %.0f s)\n%s"):format(home.seconds, rode.seconds, describe(home)))
+
+-- On cooldown it isn't used.
+C_Item.GetItemCooldown = function() return GetTime() - 10, 3600 end
+local cooling = assert(api.Plan(GROMGOL, ORGRIMMAR_FLIGHTS, { faction = "Horde" }))
+check(cooling.legs[1].mode ~= "teleport", "a Hearthstone on cooldown isn't used: " .. describe(cooling))

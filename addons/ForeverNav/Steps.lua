@@ -75,6 +75,10 @@ function Steps.Text(leg, goalName)
         local name = leg.from and leg.from.label
         return name and ("Take the " .. name) or ("Go through to " .. to)
     elseif mode == "teleport" then
+        local t = leg.teleport
+        if t and t.item == 6948 then return "Hearth to " .. to end -- the Hearthstone
+        local info = t and C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(t.spell)
+        if info and info.name then return ("Cast %s to %s"):format(info.name, to) end
         return "Teleport to " .. to
     end
     return "Go to " .. to
