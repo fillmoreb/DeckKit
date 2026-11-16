@@ -42,8 +42,10 @@ and API on it.
    place is learned where you bind or land. The ride observer (`Transport/Observer.lua`, ported) samples your rides
    and records each route's schedule (account-wide): a seen ride's wait is its real next departure, an unseen one's
    half its period. Not yet: party mages' portals.
-6. **Route tests**: Durotar to Westfall (zeppelin), the Undercity's rings and lifts, Thunder Bluff's lifts, a
-   Stormwind canal walk, the Deeprun Tram, a flight the character hasn't found.
+6. **Route tests** — done (`tests/test_routes.lua`): the Undercity's ruins to its lower ring by the lift down, Mulgore up
+   to Thunder Bluff's flight master by a lift up, Alliance from Ironforge to Stormwind by the Deeprun Tram, and the
+   Crossroads to Orgrimmar on foot without flight points and by air with them. With the other tests: the data loads,
+   lift landings on their floors, walks, the floor rule, plans, measured walks, the Hearthstone, a ride's sighting.
 7. **The API** for DeckKit: a route's legs (text, method, seconds), the next turn's position for a compass to aim
    at, change events. Then DeckKit's waypoints use ForeverNav instead of MapzerothLib.
 8. **Keeping up**: a scheduled agent check of Shortest Path Forever (and Polestar, for routing ideas): sync new data,

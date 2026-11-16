@@ -46,10 +46,17 @@ function Steps.PlaceName(place, goalName)
     end
     if place.kind == "dock" then
         local dock = ns.Docks[place.id]
+        -- A lift's landings are its site's ("Undercity, west lift": Top / Bottom); a tram's stops are named stations.
+        if dock and dock.site and dock.name and dock.name ~= "Top" and dock.name ~= "Bottom" then return dock.name end
         if dock and dock.site then return dock.site end
         return TownNear(place.map, place.x, place.y)
     end
     return place.label
+end
+
+-- "Passage to Stormwind" inside a sentence: "the passage to Stormwind".
+local function Lower(name)
+    return (name:gsub("^%u", string.lower))
 end
 
 -- One leg's words. `goalName` names the plan's destination.
@@ -62,6 +69,7 @@ function Steps.Text(leg, goalName)
             local ride = route and RIDES[route.kind]
             if ride then return ("Walk to the %s at %s"):format(ride, to) end
         end
+        if leg.to and leg.to.kind == "portal" and leg.to.label then return "Walk to the " .. Lower(leg.to.label) end
         return "Walk to " .. to
     elseif mode == "flight" then
         return "Fly to " .. to
@@ -73,7 +81,7 @@ function Steps.Text(leg, goalName)
         return ("Take the %s to %s"):format(RIDES[mode], to)
     elseif mode == "portal" or mode == "passage" then
         local name = leg.from and leg.from.label
-        return name and ("Take the " .. name) or ("Go through to " .. to)
+        return name and ("Take the " .. Lower(name)) or ("Go through to " .. to)
     elseif mode == "teleport" then
         local t = leg.teleport
         if t and t.item == 6948 then return "Hearth to " .. to end -- the Hearthstone
