@@ -199,6 +199,11 @@ ns.AddSettings({
           .. " safer while levelling. Off: the shortest line, cliffs and all.",
       get = function() return DeckKit.Route.FollowRoads() end,
       set = function(on) DeckKit.Route.SetFollowRoads(on) end },
+    { type = "toggle", label = "Share ride times",
+      hint = "Boats and zeppelins you ride tell other players on your shard when they leave, and theirs tell you, so"
+          .. " plans wait for the real departure. Sends only ride times, over a hidden addon channel.",
+      get = function() return DeckKit.Route.Sharing() end,
+      set = function(on) DeckKit.Route.SetSharing(on) end },
     { type = "action", label = "Add a waypoint", hint = "Dial in the coordinates with the d-pad.",
       run = function() ns.Editor.Open() end },
     { type = "action", label = "Manage waypoints", hint = "Make one active, edit or remove them.",

@@ -81,10 +81,23 @@ print(("ride: after the sighting, the zeppelin's wait is %.0f s (half its period
 -- refinement, recorded twice within it, is not a second ride). A second ride on
 -- the same schedule an hour later drifts by nothing; a third whose loop runs 40 s behind is logged as 40 s off.
 local Drift = ns.Drift
-check(Drift.ShardOf("Creature-0-4372-0-11-3100-0000ABCDEF") == "4372-0-11", "a creature GUID's shard")
-check(Drift.ShardOf("Player-6794-01D644D4") == nil, "a player GUID names no shard")
-local function ride(epoch, startClock, shardName)
-    Drift.SetShard(shardName)
+local Shard = ns.Shard
+-- Two kinds of creature agreeing settle a shard; one odd creature doesn't move it.
+local function onShard(zone)
+    Shard.Reset()
+    Shard.Read(("Creature-0-4372-0-%d-3100-0000ABCDEF"):format(zone))
+    Shard.Read(("Creature-0-4372-0-%d-3101-0000ABCDF0"):format(zone))
+    return tostring(zone)
+end
+check(onShard(11) == "11" and select(2, Shard.Current()) == false, "a creature GUID's zone part is the shard")
+Shard.Read("Player-6794-01D644D4")
+check(Shard.Current() == "11", "a player GUID names no shard")
+Shard.Read("Creature-0-4372-0-12-3100-0000ABCDEF")
+check(Shard.Current() == "11", "one odd creature doesn't move a settled shard")
+Shard.Read("Creature-0-4372-0-12-3102-0000ABCDEF")
+check(Shard.Current() == "12", "two kinds of creature agreeing do")
+local function ride(epoch, startClock, zone)
+    onShard(zone)
     for phase = board.depart, arrive, 1000 do
         clock = startClock + (phase - board.depart)
         local map, x, y = At(phase % route.period)
@@ -97,14 +110,14 @@ local function ride(epoch, startClock, shardName)
     end
     for _ = 1, 40 do clock = clock + 1000; ns.TravelTick() end
 end
-ride(EPOCH, clock + 3600000, "4372-0-11")
-ride(EPOCH + 40000, clock + 3600000, "4372-0-12")
+ride(EPOCH, clock + 3600000, 11)
+ride(EPOCH + 40000, clock + 3600000, 12)
 local summary = api.Drift()
 check(summary.count == 2, "two rides compared with what they replaced, the rides' own refinements left out: " .. summary.count)
 local same, shifted = summary.entries[summary.count - 1], summary.entries[summary.count]
 check(math.abs(same.drift) <= 3, ("the same schedule an hour later: %.1f s off"):format(same.drift))
 check(math.abs(shifted.drift - 40) <= 3, ("a loop running 40 s behind: %.1f s off"):format(shifted.drift))
-check(shifted.shard == "4372-0-12" and shifted.before == "4372-0-11", "the shard on each side is kept")
+check(shifted.shard == "12" and shifted.before == "11", "the shard on each side is kept")
 check(summary.otherShard.count >= 1 and summary.otherShard.worst >= 37, "and counted as a different shard's ride")
 print(("ride: drift log: same schedule %.1f s, shifted %.1f s; different shards %d (worst %.0f s)"):format(same.drift,
     shifted.drift, summary.otherShard.count, summary.otherShard.worst))

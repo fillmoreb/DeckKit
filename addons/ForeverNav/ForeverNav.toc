@@ -21,7 +21,9 @@ Transport\Model.lua
 Transport\Timetable.lua
 Transport\Teleports.lua
 Transport\Observer.lua
+Shard.lua
 Drift.lua
+Share.lua
 Routing\Planner.lua
 Context.lua
 Steps.lua

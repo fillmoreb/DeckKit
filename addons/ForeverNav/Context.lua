@@ -24,6 +24,19 @@ end
 -- opts (optional): faction ("Horde"/"Alliance", default the player's), walkSpeed (yards a second, default the
 -- player's), assumeFlights (true: every flight point counts as known), otherFaction, teleports (false: no hearthstone
 -- or teleport spells; they're used from where you stand only, as upstream does: from anywhere else, pass false).
+-- Your own sightings, with any shared on the shard you're on (Share.lua) where they're newer.
+function Context.Anchors()
+    local own = ns.Timetable.Anchors()
+    local shared = ns.Share and ns.db.share and ns.Share.For((ns.Shard.Current()))
+    if not shared then return own end
+    local out = {}
+    for route, a in pairs(own) do out[route] = a end
+    for route, a in pairs(shared) do
+        if ns.Model.Newer(a, out[route]) then out[route] = a end
+    end
+    return out
+end
+
 function Context.Options(from, to, opts)
     opts = opts or {}
     local now = ns.NowMs()
@@ -39,7 +52,7 @@ function Context.Options(from, to, opts)
         faction = opts.faction or UnitFactionGroup("player"),
         otherFaction = opts.otherFaction or ns.db.otherFaction or false,
         taxiKnown = not opts.assumeFlights and ns.charDB.taxi or nil,
-        anchors = ns.Timetable.Anchors(),
+        anchors = Context.Anchors(),
         docks = ns.Docks,
         routes = ns.Routes,
         taxiNodes = ns.TaxiNodes,

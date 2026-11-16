@@ -60,6 +60,12 @@
 --       (gap), and the shard and session on each side. The groups give how many and the worst drift: rides on the
 --       same shard, on different shards, and in different sessions.
 --
+--   ForeverNav.v1.SetSharing(on), ForeverNav.v1.Sharing() -> { on, joined, shard, sightings }
+--       Share ride sightings with other ForeverNav players (Share.lua; off until turned on): a ride you take tells
+--       everyone on your shard where that boat is in its loop, and theirs tell you, through a hidden addon channel for
+--       your faction. Plans use the shared sightings of the shard you're on. Sharing() says whether it's on, whether
+--       the channel is joined, the shard you're on (nil until a creature has been seen) and how many sightings are held.
+--
 -- v1 only grows: new functions and fields may appear, nothing is renamed or removed.
 local _, ns = ...
 
@@ -260,6 +266,14 @@ end
 
 function v1.Drift()
     return ns.Drift.Summary()
+end
+
+function v1.SetSharing(on)
+    ns.Share.SetOn(on)
+end
+
+function v1.Sharing()
+    return ns.Share.State()
 end
 
 ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })

@@ -53,6 +53,30 @@ function CreateFrame()
     end
     return f
 end
+function wipe(t) for k in pairs(t) do t[k] = nil end return t end
+-- Units: tests set UNITS = { [unit] = guid }.
+function UnitGUID(unit) return UNITS and UNITS[unit] end
+function UnitExists(unit) return UNITS and UNITS[unit] ~= nil end
+function UnitName() return "Tester", "Deck" end
+function Ambiguate(name) return name end
+function IsInInstance() return false end
+-- Timers wait in TIMERS until a test runs them (RunTimers); tickers never fire.
+TIMERS = {}
+C_Timer = {
+    After = function(s, fn) TIMERS[#TIMERS + 1] = fn end,
+    NewTicker = function() return { Cancel = function() end } end,
+}
+function RunTimers()
+    local n = 0
+    while #TIMERS > 0 and n < 1000 do table.remove(TIMERS, 1)(); n = n + 1 end
+end
+-- The addon channel: tests set CHANNEL to its number to be joined; what's sent lands in SENT.
+SENT = {}
+function GetChannelName() return CHANNEL or 0 end
+C_ChatInfo = {
+    RegisterAddonMessagePrefix = function() return true end,
+    SendAddonMessage = function(prefix, msg) SENT[#SENT + 1] = msg; return 0 end,
+}
 C_EncodingUtil = {
     DecodeBase64 = function(s) return _py_b64(s) end,
     DecompressString = function(s, method) return _py_inflate(s) end,

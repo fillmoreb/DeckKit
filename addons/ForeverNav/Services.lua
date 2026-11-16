@@ -9,6 +9,7 @@ local DEFAULTS = {
     otherFaction = false,      -- plan with the other faction's boats and zeppelins too
     hearthMinimumSavings = 0,  -- seconds a Hearthstone must save over not using it (the planner's floor is 20)
     teleports = true,          -- plan with the hearthstone and the teleports this character knows
+    share = false,             -- ride sightings shared with other players on your shard (Share.lua): off until asked
     chat = false,              -- the library's own chat lines (a ride's schedule synced): off, ForeverNav has no window
     debug = false,             -- the ride observer's raw trace (upstream's /path debug)
 }

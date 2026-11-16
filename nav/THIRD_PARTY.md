@@ -17,6 +17,11 @@ That data in turn carries Shortest Path Forever's inputs, credited in its own
 | [InFlight](https://github.com/LudiusMaximus/InFlight) | recorded flight durations | MIT |
 | The Forever client's terrain, baked with [TrinityCore](https://github.com/TrinityCore/TrinityCore)'s tools (Recast/Detour) and the player's collision limits from [benilla-re](https://github.com/samwhosung/benilla-re) | the walking maps | derived data, GPL-3.0-or-later; Blizzard's EULA applies to the client files |
 
+Adapted code: `Shard.lua` (the shard from a creature GUID's zone part, confirmed by two kinds of creature) and the
+channel handling in `Share.lua` (join after login settles, keep the channel past the chat channels and out of the chat
+windows, rejoin, the throttled send queue) come from [Mapzeroth](https://github.com/tr0tsky0/Mapzeroth)'s
+`LeyShare.lua`, by tr0tsky0, MIT (as published on CurseForge; its notice is in [LICENSE](../LICENSE)).
+
 Read for ideas, not copied: [Polestar](https://github.com/fitzforge/polestar) (GPL-3.0)'s routing documentation.
 Anything later ported from Polestar's or Shortest Path Forever's code is credited in the file it lands in and here.
 

@@ -46,6 +46,17 @@ function R.SetEnabled(on)
     route = nil
 end
 
+-- Ride times shared with other players on your shard (ForeverNav's; nil when it isn't installed).
+function R.Sharing()
+    local api = Api()
+    return api and api.Sharing and api.Sharing().on or false
+end
+
+function R.SetSharing(on)
+    local api = Api()
+    if api and api.SetSharing then api.SetSharing(on) end
+end
+
 local function KeyOf(p)
     return string.format("%d:%d:%.5f:%.5f", p.id or 0, p.mapID, p.x, p.y)
 end
