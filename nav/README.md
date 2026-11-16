@@ -2,9 +2,10 @@
 
 The fastest way anywhere in WoW: Forever, as a library: walking routes over the real terrain, plus flights, boats,
 zeppelins, lifts, the tram and portals, with an API and no window of its own. Built for the DeckKit suite (its
-waypoints, compass and assistant drive it), usable by any addon. GPL-3.0-or-later.
+waypoints, compass and assistant drive it), usable by any addon. GPL-3.0-or-later, like DeckKit ([`LICENSE`](../LICENSE)).
 
-Local only for now.
+Part of the [DeckKit](../README.md) repo: the addon is `addons/ForeverNav`, its tools and tests are here in `nav/`.
+It doesn't need the DeckKit core.
 
 ## Credits
 
@@ -35,10 +36,10 @@ ForeverNav stands on other people's work, and says so everywhere it can.
 
 ## Layout
 
-- `addon/ForeverNav/`: the addon. `Nav/` and `Data/` are synced (never edited by hand); the code goes beside them.
+- `../addons/ForeverNav/`: the addon. `Nav/` and `Data/` are synced (never edited by hand); the code goes beside them.
 - `tools/sync_spf.py`: the data sync. `tools/casc.py`: reads Forever's own files from Blizzard's CDN (from the first
   research pass; for baking our own maps one day, if ever needed).
-- `tests/`: run from the repo root: `lua5.1 tests/test_data_loads.lua` (the data loads), and
+- `tests/`: run from `nav/`: `lua5.1 tests/test_data_loads.lua` (the data loads), and
   `python3 tests/harness.py` (the addon loaded headless in Lua 5.1 through lupa: `pip install lupa`).
 - `notes/`: research. `cache/`, `vendor/` (ignored): downloads.
 

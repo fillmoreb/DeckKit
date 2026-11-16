@@ -34,7 +34,7 @@ import zipfile
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ADDON = ROOT / "addon" / "ForeverNav"
+ADDON = ROOT.parent / "addons" / "ForeverNav"   # ROOT is nav/ in the DeckKit repo
 CACHE = ROOT / "cache" / "spf"
 UPSTREAM = ROOT / "UPSTREAM.json"
 REPO = "cjber/shortest-path-forever"

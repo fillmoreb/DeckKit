@@ -134,8 +134,8 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   dependencies. DeckKit is GPL-3.0-or-later (since 2026-11-15; MIT up to 1.2.0-beta1), so
   GPL code and data may come in too, credited in the file and in `LICENSE`; keeping a library a separate addon is
   still the default (ForeverNav, the guide addon) when other addons can use it. For travel routing:
-  **ForeverNav** (~/Projects/ForeverNav, our GPL library on Shortest Path Forever's walking maps, timetables
-  and planner): `ForeverNav.v1.Plan(from, to, opts)` for the legs, `v1.Walk` for the path on foot.
+  **ForeverNav** (`addons/ForeverNav`, our routing library on Shortest Path Forever's walking maps, timetables
+  and planner; its tools, tests and notes are in `nav/`, see `nav/README.md`): `ForeverNav.v1.Plan(from, to, opts)` for the legs, `v1.Walk` for the path on foot.
   MapzerothLib (Ben's fork of Mapzeroth) and FarstriderLib were used before it and dropped. Settings name what a
   feature does, never the library behind it. Everything else stays agnostic.
 - Credit borrowed code, in the file header and in `LICENSE`. `DeckKit/Input.lua` is adapted from
@@ -222,3 +222,8 @@ when Ben asks for a release; pushing a tag publishes to CurseForge.
 - `addons/<Name>/`: one folder per addon (`.toc`, Lua, optional `Bindings.xml`).
 - `deck-setup/`: Battle.net launcher script and Steam shortcut tooling for the Deck, and the generators
   for the grip chord layout and glyphs, the minimap masks and the focus aura spell list.
+- `nav/`: ForeverNav's tools: the data sync from Shortest Path Forever (`tools/sync_spf.py`, pinned in
+  `UPSTREAM.json`), its headless tests (`lua5.1 tests/test_data_loads.lua` and `python3 tests/harness.py`, from
+  `nav/`, needs `lupa`) and its plan. `addons/ForeverNav` is the addon: it does **not** depend on the DeckKit core
+  (any addon may use it), so it doesn't use `DeckKit.NewModule`; keep it that way. Its `Data/` and `Nav/` are synced,
+  never edited; its `Routing/` and `Transport/` files are upstream's as written (credited) so fixes port from a diff.

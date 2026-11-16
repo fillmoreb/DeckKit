@@ -117,6 +117,12 @@ Menu.lua, all used under the MIT License:
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
+addons/ForeverNav's walking maps (Nav/) and travel data (Data/) are Shortest Path Forever's,
+by Cillian Berragan (https://github.com/cjber/shortest-path-forever), and its Routing/ and
+Transport/ files are ported from it, all under the GNU General Public License, version 3 or
+later. nav/THIRD_PARTY.md lists them and the sources that data carries in turn (the WoW: Forever
+client's tables, CMaNGOS classic-db and mangos-classic, InFlight, TrinityCore's terrain tools).
+
 --------------------------------------------------------------------------------
 
                     GNU GENERAL PUBLIC LICENSE

@@ -97,7 +97,7 @@ Passive, nothing to press, readable on the Deck's small screen.
 
 Routing across trams, boats, zeppelins, portals and flight paths, so a waypoint on another continent
 starts with "take the boat from Menethil". Terrain pathfinding was researched and shelved, because
-addons get no player height (`~/Projects/ForeverNav`). The travel data comes from an existing
+addons get no player height (`nav/`). The travel data comes from an existing
 addon, called through its API like Pawn (game-data libraries are an allowed exception, see CLAUDE.md):
 
 - **MapzerothLib** (chosen, 2026-11-15): Mapzeroth's travel data and route planner, split into a

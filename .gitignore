@@ -5,3 +5,9 @@ dist/
 __pycache__/
 luac.out
 .release/
+
+# ForeverNav's tools (nav/): downloads and builds
+nav/cache/
+nav/vendor/
+nav/out/
+__pycache__/

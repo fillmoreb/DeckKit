@@ -1,8 +1,8 @@
 -- The synced data loads in Lua 5.1 as the game loads it: Data/*.lua in Data.xml's order onto one addon table, the
 -- walking maps onto ForeverNavPathData, and every map holds the packed blocks its counts promise.
---     lua5.1 tests/test_data_loads.lua        (from the repo root)
+--     lua5.1 tests/test_data_loads.lua        (from nav/ in the DeckKit repo)
 
-local ADDON = "addon/ForeverNav/"
+local ADDON = "../addons/ForeverNav/"
 
 local function xmlScripts(path)
     local f = assert(io.open(path, "r"))

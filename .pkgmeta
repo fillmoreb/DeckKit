@@ -13,6 +13,7 @@ move-folders:
   DeckKit/addons/DeckAngler: DeckAngler
   DeckKit/addons/DeckHUD: DeckHUD
   DeckKit/addons/DeckSundries: DeckSundries
+  DeckKit/addons/ForeverNav: ForeverNav
   DeckKit/addons/DisenchantDeck: DisenchantDeck
   DeckKit/addons/HealPad: HealPad
   DeckKit/addons/MapDeck: MapDeck
@@ -24,6 +25,7 @@ move-folders:
 
 ignore:
   - deck-setup
+  - nav
   - patches
   - media
   - scripts

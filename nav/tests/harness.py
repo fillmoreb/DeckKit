@@ -18,7 +18,7 @@ import zlib
 from lupa.lua51 import LuaRuntime
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ADDON = ROOT / "addon" / "ForeverNav"
+ADDON = ROOT.parent / "addons" / "ForeverNav"   # ROOT is nav/ in the DeckKit repo
 
 STUBS = r"""
 Enum = { CompressionMethod = { Zlib = 0, Deflate = 1, Brotli = 2 } }

@@ -1,6 +1,6 @@
 # Third-party inputs
 
-ForeverNav is GPL-3.0-or-later ([LICENSE](LICENSE)). Everything it ships that it did not write:
+ForeverNav is GPL-3.0-or-later, like DeckKit ([LICENSE](../LICENSE)). Everything it ships that it did not write:
 
 | Input | What ForeverNav takes | Pin | Licence |
 |---|---|---|---|

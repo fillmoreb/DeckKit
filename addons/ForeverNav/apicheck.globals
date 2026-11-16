@@ -1,0 +1,3 @@
+# Routing/PathGrid.lua (upstream as written): os.clock is its fallback clock when debugprofilestop is missing,
+# which only happens in headless tests; the game always has debugprofilestop.
+os
