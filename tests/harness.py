@@ -23,6 +23,11 @@ ADDON = ROOT / "addon" / "ForeverNav"
 STUBS = r"""
 Enum = { CompressionMethod = { Zlib = 0, Deflate = 1, Brotli = 2 } }
 function debugprofilestop() return _py_clock() end
+function GetTime() return _py_clock() / 1000 end
+function GetServerTime() return 1794700000 + math.floor(_py_clock() / 1000) end
+function UnitFactionGroup() return FACTION or "Horde" end
+function GetUnitSpeed() return 0, 7 end
+function geterrorhandler() return function(e) error(e, 2) end end
 C_EncodingUtil = {
     DecodeBase64 = function(s) return _py_b64(s) end,
     DecompressString = function(s, method) return _py_inflate(s) end,

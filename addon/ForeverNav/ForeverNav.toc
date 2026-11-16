@@ -5,13 +5,21 @@
 ## Version: @project-version@
 ## Category: Libraries
 ## X-License: GPL-3.0-or-later
+## SavedVariables: ForeverNavDB
+## SavedVariablesPerCharacter: ForeverNavCharDB
 ## X-Credits: Shortest Path Forever (https://github.com/cjber/shortest-path-forever) by Cillian Berragan: walking maps, travel data and the router this one is ported from
 
 Core.lua
+Services.lua
 Data\Data.xml
 Nav\Nav.xml
 Routing\PathGrid.lua
 Routing\Path.lua
 Routing\PathJobs.lua
 Routing\Floor.lua
+Transport\Model.lua
+Transport\Timetable.lua
+Routing\Planner.lua
+Context.lua
+Steps.lua
 API.lua

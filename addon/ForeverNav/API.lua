@@ -14,8 +14,22 @@
 --       it, the cheapest surface near the point). The search runs a little each frame (2 ms) and calls
 --       callback(route) or callback(nil, reason) when done: route.points { { x, y, z }, ... } start to goal (drawn:
 --       corners only), route.yards the running cost in yards (a swum yard counts 3 unless opts.waterWalking),
---       route.wet the yards over water. Reasons: "nodata", "outside", "offmesh" (a point off every surface),
+--       route.wet the yards over water. Roads are followed: a yard off the road counts 1.5 while the walk is chosen
+--       (Shortest Path Forever's "Follow roads"), so a walk takes the road when that adds less than half again to it,
+--       and doesn't hug the foot of every cliff the way the shortest line does. opts.roads = false: the shortest line. Reasons: "nodata", "outside", "offmesh" (a point off every surface),
 --       "unreachable", "error". Searches wait out combat. handle:Cancel() drops it.
+--
+--   ForeverNav.v1.Plan(from, to[, opts]) -> plan | nil, reason
+--       The quickest way from one point to another anywhere in the world, as this character: walks joined with
+--       flights (between the flight points it has found), boats, zeppelins, lifts, the tram and portals, with each
+--       ride's wait from the timetables. from and to are { map, x, y }. opts: name (the destination's name in the
+--       steps), faction ("Horde"/"Alliance", default the player's), walkSpeed (yards a second, default the player's),
+--       assumeFlights (true: every flight point counts as found), otherFaction (the other side's boats too).
+--       plan.seconds is the whole trip; plan.legs[i] = { mode ("walk", "flight", "boat", "zeppelin", "lift",
+--       "tram", "portal", "passage", "teleport"), text ("Take the zeppelin to Grom'gol"), from and to { map, x, y },
+--       seconds (the leg itself), wait (seconds waiting for a ride before it) }. A walk's time is estimated from the
+--       baked walks or the straight line: v1.Walk measures one. Plans in the caller's frame (a few ms).
+--       Reasons: "invalid", "no route".
 --
 -- v1 only grows: new functions and fields may appear, nothing is renamed or removed.
 local _, ns = ...
@@ -55,6 +69,17 @@ end
 
 local Path = ns.Path
 
+-- The search's hazard profile (upstream: Journey/Hazards.lua, which also steers round hostile towns and zones far
+-- above your level), with nothing charged and only its Follow roads switch on.
+local ROADS = {
+    key = "foreverNav:roads",
+    roads = true,
+    Point = function() return 1 end,
+    Charged = function() return false end,
+    Near = function() return false end,
+    Chord = function() return 1 end,
+}
+
 local function point(p)
     return type(p) == "table" and type(p.x) == "number" and type(p.y) == "number"
         and { x = p.x, y = p.y, z = type(p.z) == "number" and p.z or nil } or nil
@@ -72,8 +97,35 @@ function v1.Walk(map, from, to, callback, opts)
         local route = { yards = cost, wet = points.wet or 0, points = {} }
         for i, p in ipairs(points) do route.points[i] = { x = p.x, y = p.y, z = p.z } end
         callback(route)
-    end, opts and opts.waterWalking or false)
+    end, opts and opts.waterWalking or false, not (opts and opts.roads == false) and ROADS or nil)
     return { Cancel = function() Path.Cancel(job) end }
+end
+
+local function place(p)
+    return type(p) == "table" and type(p.map) == "number" and type(p.x) == "number" and type(p.y) == "number"
+        and { map = p.map, x = p.x, y = p.y } or nil
+end
+
+function v1.Plan(from, to, opts)
+    local a, b = place(from), place(to)
+    if not a or not b then return nil, "invalid" end
+    local options = ns.Context.Options(a, b, opts)
+    local plan = ns.Planner.Plan(options)
+    if not plan or not plan.legs or #plan.legs == 0 then return nil, "no route" end
+    local goalName = opts and opts.name
+    local out = { seconds = (plan.arrive - options.now) / 1000, legs = {} }
+    for i, leg in ipairs(plan.legs) do
+        leg.next = plan.legs[i + 1]
+        out.legs[i] = {
+            mode = leg.mode,
+            text = ns.Steps.Text(leg, goalName),
+            from = { map = leg.from.map, x = leg.from.x, y = leg.from.y },
+            to = { map = leg.to.map, x = leg.to.x, y = leg.to.y },
+            seconds = (leg.arrive - leg.depart) / 1000,
+            wait = (leg.wait or 0) / 1000,
+        }
+    end
+    return out
 end
 
 ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })

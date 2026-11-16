@@ -38,6 +38,33 @@ local _, org = walk("Valley of Trials -> Orgrimmar flight master", 1, VALLEY, OR
 local cross = select(1, walk("Valley of Trials -> Crossroads (over the Southfury)", 1, VALLEY, CROSSROADS_FLIGHTS))
 check((cross.wet or 0) < 40, "the Crossroads walk takes the bridge, not a swim: " .. (cross.wet or 0) .. " yd wet")
 
+-- Following roads: off-road yards count 1.5 while choosing, so the walk keeps to the road where that costs little.
+-- The same hazard profile v1.Walk passes by default.
+local ROADS = { key = "test:roads", roads = true, Point = function() return 1 end, Charged = function() return false end,
+    Near = function() return false end, Chord = function() return 1 end }
+local roadPoints, roadCost = Path.FindSync(1, VALLEY, ORGRIMMAR_FLIGHTS, false, ROADS)
+check(roadPoints, "a road-following walk to Orgrimmar: " .. tostring(roadCost))
+check(roadCost <= org * 1.5, ("following roads costs at most half again: %.0f against %.0f"):format(roadCost, org))
+local function onRoad(points)
+    local st, Grid = ns.PathGrid.State(1), ns.PathGrid
+    local yes, all = 0, 0
+    for i = 1, #points - 1 do
+        local a, b = points[i], points[i + 1]
+        local n = math.max(1, math.floor(math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) / 8))
+        for s = 0, n - 1 do
+            local x, y = a.x + (b.x - a.x) * s / n, a.y + (b.y - a.y) * s / n
+            local k, lc = Grid.locate(st, x, y)
+            local road = k and Grid.roads(st, k)
+            all = all + 1
+            if road and road[lc] then yes = yes + 1 end
+        end
+    end
+    return yes / math.max(all, 1)
+end
+local plainShare, roadShare = onRoad(select(1, Path.FindSync(1, VALLEY, ORGRIMMAR_FLIGHTS, false))), onRoad(roadPoints)
+check(roadShare > plainShare, ("more of the road-following walk is on road: %.0f%% against %.0f%%"):format(roadShare * 100, plainShare * 100))
+print(("walk: following roads to Orgrimmar: %.0f yd (shortest %.0f), %.0f%% on road against %.0f%%"):format(roadCost, org, roadShare * 100, plainShare * 100))
+
 -- Off the map, and between continents (a walk is one map).
 local none, why = Path.FindSync(1, VALLEY, { x = 99999, y = 99999 }, false)
 check(none == nil and why == "outside", "a goal off the map: outside, " .. tostring(why))
