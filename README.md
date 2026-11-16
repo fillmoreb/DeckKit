@@ -30,7 +30,8 @@ ForeverNav stands on other people's work, and says so everywhere it can.
 - **Data sync: done.** `tools/sync_spf.py` takes Shortest Path Forever's walking maps and routing data from a
   release, checks them, and records the release in [UPSTREAM.json](UPSTREAM.json).
 - **Reader: done.** `ForeverNav.v1.SurfacesAt(map, x, y)`: the walkable surfaces at a point.
-- Router, floor tracking, the rest of the API: next ([PLAN.md](PLAN.md)).
+- **Walking search: done.** `ForeverNav.v1.Walk(map, from, to, callback)`: a walking route over the real terrain.
+- Floor tracking, the planner (flights, boats, lifts...), the rest of the API: next ([PLAN.md](PLAN.md)).
 
 ## Layout
 

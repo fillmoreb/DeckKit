@@ -9,6 +9,14 @@
 --       z is the surface's height in yards (to the map's 2-yard step), kind "ground", "water" or "steep" (walkable
 --       downhill only). Reasons: "nodata" (no walking map for that map), "outside" (off the map's area).
 --
+--   ForeverNav.v1.Walk(map, from, to, callback[, opts]) -> handle | nil, reason
+--       The walking route between two points on one map: from and to are { x, y[, z] } (z picks the floor: without
+--       it, the cheapest surface near the point). The search runs a little each frame (2 ms) and calls
+--       callback(route) or callback(nil, reason) when done: route.points { { x, y, z }, ... } start to goal (drawn:
+--       corners only), route.yards the running cost in yards (a swum yard counts 3 unless opts.waterWalking),
+--       route.wet the yards over water. Reasons: "nodata", "outside", "offmesh" (a point off every surface),
+--       "unreachable", "error". Searches wait out combat. handle:Cancel() drops it.
+--
 -- v1 only grows: new functions and fields may appear, nothing is renamed or removed.
 local _, ns = ...
 
@@ -43,6 +51,29 @@ function v1.SurfacesAt(map, x, y)
     end
     table.sort(out, function(a, b) return a.z < b.z end)
     return out
+end
+
+local Path = ns.Path
+
+local function point(p)
+    return type(p) == "table" and type(p.x) == "number" and type(p.y) == "number"
+        and { x = p.x, y = p.y, z = type(p.z) == "number" and p.z or nil } or nil
+end
+
+function v1.Walk(map, from, to, callback, opts)
+    local a, b = point(from), point(to)
+    if type(map) ~= "number" or not a or not b or type(callback) ~= "function" then return nil, "invalid" end
+    if not Grid.State(map) then return nil, "nodata" end
+    local job = Path.Find(map, a, b, function(points, cost)
+        if not points then
+            callback(nil, cost)
+            return
+        end
+        local route = { yards = cost, wet = points.wet or 0, points = {} }
+        for i, p in ipairs(points) do route.points[i] = { x = p.x, y = p.y, z = p.z } end
+        callback(route)
+    end, opts and opts.waterWalking or false)
+    return { Cancel = function() Path.Cancel(job) end }
 end
 
 ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })

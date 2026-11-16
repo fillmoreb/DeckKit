@@ -7,7 +7,10 @@
 -- Files, in load order (ForeverNav.toc):
 --   Core.lua             the shared table (`ns`) and the global ForeverNav
 --   Data/, Nav/          synced data: Data/*.lua write onto `ns`, Nav/*.lua onto ForeverNavPathData
---   Routing/PathGrid.lua the walking maps' decoder and grid helpers (ported, as upstream wrote it)
+--   Routing/PathGrid.lua the walking maps' decoder and grid helpers   } ported from Shortest Path Forever as upstream
+--   Routing/Path.lua     the walking search (HPA* over tiles, A* inside) } wrote them (credited in each file)
+--   Routing/PathJobs.lua the searches as frame-budgeted jobs           }
+--   Routing/Floor.lua    the player's floor, followed as they move     }
 --   API.lua              ForeverNav.v1, the public API
 local ADDON, ns = ...
 

@@ -24,8 +24,12 @@ and API on it.
    Headless (`tests/harness.py`, lupa): all 14 lift landings found at their recorded heights, within 16 yd of the
    shaft. In game, the same answers through the client's own decoding (Rektagho, Valley of Trials: ground at 44).
    A tile's first decode is 47 ms unsliced: step 4 decodes ahead under the frame budget, as upstream does.
-3. **The walking search** (`Routing/Path.lua`, `PathJobs.lua`): A* over the cluster graph, run as frame-budgeted jobs.
-4. **The floor rule** (`Routing/Floor.lua`): candidate surfaces kept while the map connects them.
+3. **The walking search** — done. `Routing/Path.lua` and `PathJobs.lua` ported whole; `ForeverNav.v1.Walk`.
+   Headless: Valley of Trials to Orgrimmar's flight master 2,862 yd (x1.26 the straight line, no water), to the
+   Crossroads 2,088 yd over the Southfury bridge (8 yd wet), every corner on a surface. In game through v1.Walk: the
+   same route, 148 frames at 2 ms (3.4 s, mostly first decodes of the tiles it crosses).
+4. **The floor rule** (`Routing/Floor.lua`, ported with step 3, not wired yet): candidate surfaces kept while the map
+   connects them, and tiles decoded ahead under the frame budget (no 47 ms first read).
 5. **The planner** (`Routing/Planner.lua`): walks joined with flights, boats, zeppelins, lifts, the tram, portals and
    the hearthstone, with the timetables.
 6. **Route tests**: Durotar to Westfall (zeppelin), the Undercity's rings and lifts, Thunder Bluff's lifts, a

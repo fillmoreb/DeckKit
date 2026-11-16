@@ -11,4 +11,7 @@ Core.lua
 Data\Data.xml
 Nav\Nav.xml
 Routing\PathGrid.lua
+Routing\Path.lua
+Routing\PathJobs.lua
+Routing\Floor.lua
 API.lua
