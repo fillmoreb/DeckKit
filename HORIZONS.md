@@ -92,3 +92,20 @@ Passive, nothing to press, readable on the Deck's small screen.
   (`/deckkit fpp`), and stay away from its minimap button.
 - **Lasting:** build the chosen ones as DeckKit features (likely DeckSundries for the small automations),
   with settings in the DeckKit menu and our own code.
+
+## Travel routing for the waypoints (2026-11-15)
+
+Routing across trams, boats, zeppelins, portals and flight paths, so a waypoint on another continent
+starts with "take the boat from Menethil". Terrain pathfinding was researched and shelved, because
+addons get no player height (`~/Projects/ForeverNav`). The travel data comes from an existing
+addon, called through its API like Pawn (game-data libraries are an allowed exception, see CLAUDE.md):
+
+- **MapzerothLib** (chosen, 2026-11-15): Mapzeroth's travel data and route planner, split into a
+  library in Ben's fork (`~/Projects/Mapzeroth`), proposed upstream (tr0tsky0/Mapzeroth#29). Forever
+  data measured in game: zeppelins, boats, borders, city gates, flight points the character has found.
+  `MapzerothLib.v1.RouteTo(mapID, x, y, name)` returns steps with text, time and end point.
+- **FarstriderLib** (tried, removed): GPLv3, Forever data built mostly from Blizzard's thin travel
+  tables; it misses the Orgrimmar–Grom'gol zeppelin, so it sent a Durotar orc to Westfall by the
+  Ratchet boat.
+
+Still to build: DeckKit's core waypoints handing far-away legs to MapzerothLib when it's installed.
