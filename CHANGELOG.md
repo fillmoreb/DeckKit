@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.3.0-beta1 - 2026-11-15
+
+### New
+- **Routes to anywhere** (ForeverNav, a new addon in the download). Set a waypoint across the world and the
+  compass takes you there leg by leg: walk to the zeppelin tower, take the zeppelin to Grom'gol, walk on. It
+  joins walks over the real terrain with flights (between the flight points you've found: open a flight
+  master's map once so it knows them), boats, zeppelins, lifts, the Deeprun Tram, portals and your Hearthstone.
+  The step shows under the compass's pointer; the walk to the next leg is drawn on the minimap (lilac dots)
+  and the peek map (a lilac line), from where you stand and on the floor you're on, and re-planned if you
+  wander off. Rides you take teach it their real schedules. Map & travel › Waypoints: **Plan routes** and
+  **Follow roads** (on: keeps to roads, safer while levelling; off: the shortest line). `/deckkit route`.
+  ForeverNav's walking maps, travel data and route planner come from **Shortest Path Forever** by Cillian
+  Berragan, with thanks. It needs nothing else from DeckKit, and any addon can use it (`ForeverNav.v1`).
+- **A compass in the status bar** (DeckHUD): half the horizon centered on your facing, your waypoint with its
+  distance, Blizzard's map pin, a guard's directions, the focused quest (pulsing while you're in its area) and
+  your group. Screen › Status bar picks its width, view and marks. The mouseover tooltip is a card under it.
+- **PackPad**, DeckKit's own bags, on Blizzard's gamepad bag window: bag icons in their own column, the slots
+  in one grid, item marks, and a full-screen bag peek on a grip chord with Pawn's upgrade arrows. It replaces
+  BagPad.
+- **MarketDeck**: auction house prices with nothing to press. A snapshot each time you open the auction house
+  (when the last is over an hour old), read a little each frame; auction, vendor and disenchant values on item
+  tooltips.
+- **A welcome window** for first-time setup: each step and how it's going, with a button to do it (the Steam
+  controller layout, **Apply everything suggested**, HealPad's macros). `/deckkit setup` reopens it. INSTALL.md
+  walks through setting DeckKit up from zero.
+- **Grip chords per character**: slots stay shared, and a character can change any of them for itself
+  (Controls › Grips › Slot changes apply to).
+- **Dictation**: the chord shows "Starting" the moment you press it, and the game's sound fades out while you
+  dictate so the Deck's mic doesn't hear its speakers (Chat › Dictation › Mute the game while dictating).
+
+### Changed
+- **License: the GNU General Public License, version 3 or later** (was MIT; releases up to 1.2.0-beta1 stay
+  MIT). It matches the projects DeckKit now builds on.
+- **Waypoints live in the DeckKit core**, and WayPad is their controller front end: its list and Add windows
+  are one screen, the coordinates dialed in. WayPad's floating arrow is gone: the compass shows the way.
+- MapDeck: the current waypoint's pin bounces, and the peek follows you into another zone while held.
+
+### Fixed
+- DisenchantDeck leaves your bags open when you pick Disenchant (closing them tainted the gamepad bar).
+- HealPad's macro names could collide and overwrite other macros.
+- The Suggested settings page and the layout undo were missing from the menu.
+- An old auction scan's timeout could cancel a newer scan.
+- The waypoint editor kept editing the right waypoint after the list changed; a hand-off follows the new active
+  waypoint; focus aura settings apply after a reload.
+
+### For addon authors
+- `ForeverNav.v1`: `Plan`, `PlanMeasured`, `Walk`, `SurfacesAt`, `Follow` and `PlayerFloor`.
+- `WayPad_Add`, `WayPad_Get` and `WayPad_Remove` work without WayPad, with stable ids; `DeckKit.Route.Summary`
+  gives a waypoint's trip.
+- Layouts from data (`DeckKit.UI.Build`, `UI.ShowLayout`, `DeckKit.Conditions`, `DeckKit.JSON`), welcome-window
+  steps (`DeckKit.Setup.AddStep`), and the dictation indicator's `Claim()` and Thinking state.
+
 ## 1.2.0-beta1 - 2026-11-13
 
 ### New

@@ -36,7 +36,19 @@ Hold its grip slot to read chat full-screen in a large font, and keep running wh
 
 ## WayPad
 
-Waypoints without a keyboard. Dial in coordinates with the d-pad (`✚`), then follow a floating arrow. Waypoints show on the map and minimap, and a list lets you pick, edit or remove them. Supports `/way 45.2 62.8`. With a TomTom-compatible waypoint addon installed, WayPad can hand waypoints to it instead.
+Waypoints without a keyboard. Dial in coordinates with the d-pad (`✚`), and the compass in the status bar shows the way. Waypoints show on the map and minimap, and a list lets you pick, edit or remove them. Supports `/way 45.2 62.8`. With a TomTom-compatible waypoint addon installed, WayPad can hand waypoints to it instead.
+
+## ForeverNav (routes)
+
+A waypoint across the world is reached leg by leg: walk to the zeppelin tower, take the zeppelin to Grom'gol, walk on. ForeverNav joins walks over the real terrain with the flights you've found, boats, zeppelins, lifts, the Deeprun Tram, portals and your Hearthstone. The compass shows each step, and the walk is drawn on the minimap (lilac dots) and the peek map (a lilac line), keeping to roads unless you turn that off. Rides you take teach it their real schedules. Its walking maps, travel data and route planner come from **Shortest Path Forever** by Cillian Berragan, with thanks; any addon can use it.
+
+## PackPad
+
+Your bags, controller first, on Blizzard's own gamepad bag window: the bag icons in their own column, the slots in one grid, item marks, and a full-screen bag peek on a grip slot with Pawn's upgrade arrows.
+
+## MarketDeck
+
+Auction house prices with nothing to press: a snapshot each time you open the auction house, and auction, vendor and disenchant values on item tooltips.
 
 ## DisenchantDeck
 
@@ -49,6 +61,7 @@ Laid-back controller fishing, built so you don't even have to watch the screen. 
 ## DeckHUD
 
 Interface tweaks for a handheld screen, each one switchable in the menu:
+- a **compass** in the status bar: your waypoint, Blizzard's map pin, the focused quest and your group on half the horizon around your facing
 - a **status bar** across the top of the screen: clock, FPS, latency, gold, bag space, durability and XP (with an XP line in place of Blizzard's bar), and with the optional **DeckTelemetry** from DeckKitAfterDark, the Steam Deck's battery, temperature, power and fan. You pick what goes where
 - a **square minimap** in the top-right corner, with the zone name on top and a choice of borders
 - a **thin chat frame** tucked into the bottom-left corner
