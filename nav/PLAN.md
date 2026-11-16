@@ -39,8 +39,9 @@ and API on it.
    `v1.PlanMeasured`: walk legs start as straight-line estimates, so it measures the walks the plan uses, plans again,
    and repeats until nothing is estimated (Durotar to Westfall: 13.4 min estimated, 16.7 measured; it tries the
    Ratchet boat on the way and rejects it). The Hearthstone and teleports count from where you stand; the bind point's
-   place is learned where you bind or land. Not yet: the ride observer (without a sighting a ride's wait is half its
-   period), party mages' portals.
+   place is learned where you bind or land. The ride observer (`Transport/Observer.lua`, ported) samples your rides
+   and records each route's schedule (account-wide): a seen ride's wait is its real next departure, an unseen one's
+   half its period. Not yet: party mages' portals.
 6. **Route tests**: Durotar to Westfall (zeppelin), the Undercity's rings and lifts, Thunder Bluff's lifts, a
    Stormwind canal walk, the Deeprun Tram, a flight the character hasn't found.
 7. **The API** for DeckKit: a route's legs (text, method, seconds), the next turn's position for a compass to aim

@@ -9,6 +9,8 @@ local DEFAULTS = {
     otherFaction = false,      -- plan with the other faction's boats and zeppelins too
     hearthMinimumSavings = 0,  -- seconds a Hearthstone must save over not using it (the planner's floor is 20)
     teleports = true,          -- plan with the hearthstone and the teleports this character knows
+    chat = false,              -- the library's own chat lines (a ride's schedule synced): off, ForeverNav has no window
+    debug = false,             -- the ride observer's raw trace (upstream's /path debug)
 }
 local CHAR_DEFAULTS = function() return { taxi = {}, taxiNames = {} } end
 
@@ -102,30 +104,51 @@ function ns.NearestDock()
     return nearest, yards
 end
 
--- The travel clock: listeners sampled once a second while something needs watching (a hearthstone's landing, for
--- now). Upstream keeps its own awake while you move, ride or follow a journey; ForeverNav only needs the minute after
--- a cast, so WakeTravel keeps it going for TRAVEL_AWAKE seconds.
-local TRAVEL_AWAKE = 75
-local travelListeners, travelTicker, awakeUntil = {}, nil, 0
+-- The travel clock: listeners (the ride observer, the hearthstone's landing) sampled once a second, as upstream's
+-- Core.lua runs it: while you're within 200 yd of a dock, a ride is being observed, you're on a taxi or moving, and
+-- for a few seconds after anything wakes it (TRAVEL_AWAKE after a hearth, the minute its landing may take).
+local TRAVEL_AWAKE, NEAR_DOCK = 75, 200
+local travelListeners, travelTicker, awakeUntil, moving = {}, nil, 0, false
 function ns.OnTravelTick(fn)
     travelListeners[#travelListeners + 1] = fn
 end
 
 local function TravelTick()
+    local dockID, yards = ns.NearestDock()
     for _, fn in ipairs(travelListeners) do
-        local ok, err = pcall(fn)
+        local ok, err = pcall(fn, dockID, yards)
         if not ok then geterrorhandler()(err) end
     end
-    if GetTime() > awakeUntil and travelTicker then
+    local active = (yards and yards <= NEAR_DOCK) or (ns.IsObservingRide and ns.IsObservingRide())
+        or UnitOnTaxi("player") or moving or GetTime() <= awakeUntil
+    if not active and travelTicker then
         travelTicker:Cancel()
         travelTicker = nil
     end
 end
+ns.TravelTick = TravelTick -- for tests: one tick by hand
 
-function ns.WakeTravel()
-    awakeUntil = GetTime() + TRAVEL_AWAKE
+function ns.WakeTravel(seconds)
+    awakeUntil = math.max(awakeUntil, GetTime() + (seconds or TRAVEL_AWAKE))
     if not travelTicker and C_Timer and C_Timer.NewTicker then
         travelTicker = C_Timer.NewTicker(1, TravelTick)
+    end
+end
+
+-- Moving, changing zone or coming out of a loading screen wakes the clock, which then decides whether to keep going.
+if CreateFrame then
+    local frame = CreateFrame("Frame")
+    if frame.RegisterEvent then
+        for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_CONTROL_GAINED", "PLAYER_CONTROL_LOST",
+            "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA", "PLAYER_STARTED_MOVING",
+            "PLAYER_STOPPED_MOVING" }) do
+            frame:RegisterEvent(event)
+        end
+        frame:SetScript("OnEvent", function(_, event)
+            if event == "PLAYER_STARTED_MOVING" then moving = true
+            elseif event == "PLAYER_STOPPED_MOVING" then moving = false end
+            ns.WakeTravel(2)
+        end)
     end
 end
 
@@ -140,6 +163,7 @@ function ns.DockLabel(dockID)
     return dock and (dock.name and dock.site and (dock.site .. ", " .. dock.name) or dock.site or dock.name) or "?"
 end
 
+-- The library's own chat lines (upstream's ride observer announces a synced schedule): only with ForeverNavDB.chat on.
 function ns.Print(message)
-    print("|cffb87aff" .. "ForeverNav:|r " .. tostring(message))
+    if ns.db.chat then print("|cffb87aff" .. "ForeverNav:|r " .. tostring(message)) end
 end
