@@ -49,7 +49,7 @@ end
 -- Guidance: where a point is, relative to the player
 --   state: "ok", "far" (another continent), "nopos" (can't read position here)
 --   yards, bearing (radians counter-clockwise from north), angle (counter-clockwise from facing)
--- W.guide, what the displays show, is the active waypoint's; or, while it has a route (Route.lua, MapzerothLib), the
+-- W.guide, what the displays show, is the active waypoint's; or, while it has a route (Route.lua, ForeverNav), the
 -- current leg's: its point is where that leg goes, `leg` says what it is ({ text, method, ride, index, count }) and
 -- `goal` is the waypoint's own guidance. Arriving is always the waypoint's.
 ------------------------------------------------------------------------
@@ -273,6 +273,7 @@ local function TickBody()
         g = lg
     end
     W.guide = g
+    if ns.Route then ns.Route.UpdateWalk(g) end -- the path on foot to it, for the peek map (ForeverNav)
     Each(tickFns, g)
     if W.debug and GetTime() >= debugNext then
         debugNext = GetTime() + 1

@@ -1,4 +1,4 @@
 # Optional: the dev addon from ~/Projects/AddonTools, only installed while developing.
 DeckDev
-# Optional: Mapzeroth's route planner (MapzerothLib.v1), a game-data library DeckKit may use (Route.lua).
-MapzerothLib
+# Optional: ForeverNav's routes and walks (ForeverNav.v1), our GPL routing library (Route.lua).
+ForeverNav

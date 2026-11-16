@@ -63,9 +63,10 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   game conditions (`Conditions.lua`, `DeckKit.Conditions`: quest taken, items carried...), map maths (`Map.lua`, `DeckKit.Map`:
   positions, world positions, bearings, facing), the waypoints (`Waypoints.lua`, `DeckKit.Waypoints`:
   list, guidance, arrival; WayPad is only their controller front end, DeckHUD's compass shows them), their
-  routes (`Route.lua`, `DeckKit.Route`: with MapzerothLib installed, a far waypoint is guided leg by leg,
+  routes (`Route.lua`, `DeckKit.Route`: with ForeverNav installed, a far waypoint is guided leg by leg,
   the guidance carries the step, and `Route.Summary(p)` gives other addons the trip; DeckAgent's
-  `set_waypoint` returns it), and
+  `set_waypoint` returns it; with ForeverNav installed, `Route.Walk()` is the path on foot to where the guidance
+  points, which MapDeck draws on the peek map), and
   in `Core.lua` the `DeckKit` global, per-module event buses, `DeckKit.Readable` (secret-value check),
   `DeckKit.TakeSticks` and `/deckkit`; `Override.lua` is `DeckKit.Override`, which shares pad buttons
   between modules, and `DeckKit.CrossbarButtons()`. A module lists
@@ -133,10 +134,10 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   dependencies. DeckKit is GPL-3.0-or-later (since 2026-11-15; MIT up to 1.2.0-beta1), so
   GPL code and data may come in too, credited in the file and in `LICENSE`; keeping a library a separate addon is
   still the default (ForeverNav, the guide addon) when other addons can use it. For travel routing:
-  **MapzerothLib** (`MapzerothLib.v1.RouteTo(mapID, x, y, name)`), the library half of Mapzeroth, split
-  out in Ben's fork (~/Projects/Mapzeroth, proposed upstream as tr0tsky0/Mapzeroth#29). FarstriderLib
-  was tried first and dropped: Forever's data in it lacks the Orgrimmar–Grom'gol zeppelin. Everything else
-  stays agnostic.
+  **ForeverNav** (~/Projects/ForeverNav, our GPL library on Shortest Path Forever's walking maps, timetables
+  and planner): `ForeverNav.v1.Plan(from, to, opts)` for the legs, `v1.Walk` for the path on foot.
+  MapzerothLib (Ben's fork of Mapzeroth) and FarstriderLib were used before it and dropped. Settings name what a
+  feature does, never the library behind it. Everything else stays agnostic.
 - Credit borrowed code, in the file header and in `LICENSE`. `DeckKit/Input.lua` is adapted from
   BagPad's MIT-licensed `Input/Controller.lua`; `DeckKit/Override.lua` and
   `DeckSundries/WandShoot.lua` from Improved Forever's (MIT) `Override.lua` and `WandShoot.lua`.

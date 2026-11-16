@@ -6,7 +6,7 @@
 ## Author: Ben Fillmore
 ## SavedVariables: DeckKitDB
 ## SavedVariablesPerCharacter: DeckKitCharDB
-## OptionalDeps: DeckDev, MapzerothLib
+## OptionalDeps: DeckDev, ForeverNav
 
 Core.lua
 Map.lua

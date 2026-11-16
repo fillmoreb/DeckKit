@@ -83,6 +83,79 @@ end
 -- Minimap
 ------------------------------------------------------------------------
 
+------------------------------------------------------------------------
+-- The walk on the minimap: a lilac dotted trail along the path on foot to where the guidance points
+-- (DeckKit.Route.Walk, with ForeverNav installed), from you onward, inside the minimap only. MapDeck draws the same
+-- path on the peek map.
+------------------------------------------------------------------------
+
+local crumbs = {}
+local crumbFrame
+local CRUMB_PX, CRUMB_GAP_PX = 5, 9 -- dot size and the gap between dots, on screen
+local CRUMB_TEXTURE = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask" -- a white disc
+local LILAC = DeckKit.COLORS.LILAC
+
+local function Crumb(i)
+    local t = crumbs[i]
+    if not t then
+        if not crumbFrame then
+            crumbFrame = CreateFrame("Frame", nil, Minimap)
+            crumbFrame:SetAllPoints(Minimap)
+            crumbFrame:SetFrameLevel(Minimap:GetFrameLevel() + 9) -- under the waypoint pins (+10)
+        end
+        t = crumbFrame:CreateTexture(nil, "OVERLAY")
+        t:SetTexture(CRUMB_TEXTURE)
+        t:SetVertexColor(LILAC[1], LILAC[2], LILAC[3], 0.9)
+        t:SetSize(CRUMB_PX, CRUMB_PX)
+        crumbs[i] = t
+    end
+    return t
+end
+
+local function UpdateCrumbs(view, radius, rotates, square)
+    local n = 0
+    local walk = DeckKit.Route and DeckKit.Route.Walk and DeckKit.Route.Walk()
+    local me = ns.player
+    if walk and view and me.continent == walk.continent and me.north and not (rotates and not me.facing) then
+        local turn = rotates and me.facing or 0
+        local cosT, sinT = math.cos(turn), math.sin(turn)
+        local perYard = radius / view
+        local step = (CRUMB_PX + CRUMB_GAP_PX) / perYard -- yards between dots
+        local edge = radius - CRUMB_PX
+        -- From you along the rest of the path; a dot every `step` yards, while within reach of the minimap.
+        local ax, ay = me.north, me.west
+        local at, travelled = step, 0 -- the next dot's distance along the current stretch: the first a gap ahead of you
+        for i = walk.next or 2, #walk.points do
+            local b = walk.points[i]
+            local dN, dW = b.x - ax, b.y - ay
+            local len = math.sqrt(dN * dN + dW * dW)
+            while at <= len do
+                local f = len > 0 and at / len or 0
+                local pn, pw = ax + dN * f - me.north, ay + dW * f - me.west
+                -- On screen: north up and west left, turned with you when the minimap rotates.
+                local sx, sy = -pw * perYard, pn * perYard
+                sx, sy = sx * cosT + sy * sinT, -sx * sinT + sy * cosT
+                local inside = square and (math.abs(sx) <= edge and math.abs(sy) <= edge)
+                    or (not square and sx * sx + sy * sy <= edge * edge)
+                if inside then
+                    n = n + 1
+                    local t = Crumb(n)
+                    t:ClearAllPoints()
+                    t:SetPoint("CENTER", Minimap, "CENTER", sx, sy)
+                    t:Show()
+                end
+                at = at + step
+            end
+            at = at - len -- carried into the next stretch
+            travelled = travelled + len
+            if travelled > view * 3 then break end -- far past the minimap's reach
+            ax, ay = b.x, b.y
+        end
+    end
+    for i = n + 1, #crumbs do crumbs[i]:Hide() end
+end
+
+
 local minipins = {}
 
 local function MiniPin(i)
@@ -144,6 +217,7 @@ function Pins.UpdateMinimap()
         end
     end
     for i = #ns.DrawnPoints() + 1, #minipins do minipins[i]:Hide() end
+    UpdateCrumbs(view, radius, rotates, square)
 end
 
 function Pins.Refresh()

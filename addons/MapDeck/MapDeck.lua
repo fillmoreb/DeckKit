@@ -5,6 +5,8 @@
 -- arrow that turns with you), your party, quests (? / ! / in progress), the tracked quest's
 -- areas, WayPad's waypoints, the game's map pin, where a guard pointed you, flight masters, dungeon
 -- entrances, your raid, zone names on a continent, your corpse and (while dead) the spirit healer.
+-- With ForeverNav installed, the walk to where the waypoint guidance points (DeckKit.Route.Walk) is drawn too: a lilac
+-- path over the real ground from you to the next leg's end, so you can follow it while the peek is up.
 -- It shows the map you're standing in and leaves both sticks alone, so you keep full control of
 -- your character while it's up. (It used to take the sticks for a right-stick zoom out to the
 -- continent; moving freely mattered more, so the zoom went.)
@@ -18,6 +20,7 @@ local MARGIN, HEADER = 24, 44
 
 local frame, canvas, art, marks, blob, title, coords
 local dots, backs = {}, {}
+local walkLines, walkEdges = {}, {} -- the walk's path: lilac lines over dark edges, pooled
 local playerArrow
 local mapID, homeMap -- shown map; the map you're standing in
 local layerW, layerH = 1, 1
@@ -132,6 +135,60 @@ local function Dot(i, x, y, size, r, g, b, a, atlas, back, tint)
     return t
 end
 
+-- The walk (DeckKit.Route.Walk): a line from you to the next corner, then corner to corner to its end. The corners
+-- are placed with the markers (every half second); the first line's start follows you every frame (WalkFromYou).
+local WALK_PX, EDGE_PX = 4, 7
+local LILAC = DeckKit.COLORS.LILAC
+local walkShown = 0 -- lines drawn
+
+local function WalkLine(i, x1, y1, x2, y2)
+    local scale = art:GetScale()
+    local edge = walkEdges[i] or marks:CreateLine(nil, "ARTWORK", nil, 5)
+    local line = walkLines[i] or marks:CreateLine(nil, "ARTWORK", nil, 6)
+    walkEdges[i], walkLines[i] = edge, line
+    for _, l in ipairs({ edge, line }) do
+        l:SetStartPoint("TOPLEFT", art, x1 * layerW, -y1 * layerH)
+        l:SetEndPoint("TOPLEFT", art, x2 * layerW, -y2 * layerH)
+        l:Show()
+    end
+    edge:SetThickness(EDGE_PX / scale)
+    edge:SetColorTexture(0, 0, 0, 0.55)
+    line:SetThickness(WALK_PX / scale)
+    line:SetColorTexture(LILAC[1], LILAC[2], LILAC[3], 0.95)
+end
+
+local function DrawWalk()
+    local n = 0
+    local walk = DeckKit.Route and DeckKit.Route.Walk and DeckKit.Route.Walk()
+    if walk then
+        local MapPosition = DeckKit.Map.MapPosition
+        local px, py = UnitPos("player", mapID)
+        local lx, ly = px, py -- the line runs on from you
+        for i = walk.next or 2, #walk.points do
+            local p = walk.points[i]
+            local x, y = MapPosition(walk.continent, p.x, p.y, mapID)
+            if x and lx then
+                n = n + 1
+                WalkLine(n, lx, ly, x, y)
+            end
+            lx, ly = x, y
+        end
+    end
+    for i = n + 1, walkShown do
+        walkLines[i]:Hide()
+        walkEdges[i]:Hide()
+    end
+    walkShown = n
+end
+
+-- The first line starts where you are now, between the half-second redraws.
+local function WalkFromYou(x, y)
+    if walkShown > 0 and x then
+        walkLines[1]:SetStartPoint("TOPLEFT", art, x * layerW, -y * layerH)
+        walkEdges[1]:SetStartPoint("TOPLEFT", art, x * layerW, -y * layerH)
+    end
+end
+
 -- The current waypoint's pin bounces so it's easy to find (moved in OnUpdate, between redraws).
 local bouncing
 
@@ -145,6 +202,7 @@ end
 local function DrawMarkers()
     local n = 0
     bouncing = nil
+    DrawWalk()
     -- Quests on this map
     local ok, quests = pcall(C_QuestLog.GetQuestsOnMap, mapID)
     if ok and type(quests) == "table" then
@@ -307,6 +365,7 @@ local function DrawPlayer()
         playerArrow:SetSize(s, s)
         playerArrow:ClearAllPoints()
         playerArrow:SetPoint("CENTER", art, "TOPLEFT", x * layerW, -y * layerH)
+        WalkFromYou(x, y)
         local okF, facing = pcall(GetPlayerFacing)
         playerArrow:SetRotation(okF and Readable(facing) and facing or 0)
         playerArrow:Show()

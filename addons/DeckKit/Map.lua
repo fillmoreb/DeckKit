@@ -58,6 +58,26 @@ end
 
 -- A point of one map on another map: a parent (zone -> continent) or a child (zone -> city). nil when
 -- it's off that map.
+-- WorldPosition the other way: a continent's yards (north, west) as 0-1 on mapID, or nil when the spot is off it.
+function Map.MapPosition(continent, north, west, mapID)
+    if not (C_Map and C_Map.GetMapPosFromWorldPos and CreateVector2D) then return end
+    local ok, _, pos = pcall(C_Map.GetMapPosFromWorldPos, continent, CreateVector2D(north, west), mapID)
+    if not ok or not pos then return end
+    local x, y = pos:GetXY()
+    if not (Readable(x) and Readable(y)) or x < 0 or x > 1 or y < 0 or y > 1 then return end
+    return x, y
+end
+
+-- The map a continent's spot (north, west yards) is best shown on, and its 0-1 place there: uiMapID, x, y, or nil.
+function Map.FromWorld(continent, north, west)
+    if not (C_Map and C_Map.GetMapPosFromWorldPos and CreateVector2D) then return end
+    local ok, uiMap, pos = pcall(C_Map.GetMapPosFromWorldPos, continent, CreateVector2D(north, west))
+    if not ok or not Readable(uiMap) or not pos then return end
+    local x, y = pos:GetXY()
+    if not (Readable(x) and Readable(y)) then return end
+    return uiMap, x, y
+end
+
 function Map.Translate(fromMap, x, y, toMap)
     if fromMap == toMap then return x, y end
     if not (C_Map and C_Map.GetMapRectOnMap) then return end
