@@ -29,14 +29,16 @@ ForeverNav stands on other people's work, and says so everywhere it can.
 
 - **Data sync: done.** `tools/sync_spf.py` takes Shortest Path Forever's walking maps and routing data from a
   release, checks them, and records the release in [UPSTREAM.json](UPSTREAM.json).
-- Reader, router, floor tracking, API: next ([PLAN.md](PLAN.md)).
+- **Reader: done.** `ForeverNav.v1.SurfacesAt(map, x, y)`: the walkable surfaces at a point.
+- Router, floor tracking, the rest of the API: next ([PLAN.md](PLAN.md)).
 
 ## Layout
 
 - `addon/ForeverNav/`: the addon. `Nav/` and `Data/` are synced (never edited by hand); the code goes beside them.
 - `tools/sync_spf.py`: the data sync. `tools/casc.py`: reads Forever's own files from Blizzard's CDN (from the first
   research pass; for baking our own maps one day, if ever needed).
-- `tests/`: Lua 5.1 tests, run from the repo root (`lua5.1 tests/test_data_loads.lua`).
+- `tests/`: run from the repo root: `lua5.1 tests/test_data_loads.lua` (the data loads), and
+  `python3 tests/harness.py` (the addon loaded headless in Lua 5.1 through lupa: `pip install lupa`).
 - `notes/`: research. `cache/`, `vendor/` (ignored): downloads.
 
 ## Syncing the data

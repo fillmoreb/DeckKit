@@ -20,9 +20,10 @@ and API on it.
 
 1. **Data sync** — done. 11 data files and 3 walking maps (Eastern Kingdoms, Kalimdor, Zephras Isle) from v1.37.1,
    19.7 MB; `tests/test_data_loads.lua`.
-2. **The reader.** Decode one cluster (an ADT tile) of a walking map: grid, heights, floors, graph, from the format 3
-   description in the Nav files' headers and Shortest Path Forever's `Routing/PathGrid.lua`. Check in game: the
-   surfaces under where a character stands, against its real place.
+2. **The reader** — done. `Routing/PathGrid.lua` ported whole (only the global renamed); `ForeverNav.v1.SurfacesAt`.
+   Headless (`tests/harness.py`, lupa): all 14 lift landings found at their recorded heights, within 16 yd of the
+   shaft. In game, the same answers through the client's own decoding (Rektagho, Valley of Trials: ground at 44).
+   A tile's first decode is 47 ms unsliced: step 4 decodes ahead under the frame budget, as upstream does.
 3. **The walking search** (`Routing/Path.lua`, `PathJobs.lua`): A* over the cluster graph, run as frame-budgeted jobs.
 4. **The floor rule** (`Routing/Floor.lua`): candidate surfaces kept while the map connects them.
 5. **The planner** (`Routing/Planner.lua`): walks joined with flights, boats, zeppelins, lifts, the tram, portals and

@@ -1,0 +1,14 @@
+## Interface: 16001
+## Title: ForeverNav
+## Notes: The fastest way anywhere in WoW: Forever, as a library: walking routes over the real terrain, flights, boats, zeppelins, lifts, the tram and portals. Walking maps and travel data from Shortest Path Forever by Cillian Berragan.
+## Author: Ben Fillmore
+## Version: @project-version@
+## Category: Libraries
+## X-License: GPL-3.0-or-later
+## X-Credits: Shortest Path Forever (https://github.com/cjber/shortest-path-forever) by Cillian Berragan: walking maps, travel data and the router this one is ported from
+
+Core.lua
+Data\Data.xml
+Nav\Nav.xml
+Routing\PathGrid.lua
+API.lua
