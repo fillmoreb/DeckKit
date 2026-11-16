@@ -80,7 +80,7 @@ AI did the typing. I did the Stack Overflow searching. Old habits. Seriously, of
 
 ## Credits and license
 
-MIT License. Controller input is adapted from **BagPad** (MIT, © 2026 Chris); the shared button overrides, wand shoot and the controller icon list are adapted from **Improved Forever** (MIT, © 2026 markg).
+GNU General Public License, version 3 or later (releases up to 1.2.0-beta1 were MIT). Controller input is adapted from **BagPad** (MIT, © 2026 Chris); the shared button overrides, wand shoot and the controller icon list are adapted from **Improved Forever** (MIT, © 2026 markg).
 
 ---
 

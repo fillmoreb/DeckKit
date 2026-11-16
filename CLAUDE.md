@@ -130,7 +130,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   (nil = ask again shortly), as an optional dependency (`## OptionalDeps: Pawn`); see `PackPad/Peek.lua`.
   **Exception: game-data libraries** (Ben, 2026-11-15). Addons whose job is supplying game data we'd
   otherwise have to rebuild, like Pawn's stat weights, can be used through their public API as optional
-  dependencies. Call their API; never copy their code or data into DeckKit. For travel routing:
+  dependencies. DeckKit is GPL-3.0-or-later (since 2026-11-15; MIT up to 1.2.0-beta1), so
+  GPL code and data may come in too, credited in the file and in `LICENSE`; keeping a library a separate addon is
+  still the default (ForeverNav, the guide addon) when other addons can use it. For travel routing:
   **MapzerothLib** (`MapzerothLib.v1.RouteTo(mapID, x, y, name)`), the library half of Mapzeroth, split
   out in Ben's fork (~/Projects/Mapzeroth, proposed upstream as tr0tsky0/Mapzeroth#29). FarstriderLib
   was tried first and dropped: Forever's data in it lacks the Orgrimmar–Grom'gol zeppelin. Everything else

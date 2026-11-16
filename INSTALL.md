@@ -114,7 +114,7 @@ Its [INSTALL.md](https://github.com/fillmoreb/DeckKitAfterDark/blob/main/INSTALL
 
 DeckKit comes with artwork for WoW: Forever's Steam shortcut, in `deck-setup/wowforever-art/`: a cover,
 a wide capsule, a banner, a logo and an icon. **The art is AI-generated** unofficial fan art, for personal,
-noncommercial use, and DeckKit's MIT License doesn't cover it: see
+noncommercial use, and DeckKit's license (the GPL) doesn't cover it: see
 [its terms](deck-setup/wowforever-art/README.md). Steam can't know a
 non-Steam shortcut's art, so this fills the gap. Download the folder from GitHub (or take it from a copy of the repo),
 then in **Desktop Mode**, in the Steam library, right-click your WoW: Forever shortcut:
