@@ -12,6 +12,7 @@
 Core.lua
 Services.lua
 Data\Data.xml
+Fixes.lua
 Nav\Nav.xml
 Routing\PathGrid.lua
 Routing\Path.lua

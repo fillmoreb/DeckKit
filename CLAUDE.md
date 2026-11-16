@@ -226,4 +226,5 @@ when Ben asks for a release; pushing a tag publishes to CurseForge.
   `UPSTREAM.json`), its headless tests (`lua5.1 tests/test_data_loads.lua` and `python3 tests/harness.py`, from
   `nav/`, needs `lupa`) and its plan. `addons/ForeverNav` is the addon: it does **not** depend on the DeckKit core
   (any addon may use it), so it doesn't use `DeckKit.NewModule`; keep it that way. Its `Data/` and `Nav/` are synced,
-  never edited; its `Routing/` and `Transport/` files are upstream's as written (credited) so fixes port from a diff.
+  never edited (corrections to their data go in `addons/ForeverNav/Fixes.lua`, each guarded on the bad value so a sync
+  that fixes it retires it; we don't send fixes upstream); its `Routing/` and `Transport/` files are upstream's as written (credited) so fixes port from a diff.
