@@ -1,0 +1,97 @@
+{
+  "source": "https://github.com/cjber/shortest-path-forever",
+  "release": "v1.37.1",
+  "version": "v1.37.1",
+  "commit": "3ab0dd3a91e186c049e5ba0da3680bfe956508ee",
+  "client_builds": [
+    "1.60.1.70862",
+    "1.60.1.70938"
+  ],
+  "nav_format": 3,
+  "maps": {
+    "0": {
+      "format": 3,
+      "counts": {
+        "graph": 736,
+        "grid": 736,
+        "height": 736,
+        "floor": 472,
+        "terrain": 454
+      }
+    },
+    "1": {
+      "format": 3,
+      "counts": {
+        "graph": 979,
+        "grid": 979,
+        "height": 979,
+        "floor": 636,
+        "terrain": 624
+      }
+    },
+    "2991": {
+      "format": 3,
+      "counts": {
+        "graph": 25,
+        "grid": 25,
+        "height": 25,
+        "floor": 25,
+        "terrain": 25
+      }
+    }
+  },
+  "synced": "2026-11-16T01:22:05Z",
+  "files": {
+    "Data/Heights.lua": "571ce46c6fc65b17075309711251f4429d877f955b4c2e62bd42e0b6ad61c7f9",
+    "Data/Portals.lua": "bb522d2da61d09be627bfb10ac60676369d07c6601554ce40d7d640030845e0a",
+    "Data/RoadCells.lua": "6bb20a5b4d4c163f905a176d4dbc898b835034d077d5bd3b8a1d85c1db813f7a",
+    "Data/RoadEdges.lua": "b112a9918e76a77d79946d1d1707653587b5d9533f16d4092c0137596786f50f",
+    "Data/Routes.lua": "45efecee8796c72837270e0eab23a81471dfe5bf464c17c72bd16991fd7248a0",
+    "Data/Taxi.lua": "54f8c98e1e01e934d35801ac403baa630b72d131842636e21cda623ab6064fe1",
+    "Data/Teleports.lua": "8442128f522156f52628c953b0aeaf54a4c9742368ce718db461ca8110449a47",
+    "Data/TownAreas.lua": "0990228cea131497209dd21f62898bfa824bd7970adef05ea76030d78d782e77",
+    "Data/Transports.lua": "0c15464a33706bc6d5698e2e26225e28983d685bf4d08fa8fe6f2d8087b8c498",
+    "Data/Walks.lua": "e0bd93e340a59dc2943d956d5a70ddf2264a6e67a252e20a2e13760560f14b4d",
+    "Data/Zones.lua": "e80a1c5bf6daae6e46c1b57221497f160b5634f05870123f747be5527bd2fae7",
+    "Nav/Nav.xml": "8c0ab583fe3f865c1d13cfde8459c2a03236df68a9d91ae015de36779afa7f67",
+    "Nav/Nav0.lua": "08334811bb6e1430efdbfdb26f6833be6a9a220fd8853c53c126e45cff3377d5",
+    "Nav/Nav0_1.lua": "4b64316321baa0ce1c3c0481c7d6bfb6c8384109cacd1c9b8453dc60d292f40f",
+    "Nav/Nav0_10.lua": "1409919e36ce49ddfc0b92c7a1db720fb1553cecf2478b2ee0490fb29c704955",
+    "Nav/Nav0_11.lua": "8b0ef94f838bc2c8986d001cbf70dbb48d0a7181c6d8ae01d1089fb43d81f6ea",
+    "Nav/Nav0_12.lua": "3ce93482c033f787256d04773601090d70e52c67207d0c08f6af6666e89ffae6",
+    "Nav/Nav0_13.lua": "38c1052fd1c7d29d4cb5645d05a9fd5726605a8ffdfad3065be0c2f2e3496156",
+    "Nav/Nav0_14.lua": "eb1420096a7181303b4d0cdfdbef81d709ccf3bb72fba64cd896f5f86ecff1c0",
+    "Nav/Nav0_15.lua": "50ab0c151ced725f8c8457a7e0e1f6dc91ce5cb3077345d6b29933472a44be6a",
+    "Nav/Nav0_2.lua": "8d6312113577d20b7a94eac83b2bd8979d22125d058aba3935ef876b0f67a9db",
+    "Nav/Nav0_3.lua": "e3e833fa7edef3b032eb6a98aedc81bb24b8627a62efd2ea2f0fe2658f9daad8",
+    "Nav/Nav0_4.lua": "797967cd63a53a4e09c52dadc5198a2fbdb22db7c30f910e35f0d64b22357da9",
+    "Nav/Nav0_5.lua": "c0170e1104ae90aa6793a0402688bb6c67953131aeffdf8da13f0a34cc4351b0",
+    "Nav/Nav0_6.lua": "12e01c01af21d677e5458404aa16b9536952e597b67852c4be7c0c3c87b50630",
+    "Nav/Nav0_7.lua": "0b41db1f3e1a5d3abb14d3ec790125cfef9e49d24b4ea6554284e7d06f532593",
+    "Nav/Nav0_8.lua": "da04102bc9ffbdc91db6ff00ece46e0d3321162f4bd41d15072cec8934fc434e",
+    "Nav/Nav0_9.lua": "d59825b004c4e1b13083a556f3ac8fa365e919f10e968b40da8363185b1c4f6b",
+    "Nav/Nav1.lua": "4602dd6ac4bf4e1f258fce5ce11bfe86f631ff1795582c0d60c7af567827313c",
+    "Nav/Nav1_1.lua": "80b87da96737c62dcd6b72c23a9ad049d57eb55633b541f1e5e91ba648c1b64a",
+    "Nav/Nav1_10.lua": "3e8e222159b2e084fed62a7d8c514a10d76143140c8256268f885a5c38e2365b",
+    "Nav/Nav1_11.lua": "b4bf09d550ab53d49f4c98fb45b003b5450c3074ac5a33f2a324b2f9b0c1e975",
+    "Nav/Nav1_12.lua": "cb6ae0ebf638ff4b90c0067025961d8b1acd25a033158827a3bc3b774e0816f8",
+    "Nav/Nav1_13.lua": "eaec17e6a07355ba273ebe003a149c3b4d4b59f820462b9da830cab616f837ee",
+    "Nav/Nav1_14.lua": "d56624552d5da8151cb723a3412ba920f812775533f26dd7c279b3e8f3de7826",
+    "Nav/Nav1_15.lua": "f94e90d73d7d659d2846746ecef43eb19286522ec32574bbc46a4b4f5fe710c3",
+    "Nav/Nav1_16.lua": "b3119471431e1f400502ebd3beddde64eeec93664e57b3553e8f9569140c1deb",
+    "Nav/Nav1_17.lua": "3db0bf382db946dc449384049295649fc277f15b13cba80424444f1c37d11b7f",
+    "Nav/Nav1_18.lua": "9808a67f9aa704ae3efb4362dfedd58fe4dab5c32c7d894f063b8df9abfb584b",
+    "Nav/Nav1_19.lua": "85bc14b0c3e2d1f2d0dacb3db4d882b68779765e66ac12b9a976ef7df7f1fb01",
+    "Nav/Nav1_2.lua": "4cdeb8f018a69ea35787b85c74eb2c294ddc7da07a8bf503cb375850b0cafb71",
+    "Nav/Nav1_20.lua": "69ebbddad4576df5f633cd7765febe14d4354621832a2caa247080add356a818",
+    "Nav/Nav1_3.lua": "55161b1d85a9cddf312c8b5431e371b46d1b8e88e5c07ece5c69e25d88d16450",
+    "Nav/Nav1_4.lua": "4485dad872f1b92477e479acbc10bc90d4ebb8556809b3ece35447c0a87bba74",
+    "Nav/Nav1_5.lua": "a5743e251ca85b702af7ce387c40fcd39f9f76977de95c4b0f472e385dbbfec4",
+    "Nav/Nav1_6.lua": "998ee20be0fd623766f025f03924dd330bb14e1a97e6853e846545af4073b092",
+    "Nav/Nav1_7.lua": "9f74cd6ea3dd2bc007ec58e28b3b2c307159b9f3141921d6d12877f2944f2818",
+    "Nav/Nav1_8.lua": "74cfecef81ca5b070a5e5db4b481bac209aa7618daaa9a822ec4bdfec86f8bd2",
+    "Nav/Nav1_9.lua": "7c4b26b5a02ab8c13adff7c61c4070bdc7acc7bb257d3f2cdb71695bb7c15290",
+    "Nav/Nav2991.lua": "51409a638ee11fa352c829d016c0d20edfcabb7fe8d3137f3cbb90c271dcca61",
+    "Nav/Nav2991_1.lua": "1f739b34890366de3577e81bc3d9d3b8b98bc3739d9390142e205f9a6fff33e0"
+  }
+}

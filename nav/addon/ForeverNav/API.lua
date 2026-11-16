@@ -1,0 +1,131 @@
+-- ForeverNav.v1: ForeverNav's public API, for any addon.
+--
+-- Coordinates are UnitPosition's frame: `map` the instance map (0 Eastern Kingdoms, 1 Kalimdor, 2991 Zephras Isle),
+-- x north and y west in world yards (UnitPosition returns x, y, z, map in that order).
+--
+--   ForeverNav.v1.SurfacesAt(map, x, y) -> { { z, kind }, ... } | nil, reason
+--       The walkable surfaces at a point, lowest first: the walking map's cell there holds its base surface and, where
+--       surfaces stack (a bridge over a road, a city under ruins, both ends of a lift), the floors above or below it.
+--       z is the surface's height in yards (to the map's 2-yard step), kind "ground", "water" or "steep" (walkable
+--       downhill only). Reasons: "nodata" (no walking map for that map), "outside" (off the map's area).
+--
+--   ForeverNav.v1.Walk(map, from, to, callback[, opts]) -> handle | nil, reason
+--       The walking route between two points on one map: from and to are { x, y[, z] } (z picks the floor: without
+--       it, the cheapest surface near the point). The search runs a little each frame (2 ms) and calls
+--       callback(route) or callback(nil, reason) when done: route.points { { x, y, z }, ... } start to goal (drawn:
+--       corners only), route.yards the running cost in yards (a swum yard counts 3 unless opts.waterWalking),
+--       route.wet the yards over water. Roads are followed: a yard off the road counts 1.5 while the walk is chosen
+--       (Shortest Path Forever's "Follow roads"), so a walk takes the road when that adds less than half again to it,
+--       and doesn't hug the foot of every cliff the way the shortest line does. opts.roads = false: the shortest line. Reasons: "nodata", "outside", "offmesh" (a point off every surface),
+--       "unreachable", "error". Searches wait out combat. handle:Cancel() drops it.
+--
+--   ForeverNav.v1.Plan(from, to[, opts]) -> plan | nil, reason
+--       The quickest way from one point to another anywhere in the world, as this character: walks joined with
+--       flights (between the flight points it has found), boats, zeppelins, lifts, the tram and portals, with each
+--       ride's wait from the timetables. from and to are { map, x, y }. opts: name (the destination's name in the
+--       steps), faction ("Horde"/"Alliance", default the player's), walkSpeed (yards a second, default the player's),
+--       assumeFlights (true: every flight point counts as found), otherFaction (the other side's boats too).
+--       plan.seconds is the whole trip; plan.legs[i] = { mode ("walk", "flight", "boat", "zeppelin", "lift",
+--       "tram", "portal", "passage", "teleport"), text ("Take the zeppelin to Grom'gol"), from and to { map, x, y },
+--       seconds (the leg itself), wait (seconds waiting for a ride before it) }. A walk's time is estimated from the
+--       baked walks or the straight line: v1.Walk measures one. Plans in the caller's frame (a few ms).
+--       Reasons: "invalid", "no route".
+--
+-- v1 only grows: new functions and fields may appear, nothing is renamed or removed.
+local _, ns = ...
+
+local Grid = ns.PathGrid
+
+local KIND = { [1] = "ground", [2] = "water", [3] = "steep" }
+
+local v1 = {}
+
+function v1.GetVersion()
+    return 1, 0
+end
+
+function v1.SurfacesAt(map, x, y)
+    if type(map) ~= "number" or type(x) ~= "number" or type(y) ~= "number" then return nil, "invalid" end
+    local st = Grid.State(map)
+    if not st then return nil, "nodata" end
+    local k, lc = Grid.locate(st, x, y)
+    if not k then return nil, "outside" end
+    -- Decoded whole in this frame (Quiet): a caller outside a search must never be paused by the decoder's slicing.
+    local val = Grid.Quiet(Grid.grid, st, k)
+    if not val then return nil, "nodata" end
+    local z, at = st.z[k], st.at[k]
+    local out = {}
+    if val[lc + 1] ~= 0 then
+        out[#out + 1] = { z = z[lc + 1], kind = KIND[val[lc + 1]] or "ground" }
+    end
+    local node = at and at[-(lc + 1)]
+    while node and at[node + 1] == lc do
+        out[#out + 1] = { z = z[node + 1], kind = KIND[val[node + 1]] or "ground" }
+        node = node + 1
+    end
+    table.sort(out, function(a, b) return a.z < b.z end)
+    return out
+end
+
+local Path = ns.Path
+
+-- The search's hazard profile (upstream: Journey/Hazards.lua, which also steers round hostile towns and zones far
+-- above your level), with nothing charged and only its Follow roads switch on.
+local ROADS = {
+    key = "foreverNav:roads",
+    roads = true,
+    Point = function() return 1 end,
+    Charged = function() return false end,
+    Near = function() return false end,
+    Chord = function() return 1 end,
+}
+
+local function point(p)
+    return type(p) == "table" and type(p.x) == "number" and type(p.y) == "number"
+        and { x = p.x, y = p.y, z = type(p.z) == "number" and p.z or nil } or nil
+end
+
+function v1.Walk(map, from, to, callback, opts)
+    local a, b = point(from), point(to)
+    if type(map) ~= "number" or not a or not b or type(callback) ~= "function" then return nil, "invalid" end
+    if not Grid.State(map) then return nil, "nodata" end
+    local job = Path.Find(map, a, b, function(points, cost)
+        if not points then
+            callback(nil, cost)
+            return
+        end
+        local route = { yards = cost, wet = points.wet or 0, points = {} }
+        for i, p in ipairs(points) do route.points[i] = { x = p.x, y = p.y, z = p.z } end
+        callback(route)
+    end, opts and opts.waterWalking or false, not (opts and opts.roads == false) and ROADS or nil)
+    return { Cancel = function() Path.Cancel(job) end }
+end
+
+local function place(p)
+    return type(p) == "table" and type(p.map) == "number" and type(p.x) == "number" and type(p.y) == "number"
+        and { map = p.map, x = p.x, y = p.y } or nil
+end
+
+function v1.Plan(from, to, opts)
+    local a, b = place(from), place(to)
+    if not a or not b then return nil, "invalid" end
+    local options = ns.Context.Options(a, b, opts)
+    local plan = ns.Planner.Plan(options)
+    if not plan or not plan.legs or #plan.legs == 0 then return nil, "no route" end
+    local goalName = opts and opts.name
+    local out = { seconds = (plan.arrive - options.now) / 1000, legs = {} }
+    for i, leg in ipairs(plan.legs) do
+        leg.next = plan.legs[i + 1]
+        out.legs[i] = {
+            mode = leg.mode,
+            text = ns.Steps.Text(leg, goalName),
+            from = { map = leg.from.map, x = leg.from.x, y = leg.from.y },
+            to = { map = leg.to.map, x = leg.to.x, y = leg.to.y },
+            seconds = (leg.arrive - leg.depart) / 1000,
+            wait = (leg.wait or 0) / 1000,
+        }
+    end
+    return out
+end
+
+ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })

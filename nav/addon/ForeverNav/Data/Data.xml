@@ -1,0 +1,14 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- Shortest Path Forever v1.37.1's routing data, in its load order. tools/sync_spf.py writes it. -->
+	<Script file="Routes.lua"/>
+	<Script file="Transports.lua"/>
+	<Script file="Taxi.lua"/>
+	<Script file="Portals.lua"/>
+	<Script file="Teleports.lua"/>
+	<Script file="Zones.lua"/>
+	<Script file="TownAreas.lua"/>
+	<Script file="Walks.lua"/>
+	<Script file="RoadCells.lua"/>
+	<Script file="RoadEdges.lua"/>
+	<Script file="Heights.lua"/>
+</Ui>
