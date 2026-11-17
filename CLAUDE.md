@@ -195,8 +195,12 @@ The dev tooling lives in **~/Projects/AddonTools** (read its README): the **Deck
   in ~/Projects/AddonTools with tests, not here. The one exception is the real key press for secure
   code above.
 - DeckKit must work without DeckDev: it's an optional dependency (`## OptionalDeps: DeckDev`).
-- There is no automated test harness for DeckKit itself yet. Behavior has to be verified in the
-  game; say plainly when a change hasn't been tested in-game yet.
+- Offline scenarios: `tests/run.sh` runs `tests/test_*.lua` in AddonTools' harness (the core's real files
+  against a stand-in client: geometry, pad presses, keys through override bindings, secure snippets and
+  SecureActionButtons recorded in `H.actions`; see AddonTools' README). Add a scenario when changing a window's
+  behaviour, the picker, chords or anything secure; run it before deploying. It can't show rendering, taint
+  or Steam Input, so behaviour still gets verified in the game: say plainly when a change has only passed
+  offline.
 
 ## Releasing
 
