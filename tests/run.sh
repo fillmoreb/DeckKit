@@ -9,7 +9,7 @@ tools="${ADDONTOOLS:-$here/../AddonTools}"
 [[ -x "$tools/harness/harness.sh" ]] || { echo "tests: no harness at $tools/harness (set ADDONTOOLS)" >&2; exit 2; }
 if (($#)); then scenarios=("$@"); else scenarios=("$here"/tests/test_*.lua); fi
 # The addons the scenarios load, in dependency order.
-addons=(DeckKit PadTouchGrid)
+addons=(DeckKit PadTouchGrid AuctionPad)
 args=()
 for a in "${addons[@]}"; do args+=(--addon "$here/addons/$a"); done
 exec "$tools/harness/harness.sh" "${args[@]}" "${scenarios[@]}"

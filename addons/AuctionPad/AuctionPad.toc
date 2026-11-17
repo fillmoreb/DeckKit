@@ -1,0 +1,14 @@
+## Interface: 16001
+## Title: AuctionPad
+## Notes: The auction house, controller first: talking to an auctioneer opens AuctionPad instead of Blizzard's window. Sell your bags' items with a suggested price; see and cancel your auctions.
+## Version: @project-version@
+## Author: Ben Fillmore
+## SavedVariables: AuctionPadDB
+## Dependencies: DeckKit
+## OptionalDeps: MarketDeck
+
+Core.lua
+Pricing.lua
+Sell.lua
+Mine.lua
+Buy.lua

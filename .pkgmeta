@@ -21,6 +21,7 @@ move-folders:
   DeckKit/addons/MenuReload: MenuReload
   DeckKit/addons/PackPad: PackPad
   DeckKit/addons/PadTouchGrid: PadTouchGrid
+  DeckKit/addons/AuctionPad: AuctionPad
   DeckKit/addons/QuestPad: QuestPad
   DeckKit/addons/WayPad: WayPad
 
