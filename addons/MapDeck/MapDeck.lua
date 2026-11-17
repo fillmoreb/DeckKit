@@ -6,7 +6,9 @@
 -- areas, WayPad's waypoints, the game's map pin, where a guard pointed you, flight masters, dungeon
 -- entrances, your raid, zone names on a continent, your corpse and (while dead) the spirit healer.
 -- With ForeverNav installed, the walk to where the waypoint guidance points (DeckKit.Route.Walk) is drawn too: a lilac
--- path over the real ground from you to the next leg's end, so you can follow it while the peek is up.
+-- path over the real ground from you to the next leg's end, so you can follow it while the peek is up. And while
+-- you record streets (ForeverNav's Streets.lua: /deckkit streets, or its grip action), every recorded 8-yard cell
+-- shows as a green square, so you can see what's still missing.
 -- It shows the map you're standing in and leaves both sticks alone, so you keep full control of
 -- your character while it's up. (It used to take the sticks for a right-stick zoom out to the
 -- continent; moving freely mattered more, so the zoom went.)
@@ -21,6 +23,8 @@ local MARGIN, HEADER = 24, 44
 local frame, canvas, art, marks, blob, title, coords
 local dots, backs = {}, {}
 local walkLines, walkEdges = {}, {} -- the walk's path: lilac lines over dark edges, pooled
+local streetDots = {} -- recorded street cells (ForeverNav's Streets), pooled
+local streetNote -- "Recording streets: N cells" under the title
 local playerArrow
 local mapID, homeMap -- shown map; the map you're standing in
 local layerW, layerH = 1, 1
@@ -199,10 +203,61 @@ local function Bounce()
     b.t:SetPoint("CENTER", art, "TOPLEFT", b.x * layerW, -b.y * layerH + h / art:GetScale())
 end
 
+-- Recorded streets: each 8-yard cell a green square at its size on this map, while recording or when the menu
+-- says to show them, with the count under the title.
+local function Streets() return ForeverNav and ForeverNav.v1 and ForeverNav.v1.Streets end
+local function ShowStreets()
+    local S = Streets()
+    return S and (S.Recording() or (MapDeckDB and MapDeckDB.showStreets)) or false
+end
+
+local function DrawStreets()
+    local n, S = 0, Streets()
+    local continent
+    if S and ShowStreets() then
+        local _, _, _, inst = UnitPosition("player")
+        continent = inst
+        local MapPosition = DeckKit.Map.MapPosition
+        -- A cell's size on this map: two points 8 yards apart, measured in layer pixels.
+        local size = 4
+        local cells = continent and S.Cells(continent) or {}
+        if cells[1] then
+            local c = cells[1]
+            local ax, ay = MapPosition(continent, c.x, c.y, mapID)
+            local bx, by = MapPosition(continent, c.x + 8, c.y, mapID)
+            if ax and bx then size = math.max(2, math.abs(by - ay) * layerH + math.abs(bx - ax) * layerW) end
+        end
+        for _, c in ipairs(cells) do
+            local x, y = MapPosition(continent, c.x, c.y, mapID)
+            if x and x >= 0 and x <= 1 and y >= 0 and y <= 1 then
+                n = n + 1
+                local t = Pool(streetDots, n, "ARTWORK", 4, marks)
+                t:SetTexture("Interface\\Buttons\\WHITE8X8")
+                t:SetVertexColor(0.35, 0.95, 0.45, 0.75)
+                t:SetSize(size, size)
+                t:SetPoint("CENTER", art, "TOPLEFT", x * layerW, -y * layerH)
+            end
+        end
+    end
+    HideFrom(streetDots, n + 1)
+    if streetNote then
+        if S and S.Recording() then
+            streetNote:SetText(("|cff59f273Recording streets|r: %d cells"):format(continent and S.Count(continent) or 0))
+            streetNote:Show()
+        elseif S and ShowStreets() then
+            streetNote:SetText(("Recorded streets: %d cells"):format(continent and S.Count(continent) or 0))
+            streetNote:Show()
+        else
+            streetNote:Hide()
+        end
+    end
+end
+
 local function DrawMarkers()
     local n = 0
     bouncing = nil
     DrawWalk()
+    DrawStreets()
     -- Quests on this map
     local ok, quests = pcall(C_QuestLog.GetQuestsOnMap, mapID)
     if ok and type(quests) == "table" then
@@ -476,6 +531,9 @@ local function Create()
 
     title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
     title:SetPoint("TOP", 0, -16)
+    streetNote = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    streetNote:SetPoint("TOP", title, "BOTTOM", 0, -2)
+    streetNote:Hide()
     coords = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     coords:SetPoint("TOPRIGHT", -MARGIN, -20)
 
@@ -532,6 +590,38 @@ BINDING_HEADER_MAPDECK = "MapDeck"
 BINDING_NAME_MAPDECK_PEEK = "Peek at the map (hold)"
 DeckKit.Chords.Offer("MAPDECK_PEEK", { label = "Map peek", run = function(down) Peek(down) end })
 
+-- Recording streets (ForeverNav): walk a city's roads once so routes keep to them. Start, stop, see them on the peek.
+local function RecordStreets(on)
+    local S = Streets()
+    if not S then ns.Print("recording streets needs ForeverNav") return end
+    S.Record(on)
+    ns.Print(on and "recording streets: walk the roads; hold the map peek to see what's covered"
+        or ("streets recorded: %d cells here; routes use them now"):format(S.Count(select(4, UnitPosition("player")) or 0)))
+end
+DeckKit.Chords.OfferPress("MAPDECK_STREETS", function()
+    local S = Streets()
+    RecordStreets(not (S and S.Recording()))
+end, "Record streets")
+ns.AddCommand("streets", function(msg)
+    local word = (msg or ""):lower():match("^%s*(%S*)")
+    local S = Streets()
+    if word == "start" then RecordStreets(true)
+    elseif word == "stop" then RecordStreets(false)
+    elseif word == "clear" and S then
+        S.Clear(select(4, UnitPosition("player")))
+        ns.Print("recorded streets here cleared")
+    elseif S then
+        local map = select(4, UnitPosition("player"))
+        ns.Print(("streets: %s, %d cells recorded here. /deckkit streets start | stop | clear")
+            :format(S.Recording() and "recording" or "not recording", map and S.Count(map) or 0))
+    else
+        ns.Print("recording streets needs ForeverNav")
+    end
+end)
+if ForeverNav and ForeverNav.v1 and ForeverNav.v1.Streets then
+    ForeverNav.v1.Streets.OnChange(function() if frame and frame:IsShown() then DrawStreets() end end)
+end
+
 SLASH_MAPDECK1 = "/mapdeck"
 SlashCmdList.MAPDECK = function()
     if frame and frame:IsShown() then Hide() else Show() end
@@ -547,6 +637,11 @@ end)
 
 ns.AddSettings({
     { type = "section", tab = "Map & travel", label = "Map", order = 2 },
+    { type = "toggle", label = "Show recorded streets on the map peek",
+      hint = "The streets you've recorded (the \"Record streets\" grip action, or /deckkit streets start) as green "
+          .. "squares. While recording they always show.",
+      get = function() return MapDeckDB and MapDeckDB.showStreets == true end,
+      set = function(on) MapDeckDB = MapDeckDB or {}; MapDeckDB.showStreets = on or nil end },
     { type = "info", label = "Hold the map peek's grip slot (Controls > Grips, R4 at first) for the map. Both sticks stay yours: you can keep running while it's up." },
 })
 

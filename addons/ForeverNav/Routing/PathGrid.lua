@@ -1,6 +1,8 @@
 -- Ported from Shortest Path Forever v1.37.1 (3ab0dd3a91e1), Routing/PathGrid.lua, by Cillian Berragan (cjber),
 -- https://github.com/cjber/shortest-path-forever, GPL-3.0-or-later. Kept as upstream wrote it so its fixes port from a
--- diff: the only change is the walking maps' global (ForeverNavPathData). ForeverNav is GPL-3.0-or-later too.
+-- diff. ForeverNav's changes, each marked "ForeverNav": the walking maps' global (ForeverNavPathData); a climb limit
+-- (MAX_CLIMB, nav/tests/test_climb.lua); recorded streets counted as roads (ns.ExtraRoads, Streets.lua).
+-- ForeverNav is GPL-3.0-or-later too.
 
 ---@class SPFNamespace
 local ns = select(2, ...)
@@ -152,7 +154,14 @@ end
 
 -- A step involving steep ground (value 3) may only go downhill: the destination's stored height must not exceed the
 -- source's. Both are the quantized heights the data file holds, the same ones the bake decided with.
+-- ForeverNav (DeckKit): and no step climbs more than MAX_CLIMB yards, whatever the cells are marked. The maps' cells
+-- are about 8 yards across and some of their links climb a rock face from one cell to the next (Orgrimmar: 9 yards
+-- up onto an outcrop in the Valley of Strength); a drop of any height stays allowed. nav/tests/test_climb.lua.
+local MAX_CLIMB = 6
 local function steepStep(valA, zA, from, valB, zB, to)
+	if zB[to + 1] - zA[from + 1] > MAX_CLIMB then
+		return false
+	end
 	if valA[from + 1] ~= 3 and valB[to + 1] ~= 3 then
 		return true
 	end
@@ -162,6 +171,9 @@ end
 -- May a base step feed a diagonal detour? A steep step only does when its stored heights match: a step that only
 -- goes downhill is one direction, and a detour through it would turn that into a climb.
 local function bitStep(val, z, a, b)
+	if math.abs(z[b] - z[a]) > MAX_CLIMB then -- ForeverNav: a detour leg may not climb a face either way
+		return false
+	end
 	return (val[a] ~= 3 and val[b] ~= 3) or z[a] == z[b]
 end
 
@@ -987,6 +999,9 @@ local function roads(st, k)
 	local set = st.road[k]
 	if set == nil then
 		set = decodeRoads(st, k) or false
+		if ns.ExtraRoads then -- ForeverNav: streets recorded by walking them (Streets.lua) join the map's own roads
+			set = ns.ExtraRoads(st, k, set) or set
+		end
 		st.road[k] = set
 	end
 	return set or nil
@@ -1296,6 +1311,9 @@ local function detourStep(st, gx, gy, dx, dy, water)
 	end
 	local ak, an = baseAt(st, gx, gy)
 	local bk, bn = baseAt(st, gx + dx, gy + dy)
+	if math.abs(st.z[bk][bn + 1] - st.z[ak][an + 1]) > MAX_CLIMB then -- ForeverNav: nor between clusters
+		return false
+	end
 	if st.val[ak][an + 1] ~= 3 and st.val[bk][bn + 1] ~= 3 then
 		return true
 	end

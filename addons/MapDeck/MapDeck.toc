@@ -4,6 +4,7 @@
 ## Version: @project-version@
 ## Author: Ben Fillmore
 ## Dependencies: DeckKit
-## OptionalDeps: WayPad
+## OptionalDeps: WayPad, ForeverNav
+## SavedVariables: MapDeckDB
 
 MapDeck.lua

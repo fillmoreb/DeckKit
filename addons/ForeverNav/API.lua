@@ -105,15 +105,54 @@ end
 local Path = ns.Path
 
 -- The search's hazard profile (upstream: Journey/Hazards.lua, which also steers round hostile towns and zones far
--- above your level), with nothing charged and only its Follow roads switch on.
+-- above your level), with only its Follow roads switch on, and inside the capitals off the road charged CITY_OFFROAD
+-- times on top: Shortest Path Forever's walking maps keep the ground under Orgrimmar's rock formations as open floor
+-- (the rocks aren't in them), so the shortest line ran through rock (Ben, 2026-11-17). In a city every way worth
+-- taking is a road; a walk leaves one only to reach a door or a spot off it. nav/tests/test_cities.lua.
+local CITY_OFFROAD = 4
+-- Each capital's map rectangle in world yards (UiMapAssignment Region: north and west, min and max), by instance map.
+local CITIES = {
+    [1] = {
+        { 1338.5, -5083.2, 2273.9, -3680.6 },   -- Orgrimmar (uiMap 1454)
+        { -1545.8, -527.1, -850.0, 516.7 },     -- Thunder Bluff (1456)
+        { 9532.6, 1880.0, 10238.3, 2938.4 },    -- Darnassus (1457)
+    },
+    [0] = {
+        { -9154.2, -14.6, -7995.8, 1722.9 },    -- Stormwind City (1453)
+        { -5096.8, -1504.2, -4569.2, -713.6 },  -- Ironforge (1455)
+        { 1237.8, -86.2, 1878.0, 873.2 },       -- Undercity (1458)
+    },
+}
+
+local function InCity(map, x0, y0, x1, y1)
+    for _, r in ipairs(CITIES[map] or {}) do
+        if x1 >= r[1] and x0 <= r[3] and y1 >= r[2] and y0 <= r[4] then return true end
+    end
+    return false
+end
+
+-- Is the cell at (x, y) one of the walking map's road cells?
+local function OnRoad(map, x, y)
+    local st = Grid.State(map)
+    if not st then return false end
+    local k, cell = Grid.locate(st, x, y) -- (not `st and Grid.locate(...)`: that keeps only k, and every cell was off-road)
+    if not k then return false end
+    local set = Grid.roads(st, k)
+    return set ~= nil and set[cell] == true
+end
+
 local ROADS = {
-    key = "foreverNav:roads",
+    key = "foreverNav:roads:cities",
     roads = true,
-    Point = function() return 1 end,
-    Charged = function() return false end,
+    Point = function(map, x, y)
+        if InCity(map, x, y, x, y) and not OnRoad(map, x, y) then return CITY_OFFROAD end
+        return 1
+    end,
+    Charged = function(map, x0, y0, x1, y1) return InCity(map, x0, y0, x1, y1) end,
     Near = function() return false end,
     Chord = function() return 1 end,
 }
+ns.RoadsProfile = ROADS -- (for the tests)
 
 local function point(p)
     return type(p) == "table" and type(p.x) == "number" and type(p.y) == "number"
@@ -275,5 +314,7 @@ end
 function v1.Sharing()
     return ns.Share.State()
 end
+
+v1.Streets = ns.Streets -- streets recorded by walking them (Streets.lua)
 
 ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })
