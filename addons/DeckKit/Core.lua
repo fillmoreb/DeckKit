@@ -11,6 +11,7 @@
 --   Override.lua  shared pad button overrides, e.g. X for wand shoot and fishing (DeckKit.Override)
 --   Settings.lua  the settings registry modules add their options to (ns.AddSettings)
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
+--   Actions.lua   what a player can bind, anywhere: spells, items, macros, offered actions (DeckKit.Actions)
 --   Chords.lua    grip chords: the four back grips, alone or together, pressed or held (secure slots)
 --   Grips.lua     what the grip actions do: peeks, the dictation indicator, hiding a side
 --   Map.lua       map positions, world positions, bearings, facing, quest areas (DeckKit.Map)
@@ -104,6 +105,7 @@ function ns.NewModule(addonNS, name, title)
     addonNS.Override = ns.Override
     addonNS.Grips = ns.Grips
     addonNS.Chords = ns.Chords
+    addonNS.Actions = ns.Actions
     addonNS.Debug = ns.Logger(name)
     addonNS.Notice = function(...) if ns.Notice then ns.Notice(...) end end
     addonNS.AddCommand = ns.AddCommand

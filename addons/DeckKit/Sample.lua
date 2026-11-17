@@ -28,6 +28,7 @@ local state = {
     selected = { [1] = true, [2] = true }, binds = { [1] = { "PADDUP" }, [2] = { "PADDLEFT" } },
     list = { { "PADDUP" }, { "PADDDOWN" }, nil, { "PADDRIGHT" } },
     range = 40, x = 452, y = 628,
+    cells = {}, quick = nil, pressSlot = nil, holdSlot = nil,
 }
 
 local function Build()
@@ -187,6 +188,50 @@ local function Build()
         ly = ly + UI.ROW_H + 2
     end
     scroll:SetContentHeight(ly)
+
+    ------------------------------------------------------------------
+    -- Tab: actions (DeckKit.Actions). Slots in a 3x3 grid as PadGrid lays them out, a menu row, and a table
+    -- of cells as the grip slots use. {X} on any of them opens the picker; nothing is bound for real.
+    ------------------------------------------------------------------
+    local ta = screen:AddTab("Actions")
+    local gridPanel = UI.Panel(ta.frame, "A 3x3 grid")
+    gridPanel:SetPoint("TOPLEFT")
+    gridPanel:SetSize(250, 260)
+    local cells = {}
+    for i = 1, 9 do
+        cells[i] = UI.ActionSlot(gridPanel, { size = 52, title = "Cell " .. i,
+            get = function() return state.cells[i] end, set = function(id) state.cells[i] = id end })
+    end
+    UI.Grid(cells, gridPanel, 3, 52, 22, 34, gridPanel.top - 10)
+    local rowsPanel = UI.Panel(ta.frame, "As menu rows")
+    rowsPanel:SetPoint("TOPLEFT", gridPanel, "TOPRIGHT", 12, 0)
+    rowsPanel:SetPoint("BOTTOMRIGHT")
+    local RW2 = W - 250 - 12 - 24
+    local ry = rowsPanel.top
+    local quick = UI.ActionRow(rowsPanel, RW2, { label = "Quick heal",
+        get = function() return state.quick end, set = function(id) state.quick = id end })
+    quick:SetPoint("TOPLEFT", 12, ry)
+    ry = ry - UI.ROW_H - 16
+    local head = UI.Heading(rowsPanel, "")
+    head:SetFontObject(UI.Font.smallDim)
+    head:SetText("Press                                      Hold")
+    head:SetPoint("TOPLEFT", 160, ry)
+    ry = ry - 22
+    local label = UI.Heading(rowsPanel, "L4 + R5")
+    label:SetFontObject(UI.Font.body)
+    label:SetPoint("TOPLEFT", 22, ry - 7)
+    local cw = math.floor((RW2 - 150) / 2)
+    local press = UI.ActionCell(rowsPanel, cw - 4, { title = "L4 + R5 pressed",
+        get = function() return state.pressSlot end, set = function(id) state.pressSlot = id end })
+    press:SetPoint("TOPLEFT", 12 + 150, ry)
+    local hold = UI.ActionCell(rowsPanel, cw - 4, { title = "L4 + R5 held", mine = function() return true end,
+        get = function() return state.holdSlot end, set = function(id) state.holdSlot = id end })
+    hold:SetPoint("TOPLEFT", 12 + 150 + cw, ry)
+    ry = ry - UI.ROW_H - 16
+    local note = UI.Description(rowsPanel, "{X} on a slot opens the picker: {LB} {RB} change the list (DeckKit, spells, items, "
+        .. "macros, action bars), {A} chooses, {B} leaves it as it was. The first cell of every list empties the slot. "
+        .. "A held name in lilac is this character's own.", RW2 - 10)
+    note:SetPoint("TOPLEFT", 12, ry)
 
     ------------------------------------------------------------------
     -- Tab 3: numbers. A stepper for a value nudged up and down; dials for one typed digit by digit.

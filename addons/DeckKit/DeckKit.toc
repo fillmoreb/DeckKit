@@ -24,6 +24,7 @@ Override.lua
 Settings.lua
 Menu.lua
 Sample.lua
+Actions.lua
 Chords.lua
 Grips.lua
 CheatSheet.lua

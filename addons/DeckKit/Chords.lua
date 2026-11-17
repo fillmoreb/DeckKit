@@ -48,39 +48,21 @@ local MIRROR = { "type", "action", "spell", "item", "macro", "macrotext", "unit"
 -- Offers: what a slot can hold, and how it runs
 ------------------------------------------------------------------------
 
-local offers = {}
+-- What a slot can hold and how it runs live in DeckKit.Actions (Actions.lua), shared with every other place that
+-- binds an action. These names stay for the modules that call them.
+local Actions = ns.Actions
+Chords.Offer = Actions.Offer
+Chords.OfferPress = Actions.OfferPress
+Chords.Label = function(id) if id then return Actions.Label(id) end end
+Chords.CanRun = Actions.CanRun
 
--- opts: label (else the binding's own name), mirror = secure button name, run = fn(down) (insecure).
-function Chords.Offer(id, opts) offers[id] = opts or {} end
-
--- An action that just happens once, when the slot fires.
-function Chords.OfferPress(id, fn, label)
-    offers[id] = { label = label, run = function(down) if down then fn() end end }
-end
-
-local BARS = { "ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarRightButton",
-    "MultiBarLeftButton" }
-
--- How a binding id runs: "mirror", frame name; "run"; or nil (nothing can run it).
+-- How a slot runs in the secure snippet: "attrs" (the grip button is set up as Actions.Attributes says: spells,
+-- items, equipped slots, macros), "mirror" + frame name, "run", or nil (nothing can run it).
 local function HowToRun(id)
-    local spell = id:match("^SPELL:(%d+)$")
-    if spell then return "spell", spell end
-    local o = offers[id]
-    if o and o.mirror then return "mirror", o.mirror end
-    if o and o.run then return "run" end
-    local n = id:match("^ACTIONBUTTON(%d+)$")
-    if n then return "mirror", BARS[1] .. n end
-    local bar, b = id:match("^MULTIACTIONBAR(%d)BUTTON(%d+)$")
-    if bar and BARS[tonumber(bar) + 1] then return "mirror", BARS[tonumber(bar) + 1] .. b end
-end
-Chords.CanRun = function(id) return HowToRun(id) ~= nil end
-
-function Chords.Label(id)
-    if not id then return nil end
-    local spell = id:match("^SPELL:(%d+)$")
-    if spell then return (C_Spell.GetSpellName(tonumber(spell))) or ("Spell " .. spell) end
-    local o = offers[id]
-    return (o and o.label) or _G["BINDING_NAME_" .. id] or id
+    local kind, ref = Actions.Kind(id)
+    if kind == "spell" or kind == "item" or kind == "slot" or kind == "macro" then return "attrs" end
+    if kind == "mirror" then return "mirror", ref end
+    if kind == "run" then return "run" end
 end
 
 ------------------------------------------------------------------------
@@ -136,13 +118,9 @@ local function Changed()
     end
 end
 
--- A new name for an offered action (the cheat sheet and menu follow). For an offer whose name another
--- addon knows better (the voice assistant's: Grips.lua, DeckKit.Dictation.SetAssistant).
-function Chords.SetLabel(id, label)
-    if not offers[id] then return end
-    offers[id].label = label
-    Changed()
-end
+-- A new name for an offered action (the cheat sheet and menu follow): Actions.SetLabel.
+Chords.SetLabel = Actions.SetLabel
+Actions.OnChange(function() Changed() end)
 
 local function Store(t, chord, gesture, v)
     local c = t[chord] or {}
@@ -229,10 +207,9 @@ local FIRE = [[
         return false
     end
     self:SetAttribute("useOnKeyDown", how == "down")
-    if fire.kind == "spell" then
+    if fire.kind == "attrs" then
         for n = 1, NMIRROR do self:SetAttribute(MIRROR[n], nil) end
-        self:SetAttribute("type", "spell")
-        self:SetAttribute("spell", tonumber(fire.ref))
+        for k, v in pairs(fire.attrs) do self:SetAttribute(k, v) end
     else
         local src = owner:GetFrameRef(fire.ref)
         if not src then return false end
@@ -304,7 +281,7 @@ end
 
 -- The insecure half: "run" slots, and a log line per fired slot.
 local function Run(id, state)
-    local o = offers[id]
+    local o = Actions.Offered(id)
     if not (o and o.run) then return end
     if state ~= "up" then o.run(true) end
     if state ~= "down" then o.run(false) end
@@ -340,6 +317,13 @@ Apply = function()
                 if not kind then ns.Debug("chord slot can't run", chord, gesture, id) end
                 code[#code + 1] = string.format("c.%s = newtable(); c.%s.kind = %q; c.%s.id = %q; c.%s.ref = %q",
                     gesture, gesture, kind or "none", gesture, id, gesture, ref or "")
+                if kind == "attrs" then
+                    code[#code + 1] = string.format("c.%s.attrs = newtable()", gesture)
+                    for k, v in pairs(Actions.Attributes(id)) do
+                        code[#code + 1] = string.format(type(v) == "number" and "c.%s.attrs[%q] = %d" or "c.%s.attrs[%q] = %q",
+                            gesture, k, v)
+                    end
+                end
             end
             code[#code + 1] = "end"
         end
@@ -433,27 +417,8 @@ end
 -- What a slot can hold, as { {id, label}, ... } (the menu's list; deckctl chords resolves names with it).
 local function Choices()
     local list = { { false, "Nothing" } }
-    local ids = {}
-    for id in pairs(offers) do ids[#ids + 1] = id end
-    table.sort(ids, function(a, b) return Chords.Label(a) < Chords.Label(b) end)
-    for _, id in ipairs(ids) do list[#list + 1] = { id, Chords.Label(id) } end
-    -- The spellbook's castable spells, in book order.
-    local book = Enum.SpellBookSpellBank.Player
-    for line = 1, C_SpellBook.GetNumSpellBookSkillLines() do
-        local info = C_SpellBook.GetSpellBookSkillLineInfo(line)
-        for i = info.itemIndexOffset + 1, info.itemIndexOffset + info.numSpellBookItems do
-            local item = C_SpellBook.GetSpellBookItemInfo(i, book)
-            if item and item.itemType == Enum.SpellBookItemType.Spell and not item.isPassive and item.spellID then
-                list[#list + 1] = { "SPELL:" .. item.spellID, item.name }
-            end
-        end
-    end
-    for b = 1, 12 do list[#list + 1] = { "ACTIONBUTTON" .. b, Chords.Label("ACTIONBUTTON" .. b) } end
-    for bar = 1, 4 do
-        for b = 1, 12 do
-            local id = "MULTIACTIONBAR" .. bar .. "BUTTON" .. b
-            list[#list + 1] = { id, Chords.Label(id) }
-        end
+    for _, cat in ipairs(Actions.CATEGORIES) do
+        for _, e in ipairs(Actions.List(cat.key)) do list[#list + 1] = { e.id, e.label } end
     end
     return list
 end
@@ -468,9 +433,9 @@ end
 
 local HINT = {
     press = "Fires when you let go, or the moment the grips are down if nothing else could follow "
-        .. "(no hold here, nothing on a bigger chord). {DPAD_LR} or {A} to choose.",
+        .. "(no hold here, nothing on a bigger chord). {X} chooses what it does.",
     hold = "Fires once every grip in it has been held for the long-press time (Steam's, 400 ms unless "
-        .. "changed); letting go then does nothing more. {DPAD_LR} or {A} to choose.",
+        .. "changed); letting go then does nothing more. {X} chooses what it does.",
 }
 
 local rows = {
@@ -482,7 +447,7 @@ local rows = {
       set = function(on) ns.db.chordsOff = not on or nil; Apply(); Changed() end },
     { type = "choice", label = "Slot changes apply to",
       hint = "All characters: the slots every character shares. This character: changes kept for this "
-          .. "character only, on top of the shared ones (class spells, say); those slots are marked.",
+          .. "character only, on top of the shared ones (class spells, say); those show in lilac.",
       values = { { "all", "All characters" }, { "char", "This character" } },
       get = function() return Chords.Scope() end,
       set = function(v)
@@ -494,49 +459,27 @@ local rows = {
       run = function() Chords.ClearOwn(); ns.Print("This character is back on the shared grip slots.") end },
 }
 local GROUPS = { { 1, "Grips: one" }, { 2, "Grips: two together" }, { 3, "Grips: three or four together" } }
--- One list for every slot row, filled in at login once the modules have made their offers.
-local choices = {}
-local function FillChoices()
-    wipe(choices)
-    local listed = {}
-    for i, c in ipairs(Choices()) do
-        choices[i] = c
-        listed[c[1]] = true
-    end
-    -- A slot set to something this character doesn't have (a shared slot's spell another class knows)
-    -- shows by name, marked, not as its raw id.
-    for _, chord in ipairs(Chords.LIST) do
-        for _, gesture in ipairs(Chords.GESTURES) do
-            local id = Chords.Get(chord, gesture)
-            if id and not listed[id] then
-                listed[id] = true
-                choices[#choices + 1] = { id, Chords.Label(id) .. "  |cff9d9d9d(not known)|r" }
-            end
-        end
-    end
-end
-ns.On("PLAYER_LOGIN", FillChoices)
-ns.On("SPELLS_CHANGED", function() if IsLoggedIn() then FillChoices() end end)
+-- Each group is a table: a row per chord, its press and hold side by side. {X} on a slot opens the action picker.
 for gi, group in ipairs(GROUPS) do
     if gi > 1 then rows[#rows + 1] = { type = "section", tab = "Controls", label = group[2], order = 3 + gi * 0.1 } end
+    local table_ = { type = "bindings", columns = { "Press", "Hold" }, rows = {}, labelWidth = 150 }
     for _, chord in ipairs(Chords.LIST) do
         local size = select(2, chord:gsub("+", "")) + 1
         if size == group[1] or (group[1] == 3 and size == 4) then
-            for _, gesture in ipairs({ "press", "hold" }) do
-                rows[#rows + 1] = {
-                    type = "choice",
-                    label = function()
-                        local mark = Chords.Own(chord, gesture) ~= nil and "  |cff9d9d9d(this character)|r" or ""
-                        return Chords.Glyph(chord, gesture) .. "  " .. Chords.Describe(chord, gesture) .. mark
-                    end,
+            local cells = {}
+            for _, gesture in ipairs(Chords.GESTURES) do
+                cells[#cells + 1] = {
+                    title = Chords.Glyph(chord, gesture) .. "  " .. Chords.Describe(chord, gesture),
                     hint = HINT[gesture],
-                    values = choices,
-                    get = function() return Chords.Get(chord, gesture) or false end,
-                    set = function(v) Chords.Set(chord, gesture, v or nil) end,
+                    mine = function() return Chords.Own(chord, gesture) ~= nil end,
+                    get = function() return Chords.Get(chord, gesture) end,
+                    set = function(id) Chords.Set(chord, gesture, id) end,
                 }
             end
+            table.insert(table_.rows, { label = Chords.Glyph(chord, "press") .. "  " .. chord, cells = cells })
         end
     end
+    rows[#rows + 1] = table_
 end
 ns.Settings.Add("DeckKit", ns.TITLE, rows)
 

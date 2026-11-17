@@ -174,6 +174,9 @@ end
 
 local screens = {} -- every DeckKit screen made so far
 
+-- Every DeckKit screen made so far (for tests: AddonTools' harness finds a window's screen here).
+function UI.Screens() return screens end
+
 -- True while any DeckKit screen (the menu, a module's window) is open: it has the pad then, whatever
 -- the game's own gamepad focus says.
 function UI.AnyScreenShown()
@@ -416,7 +419,8 @@ function Screen:SetFocus(f, intro)
     self:UpdatePrompts()
 end
 
--- The game's rule: nearest control whose center is inside a 45 degree cone that way.
+-- The game's rule: the nearest control whose center is inside a 45 degree cone that way (nearest counting
+-- sideways distance double, so a control in line wins).
 function Screen:Move(dir)
     local cur = self:Focused()
     local list = (self.popup and self.popup:IsShown()) and self.popup.items or self:Focusables()
@@ -438,7 +442,9 @@ function Screen:Move(dir)
             elseif dir == "PADDUP" then along, across = dy, dx
             else along, across = -dy, dx end
             if along > 1 and math.abs(across) <= along then
-                local d = dx * dx + dy * dy
+                -- Nearest, with sideways counted double: the control in line wins over one off to the side
+                -- whose centre happens to be close (a full-width row's centre, next to a table's cells).
+                local d = along + 2 * math.abs(across)
                 if not bestD or d < bestD then best, bestD = f, d end
             end
         end
@@ -503,7 +509,13 @@ function Screen:Key(key)
         return
     end
     if key == "PADLSHOULDER" or key == "PADRSHOULDER" then
-        if self.popup and self.popup:IsShown() then return end
+        if self.popup and self.popup:IsShown() then
+            if self.popup.onShoulder then
+                self.popup.onShoulder(key == "PADRSHOULDER" and 1 or -1)
+                ns.Window.Tick()
+            end
+            return
+        end
         local n = #self.tabs
         if n > 1 then self:SelectTab((self.tab - 1 + (key == "PADRSHOULDER" and 1 or -1)) % n + 1) end
         return
@@ -584,6 +596,10 @@ function Screen:UpdatePrompts()
         end
         local inPopup = self.popup and self.popup:IsShown()
         parts[#parts + 1] = { "B", inPopup and "Cancel" or "Close" }
+        if inPopup and self.popup.onShoulder then
+            parts[#parts + 1] = { "LB", self.popup.shoulderText or "Tabs",
+                glyphs = Glyph("LB", LEGEND_GLYPH) .. Glyph("RB", LEGEND_GLYPH) }
+        end
         if #self.tabs > 1 and not inPopup then
             parts[#parts + 1] = { "LB", "Tabs", glyphs = Glyph("LB", LEGEND_GLYPH) .. Glyph("RB", LEGEND_GLYPH) }
         end
@@ -1171,15 +1187,18 @@ UI.ScrollOf = ScrollOf
 local LIST_MAX = 12
 
 function Screen:OpenList(owner, values, current, choose)
-    local pop = self.popup
+    self:ClosePopup()
+    local pop = self.listPopup
     if not pop then
         pop = CreateFrame("Frame", nil, self.win)
         pop:SetFrameStrata("FULLSCREEN")
         Fill(pop, 0.035, 0.035, 0.045, 0.98, 2)
         Border(pop, "SimplePanelTemplate")
         pop.rows, pop.longRows = {}, {}
-        self.popup = pop
+        pop:Hide()
+        self.listPopup = pop
     end
+    self.popup = pop
     local long = #values > LIST_MAX
     local width = math.max(owner.box and owner.box:GetWidth() or 160, long and 320 or 160)
     pop:ClearAllPoints()
@@ -1247,4 +1266,284 @@ function Screen:ClosePopup()
     pop:Hide()
     local owner = pop.owner
     if owner and self.win:IsShown() then self:SetFocus(owner) end
+end
+
+------------------------------------------------------------------------
+-- Actions: a slot that holds one (DeckKit.Actions), the picker that chooses it, and a menu row for one.
+-- The same everywhere something is bound: X on a slot starts binding (as Forever's spellbook and macros
+-- bind with X), the picker opens over the window, A chooses, B leaves it as it was.
+------------------------------------------------------------------------
+
+local EMPTY_SLOT = "Interface\\Buttons\\UI-Quickslot"
+
+-- Draws action `id` (or nothing) on a slot frame made by ActionArt.
+local function DrawAction(f, id)
+    local A = ns.Actions
+    if not id then
+        f.icon:SetTexture(nil)
+        f.count:SetText("")
+        f.empty:Show()
+        return
+    end
+    f.empty:Hide()
+    f.icon:SetTexture(A.Icon(id))
+    local available = A.Available(id)
+    f.icon:SetDesaturated(not available)
+    f.icon:SetVertexColor(available and 1 or 0.6, available and 1 or 0.6, available and 1 or 0.6)
+    local n = A.Count(id)
+    f.count:SetText(n and n ~= 1 and tostring(n) or "")
+end
+
+-- The action bar's slot look, at any size: icon, border, highlight, a count in the corner, an empty state.
+local function ActionArt(f, size)
+    f:SetSize(size, size)
+    f.empty = f:CreateTexture(nil, "BACKGROUND")
+    f.empty:SetTexture(EMPTY_SLOT)
+    f.empty:SetPoint("TOPLEFT", -size * 0.42, size * 0.42)
+    f.empty:SetPoint("BOTTOMRIGHT", size * 0.42, -size * 0.42)
+    f.icon = f:CreateTexture(nil, "ARTWORK")
+    f.icon:SetAllPoints()
+    f.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    f.border = f:CreateTexture(nil, "OVERLAY")
+    f.border:SetTexture("Interface\\Buttons\\UI-Quickslot2")
+    f.border:SetPoint("TOPLEFT", -size * 0.42, size * 0.42)
+    f.border:SetPoint("BOTTOMRIGHT", size * 0.42, -size * 0.42)
+    local hl = f:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+    hl:SetBlendMode("ADD")
+    hl:SetAllPoints()
+    f:SetHighlightTexture(hl)
+    f.press = f:CreateTexture(nil, "OVERLAY", nil, 2)
+    f.press:SetTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+    f.press:SetAllPoints()
+    f.press:Hide()
+    f.selected = f:CreateTexture(nil, "OVERLAY", nil, 1)
+    f.selected:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+    f.selected:SetBlendMode("ADD")
+    f.selected:SetAllPoints()
+    f.selected:Hide()
+    local top = CreateFrame("Frame", nil, f)
+    top:SetAllPoints()
+    top:SetFrameLevel(f:GetFrameLevel() + 2)
+    f.count = Text(top, UI.Font.small, "RIGHT")
+    f.count:SetPoint("BOTTOMRIGHT", -2, 2)
+    f.hotkey = Text(top, UI.Font.small, "RIGHT")
+    f.hotkey:SetPoint("TOPRIGHT", 6, 6)
+    return f
+end
+UI.ActionArt, UI.DrawAction = ActionArt, DrawAction
+
+-- The picker: opens over the window. opts.current (the id bound now, or nil), opts.choose(id or nil),
+-- opts.title (what's being bound, shown at the top). LB/RB change the list (DeckKit actions, spells,
+-- items, macros, action bars); the first cell of every list is "Empty", which clears the slot.
+local PICK_COLS, PICK_CELL, PICK_GAP, PICK_ROWS = 8, 44, 10, 5
+local PICK_W = PICK_COLS * (PICK_CELL + PICK_GAP) + 18 -- the scroll bar's room
+
+function Screen:OpenPicker(opts)
+    self:ClosePopup()
+    local A = ns.Actions
+    local pop = self.picker
+    if not pop then
+        pop = CreateFrame("Frame", nil, self.win)
+        pop:SetFrameStrata("FULLSCREEN")
+        pop:SetSize(PICK_W + 40, 100 + PICK_ROWS * (PICK_CELL + PICK_GAP) + 50)
+        Fill(pop, 0.035, 0.035, 0.045, 0.98, 2)
+        Border(pop, "SimplePanelTemplate")
+        pop.title = Text(pop, UI.Font.heading, "CENTER")
+        pop.title:SetPoint("TOP", 0, -12)
+        pop.strip = CreateFrame("Frame", nil, pop)
+        pop.strip:SetPoint("TOPLEFT", 14, -34)
+        pop.strip:SetPoint("TOPRIGHT", -14, -34)
+        pop.strip:SetHeight(TAB_H)
+        local rule = Line(pop.strip, 0.45, 0.42, 0.35, 0.8)
+        rule:SetPoint("BOTTOMLEFT")
+        rule:SetPoint("BOTTOMRIGHT")
+        pop.lb = Text(pop.strip, UI.Font.body, "CENTER")
+        pop.lb:SetPoint("LEFT", 4, 0)
+        pop.lb:SetText(Glyph("LB", 30))
+        pop.rb = Text(pop.strip, UI.Font.body, "CENTER")
+        pop.rb:SetPoint("RIGHT", -4, 0)
+        pop.rb:SetText(Glyph("RB", 30))
+        pop.labels = {}
+        for i, cat in ipairs(A.CATEGORIES) do
+            local t = Text(pop.strip, UI.Font.dim, "CENTER")
+            t:SetText(cat.label)
+            pop.labels[i] = t
+        end
+        pop.underline = Line(pop.strip, 1, 0.82, 0, 1, 2)
+        pop.scroll = UI.ScrollList(pop, PICK_W, PICK_ROWS * (PICK_CELL + PICK_GAP))
+        pop.scroll:SetPoint("TOP", 0, -34 - TAB_H - 18)
+        pop.name = Text(pop, UI.Font.body, "CENTER")
+        pop.name:SetPoint("BOTTOM", 0, 16)
+        pop.name:SetWidth(PICK_W)
+        pop.cells = {}
+        pop.shoulderText = "Lists"
+        pop:Hide()
+        self.picker = pop
+    end
+
+    -- Category labels laid out across the strip, the chosen one gold and underlined.
+    local function Strip()
+        local widths, total = {}, 0
+        for i, t in ipairs(pop.labels) do
+            widths[i] = t:GetStringWidth() + 26
+            total = total + widths[i]
+        end
+        local x = -total / 2
+        for i, t in ipairs(pop.labels) do
+            t:ClearAllPoints()
+            t:SetPoint("CENTER", pop.strip, "CENTER", x + widths[i] / 2, 1)
+            t:SetFontObject(i == pop.cat and UI.Font.heading or UI.Font.dim)
+            if i == pop.cat then
+                pop.underline:ClearAllPoints()
+                pop.underline:SetPoint("BOTTOM", t, "BOTTOM", 0, -8)
+                pop.underline:SetWidth(widths[i] - 12)
+            end
+            x = x + widths[i]
+        end
+    end
+
+    local screen = self
+    local function Populate(catIndex)
+        pop.cat = catIndex
+        Strip()
+        local list = { { id = false, label = "Empty" } }
+        for _, e in ipairs(A.List(A.CATEGORIES[catIndex].key)) do list[#list + 1] = e end
+        pop.items = {}
+        local focus
+        for i, e in ipairs(list) do
+            local c = pop.cells[i]
+            if not c then
+                c = ActionArt(CreateFrame("Button", nil, pop.scroll.content), PICK_CELL)
+                c:EnableMouse(false)
+                pop.cells[i] = c
+            end
+            local col, row = (i - 1) % PICK_COLS, math.floor((i - 1) / PICK_COLS)
+            c:ClearAllPoints()
+            c:SetPoint("TOPLEFT", PICK_GAP / 2 + col * (PICK_CELL + PICK_GAP), -(PICK_GAP / 2 + row * (PICK_CELL + PICK_GAP)))
+            DrawAction(c, e.id or nil)
+            c.selected:SetShown((e.id or nil) == opts.current)
+            c.dk = {
+                prompts = function() return { { "A", "Choose" } } end,
+                onFocus = function() pop.name:SetText(e.label) end,
+                activate = function()
+                    screen:ClosePopup()
+                    opts.choose(e.id or nil)
+                    screen:Refresh()
+                end,
+            }
+            c:Show()
+            pop.items[i] = c
+            if e.id and e.id == opts.current then focus = c end -- an empty slot starts on the first entry
+        end
+        for i = #list + 1, #pop.cells do pop.cells[i]:Hide() end
+        pop.scroll:SetContentHeight(math.ceil(#list / PICK_COLS) * (PICK_CELL + PICK_GAP))
+        pop.scroll:ScrollTo(0)
+        screen:SetFocus(focus or pop.items[math.min(2, #pop.items)])
+    end
+
+    pop.onShoulder = function(d)
+        local n = #A.CATEGORIES
+        Populate((pop.cat - 1 + d) % n + 1)
+    end
+    pop.title:SetText(opts.title or "Bind")
+    pop.owner = opts.owner
+    pop:ClearAllPoints()
+    pop:SetPoint("CENTER", self.win)
+    self.popup = pop
+    pop:Show()
+    local start = 1
+    local cat = opts.current and A.CategoryOf(opts.current)
+    for i, c in ipairs(A.CATEGORIES) do if c.key == cat then start = i end end
+    Populate(start)
+end
+
+-- A slot showing one action as an icon. opts: get() -> id or nil, set(id or nil), title (for the picker), size,
+-- label (shown under the icon, or none), disabled/reason/onFocus. X starts binding.
+function UI.ActionSlot(parent, opts)
+    local f = ActionArt(CreateFrame("Button", nil, parent), opts.size or 44)
+    if opts.label then
+        f.caption = Text(f, UI.Font.smallDim, "CENTER")
+        f.caption:SetPoint("TOP", f, "BOTTOM", 0, -6)
+        f.caption:SetText(opts.label)
+    end
+    return Register(f, {
+        disabled = opts.disabled, reason = opts.reason,
+        onFocus = opts.onFocus,
+        prompts = function()
+            local id = opts.get()
+            return { { "X", id and "Change" or "Bind" } }
+        end,
+        x = function(self)
+            TabOf(self).screen:OpenPicker({ owner = self, current = opts.get(), choose = opts.set,
+                title = opts.title and (type(opts.title) == "function" and opts.title() or opts.title) })
+        end,
+        refresh = function(self) DrawAction(self, opts.get()) end,
+    })
+end
+
+-- A menu row holding an action: label at the left, the action's icon and name at the right. X starts binding.
+function UI.ActionRow(parent, width, opts)
+    local f = Row(parent, width, opts.label)
+    f.slot = ActionArt(CreateFrame("Frame", nil, f), 22)
+    f.slot:EnableMouse(false)
+    f.slot:SetPoint("RIGHT", -10, 0)
+    f.slot.border:Hide()
+    f.value = Text(f, UI.Font.small, "RIGHT")
+    f.value:SetPoint("RIGHT", f.slot, "LEFT", -8, 0)
+    f.value:SetWidth(width * 0.45)
+    return Register(f, {
+        disabled = opts.disabled, reason = opts.reason, onFocus = opts.onFocus,
+        prompts = function() return { { "X", opts.get() and "Change" or "Bind" } } end,
+        x = function(self)
+            local label = opts.label
+            if type(label) == "function" then label = label() end
+            TabOf(self).screen:OpenPicker({ owner = self, current = opts.get(), choose = opts.set,
+                title = ns.Window.Glyphs(label or "Bind") })
+        end,
+        refresh = function(self)
+            local enabled = RowEnabled(self)
+            local id = opts.get()
+            DrawAction(self.slot, id)
+            self.slot.empty:SetShown(false)
+            self.value:SetText(id and ns.Actions.Label(id) or (Hex(UI.Color.dim) .. "Empty|r"))
+            self.value:SetFontObject(enabled and UI.Font.small or UI.Font.smallDim)
+        end,
+    })
+end
+
+-- A compact cell holding an action, for tables of them (the grip slots): icon, then the action's name. opts:
+-- width, get, set, title (for the picker), mine() -> true to show the name in lilac (a per-character setting),
+-- onFocus. X starts binding.
+function UI.ActionCell(parent, width, opts)
+    local f = Row(parent, width, "")
+    f.label:Hide()
+    f.slot = ActionArt(CreateFrame("Frame", nil, f), 22)
+    f.slot:EnableMouse(false)
+    f.slot:SetPoint("LEFT", 8, 0)
+    f.slot.border:Hide()
+    f.value = Text(f, UI.Font.small)
+    f.value:SetPoint("LEFT", f.slot, "RIGHT", 8, 0)
+    f.value:SetPoint("RIGHT", -6, 0)
+    f.value:SetWordWrap(false)
+    return Register(f, {
+        onFocus = opts.onFocus,
+        prompts = function() return { { "X", opts.get() and "Change" or "Bind" } } end,
+        x = function(self)
+            local title = opts.title
+            if type(title) == "function" then title = title() end
+            TabOf(self).screen:OpenPicker({ owner = self, current = opts.get(), choose = opts.set, title = title })
+        end,
+        refresh = function(self)
+            local id = opts.get()
+            DrawAction(self.slot, id)
+            self.slot.empty:SetShown(false)
+            local text = id and ns.Actions.Label(id) or (Hex(UI.Color.dim) .. "Empty|r")
+            if id and opts.mine and opts.mine() then
+                local c = ns.COLORS and ns.COLORS.LILAC
+                if c then text = Hex(c) .. text .. "|r" end
+            end
+            self.value:SetText(text)
+        end,
+    })
 end

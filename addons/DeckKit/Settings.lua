@@ -10,6 +10,10 @@
 --         (keepOpen = true runs it straight from the A press instead of after closing the menu:
 --          needed for anything Forever only allows from a key press, like ReloadUI)
 --       { type = "status", label = "Reload UI", get = function() return text, color end },
+--       { type = "binding", label = "Quick heal", get = function() return id end, set = function(id) ... end },
+--         (an action, DeckKit.Actions: {X} opens the picker; id nil = empty)
+--       { type = "bindings", columns = { "Press", "Hold" }, rows = { { label = "L4", cells = { { get, set,
+--         title = "L4 pressed", hint, mine = fn -> lilac name } , ... } }, ... } },  -- a table of actions
 --       { type = "info",   label = "Plain text that explains something." },
 --   })
 --

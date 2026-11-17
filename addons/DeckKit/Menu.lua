@@ -26,6 +26,8 @@ local DEFAULT_HINT = {
     choice = "{DPAD_LR} steps through the choices; {A} shows them all.",
     range = "{DPAD_LR} changes it.",
     action = "{A} does it.",
+    binding = "{X} chooses what it does.",
+    bindings = "{X} chooses what it does.",
 }
 
 local function BuildTab(tabName, sections)
@@ -96,6 +98,34 @@ local function BuildTab(tabName, sections)
                     C_Timer.After(0, item.run)
                 end
                 f = UI.Action(content, W, opts)
+            elseif item.type == "binding" then
+                f = UI.ActionRow(content, W, opts)
+            elseif item.type == "bindings" then
+                -- A table of action slots: a label per row, a column per kind of slot (a chord's press and hold).
+                local LABEL_W = item.labelWidth or 170
+                local cols = #item.columns
+                local cellW = math.floor((W - LABEL_W) / cols)
+                for c, title in ipairs(item.columns) do
+                    local t = UI.Heading(content, title)
+                    t:SetFontObject(UI.Font.smallDim)
+                    t:SetPoint("TOPLEFT", LABEL_W + (c - 1) * cellW + 8, -y - 4)
+                end
+                y = y + 22
+                for _, r in ipairs(item.rows) do
+                    local label = UI.Heading(content, "")
+                    label:SetFontObject(UI.Font.body)
+                    label:SetPoint("TOPLEFT", 10, -y - 7)
+                    label:SetText(ns.Window.Glyphs(type(r.label) == "function" and r.label() or r.label))
+                    for c, cell in ipairs(r.cells) do
+                        local details = { label = cell.title, hint = cell.hint or item.hint, from = item.from }
+                        local cf = UI.ActionCell(content, cellW - 4, {
+                            get = cell.get, set = cell.set, mine = cell.mine, title = cell.title,
+                            onFocus = function() Details(details) end,
+                        })
+                        cf:SetPoint("TOPLEFT", LABEL_W + (c - 1) * cellW, -y)
+                    end
+                    y = y + UI.ROW_H + 2
+                end
             elseif item.type == "status" then
                 f = UI.StatusRow(content, W, item)
                 statuses[#statuses + 1] = f
