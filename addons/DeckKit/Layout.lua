@@ -35,6 +35,14 @@
 --                                                                   full check box that A ticks
 --   progress  { type = "progress", bind = { item = 2589, count = 10 }, text = "Linen Cloth" }
 --             { type = "progress", value = 3, max = 8 }             a bar with "3/8"
+--             { type = "progress", bind = <measure>, max = 100 }    a live number (DeckKit.Measures) toward max
+--   stat      { type = "stat", text = "Light Leather", bind = <measure>, format = "count" }
+--                                                                   a live number (DeckKit.Measures), right-
+--                                                                   aligned after its label: "count" (1,234; a
+--                                                                   measure with per: 36/h), "money" (3s 78c),
+--                                                                   "time" (23 min); "…" while it can't be told.
+--                                                                   No text: the number alone (columns in a row;
+--                                                                   `width` fixes its width)
 --   waypoint  { type = "waypoint", map = 1421, x = 45.2, y = 68.1, label = "Deathstalker Rendow" }
 --                                                                   zone and live distance; A makes it the
 --                                                                   active waypoint, hold Y for its map
@@ -69,6 +77,7 @@
 local _, ns = ...
 local UI = ns.UI
 local Conditions = ns.Conditions
+local Measures = ns.Measures
 
 local GAP_X, GAP_Y = 8, 2
 local ROW_H = UI.ROW_H
@@ -345,6 +354,9 @@ widgets.check = {
 -- Progress: a bar with "have/need", in the suite's purple (MarketDeck's bar lit, as a fill); full, lilac.
 local PROGRESS = { 0.52, 0.30, 0.80 }
 local function ProgressOf(node)
+    if type(node.bind) == "table" and node.bind.measure then
+        return math.max(0, math.floor(Measures.Value(node.bind) or 0)), math.max(1, Num(node.max) or 1)
+    end
     if node.bind then
         local have, need = Conditions.Progress(node.bind)
         if have then return have, need end
@@ -457,6 +469,35 @@ widgets.waypoint = {
     update = function(f, node) f.dist:SetText(Distance(node)) end,
     peek = function(f, node) UI.ShowMap(node, f) end,
     onBlur = function() UI.HideMap() end,
+}
+
+-- Stat: a live number from DeckKit.Measures, after its label (or alone, as a column in a row).
+widgets.stat = {
+    fixed = function(node) return Num(node.width) end,
+    make = function(parent)
+        local f = CreateFrame("Frame", nil, parent)
+        f.label = Text(f, UI.Font.body)
+        f.label:SetPoint("LEFT", 6, 0)
+        f.value = Text(f, UI.Font.body, "RIGHT")
+        f.value:SetPoint("RIGHT", -6, 0)
+        return f
+    end,
+    set = function(f, node, w)
+        f:SetSize(w, ROW_H)
+        f.label:SetText(node.text and Glyphs(tostring(node.text)) or "")
+        f.label:SetShown(node.text ~= nil)
+        if node.text then f.label:SetPoint("RIGHT", f.value, "LEFT", -8, 0) end
+        local style = STYLE[node.style] or STYLE.body
+        f.value:SetFontObject(style[1])
+        if style[2] then f.value:SetTextColor(unpack(style[2]))
+        elseif style[1].GetTextColor then f.value:SetTextColor(style[1]:GetTextColor()) end -- a reused frame's old color
+        widgets.stat.update(f, node)
+        return ROW_H
+    end,
+    update = function(f, node)
+        local m = type(node.bind) == "table" and node.bind or nil
+        f.value:SetText(Measures.Format(m and Measures.Value(m), node.format, m and m.per))
+    end,
 }
 
 -- Money: copper as the game writes it, gold / silver / copper with the coin icons.
@@ -952,6 +993,7 @@ local function UpdateAll()
     for L in pairs(active) do L:Update() end
 end
 Conditions.OnChange(UpdateAll)
+ns.Ledger.Listen(function() C_Timer.After(0, UpdateAll) end) -- a stat counts up as the loot line arrives
 ns.On("GET_ITEM_INFO_RECEIVED", function() C_Timer.After(0, UpdateAll) end)
 ns.On("QUEST_DATA_LOAD_RESULT", function() C_Timer.After(0, UpdateAll) end)
 local ticker = CreateFrame("Frame")

@@ -5,6 +5,9 @@
 --   Window.lua  the window look and sounds (DeckKit.Window)
 --   UI.lua      the UI kit for windows: screens, tabs, footer prompts, controls (DeckKit.UI)
 --   Conditions.lua  live questions about the game: quest taken, items carried... (DeckKit.Conditions)
+--   Ledger.lua  a record of what happens: loot, money, XP, reputation, skill-ups, whispers, trades (DeckKit.Ledger)
+--   Measures.lua  live numbers from it: looted since a mark, per hour, value (DeckKit.Measures, DeckKit.Prices)
+--   People.lua  who you've been dealing with, and a party invite (DeckKit.People)
 --   JSON.lua    JSON from outside the game, as plain tables (DeckKit.JSON.Decode)
 --   Layout.lua  windows described as data, built from the UI kit (UI.Build); the hold-Y map peek
 --   Displays.lua  where a layout shows on its own: window, card or tracker (UI.ShowLayout / ShowCard / ShowTracker)
@@ -12,6 +15,7 @@
 --   Settings.lua  the settings registry modules add their options to (ns.AddSettings)
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
 --   Actions.lua   what a player can bind, anywhere: spells, items, macros, offered actions (DeckKit.Actions)
+--   Widgets.lua   layouts kept by name and shown as trackers; each one an action to toggle (DeckKit.Widgets)
 --   Chords.lua    grip chords: the four back grips, alone or together, pressed or held (secure slots)
 --   Grips.lua     what the grip actions do: peeks, the dictation indicator, hiding a side
 --   Map.lua       map positions, world positions, bearings, facing, quest areas (DeckKit.Map)

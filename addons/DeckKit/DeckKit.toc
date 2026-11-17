@@ -17,6 +17,9 @@ Input.lua
 Window.lua
 UI.lua
 Conditions.lua
+Ledger.lua
+Measures.lua
+People.lua
 JSON.lua
 Layout.lua
 Displays.lua
@@ -25,6 +28,7 @@ Settings.lua
 Menu.lua
 Sample.lua
 Actions.lua
+Widgets.lua
 Chords.lua
 Grips.lua
 CheatSheet.lua

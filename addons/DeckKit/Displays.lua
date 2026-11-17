@@ -2,10 +2,11 @@
 --
 --   window    UI.ShowLayout(spec, opts)   takes the pad: you move through it, act on pieces, reply
 --   card      UI.ShowCard(spec, opts)     on screen for a while, never takes the pad, fine in combat
---   tracker   UI.ShowTracker(spec, opts)  pinned at the top left while you play, ticking itself off
+--   tracker   UI.ShowTracker(spec, opts)  pinned at the top left while you play, ticking itself off; several,
+--                                         by name, stack down the left
 --
--- One of each at a time: a new one replaces the one up. The card sits to the right of the tracker while
--- both are up. Each is one spec (the same vocabulary everywhere), so an assistant answers with whichever
+-- One window and one card at a time: a new one replaces the one up. The card sits to the right of the top
+-- tracker while both are up. Each is one spec (the same vocabulary everywhere), so an assistant answers with whichever
 -- host fits: something to act on, something to glance at, something to play alongside.
 --
 -- Shared spec fields: `title` (the window's tab label, the card's and tracker's heading), `width`.
@@ -51,30 +52,49 @@ local function Fill(p, spec, w, opts)
 end
 
 ------------------------------------------------------------------------
--- The tracker
+-- The trackers
 ------------------------------------------------------------------------
+-- Several can be up, stacked down the top left in the order they first showed (a checklist, a saved widget...),
+-- each by name; no name is the default one (frame DeckKitTracker, as before).
+--   opts.name                  which tracker (default: the default one); showing it again replaces its content
 --   opts.fade (default true)   fade out a minute after every check in it is ticked
 --   opts.onDone()              it faded away finished (the owner forgets it)
 --   opts.ticks                 as for UI.Build (a tracker's checks are usually the game's, not yours)
+--   UI.HideTracker([name]) / UI.TrackerShown([name]) / UI.TrackerFrame([name])
 
-local tracker, card
+local trackers, order, card = {}, {}, nil
 local TRACKER_W, CARD_W = 300, 340
+local TOP_Y, STACK_GAP = -80, 8
 
-local function PlaceCard()
-    if not (card and card:IsShown()) then return end
-    card:ClearAllPoints()
-    if tracker and tracker:IsShown() then
-        card:SetPoint("TOPLEFT", tracker, "TOPRIGHT", 8, 0)
-    else
-        card:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 24, -80)
+local function Key(name) return name or "default" end
+
+local function PlaceAll()
+    local y, first = TOP_Y, nil
+    for _, key in ipairs(order) do
+        local t = trackers[key]
+        if t:IsShown() then
+            t:ClearAllPoints()
+            t:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 24, y)
+            y = y - t:GetHeight() - STACK_GAP
+            first = first or t
+        end
+    end
+    if card and card:IsShown() then
+        card:ClearAllPoints()
+        if first then card:SetPoint("TOPLEFT", first, "TOPRIGHT", 8, 0)
+        else card:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 24, TOP_Y) end
     end
 end
+local PlaceCard = PlaceAll
 
 function UI.ShowTracker(spec, opts)
     opts = opts or {}
+    local key = Key(opts.name)
+    local tracker = trackers[key]
     if not tracker then
-        tracker = Panel("DeckKitTracker", 0.7)
-        tracker:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 24, -80)
+        tracker = Panel(key == "default" and "DeckKitTracker" or nil, 0.7)
+        trackers[key] = tracker
+        order[#order + 1] = key
     end
     if tracker.fadeTimer then tracker.fadeTimer:Cancel(); tracker.fadeTimer = nil end
     tracker:SetAlpha(1)
@@ -87,7 +107,7 @@ function UI.ShowTracker(spec, opts)
                     tracker.fadeTimer = nil
                     UIFrameFadeOut(tracker, 1.5, 1, 0)
                     C_Timer.After(1.5, function()
-                        UI.HideTracker()
+                        UI.HideTracker(opts.name)
                         if opts.onDone then opts.onDone() end
                     end)
                 end)
@@ -99,19 +119,25 @@ function UI.ShowTracker(spec, opts)
     end })
     tracker:Show()
     tracker.L:Update()
-    PlaceCard()
+    PlaceAll()
 end
 
-function UI.HideTracker()
+function UI.HideTracker(name)
+    local tracker = trackers[Key(name)]
     if not tracker then return end
     if tracker.fadeTimer then tracker.fadeTimer:Cancel(); tracker.fadeTimer = nil end
     if tracker.L then tracker.L:Release(); tracker.L = nil end
     tracker:Hide()
     tracker:SetAlpha(1)
-    PlaceCard()
+    PlaceAll()
 end
 
-function UI.TrackerShown() return tracker ~= nil and tracker:IsShown() end
+function UI.TrackerShown(name)
+    local tracker = trackers[Key(name)]
+    return tracker ~= nil and tracker:IsShown()
+end
+
+function UI.TrackerFrame(name) return trackers[Key(name)] end
 
 ------------------------------------------------------------------------
 -- The card

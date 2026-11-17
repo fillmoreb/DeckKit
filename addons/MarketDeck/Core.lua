@@ -101,6 +101,14 @@ ns.On("PLAYER_LOGIN", function()
     ns.db = db
 end)
 
+-- DeckKit's live numbers (DeckKit.Measures) value items at the auction price: the market median, else the lowest now.
+if DeckKit.Prices then
+    DeckKit.Prices.Provide(function(itemID)
+        local p = db and ns.Price(itemID)
+        return p and (p.market or p.now) or nil
+    end)
+end
+
 function MarketDeck_GetPrice(itemID)
     if not db or type(itemID) ~= "number" then return nil end
     local p = ns.Price(itemID)

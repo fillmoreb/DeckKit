@@ -51,6 +51,12 @@ end
 
 function Actions.Offered(id) return offers[id] end
 
+-- Offers that come and go while you play (saved widgets): added or taken back, and every list told.
+function Actions.OfferNow(id, opts) offers[id] = opts or {}; Changed() end
+function Actions.Withdraw(id)
+    if offers[id] then offers[id] = nil; Changed() end
+end
+
 ------------------------------------------------------------------------
 -- What an id is
 ------------------------------------------------------------------------
