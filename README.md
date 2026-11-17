@@ -26,6 +26,7 @@ layout for the grips and speech to text.
 | **DeckKit** | The shared core: controller input, windows, shared button overrides (X is shared by wand shoot and fishing), the **DeckKit menu** with every module's settings by topic (double-tap ☰ Menu, or `/deckkit`), **grip chords** (the back grips alone or together, pressed or held: 30 slots for any action, spells included, see below), and the suite's **waypoints** (WayPad is their controller front end; other addons use `WayPad_Add` / `WayPad_Get` / `WayPad_Remove`) |
 | **HealPad** | Healing on a controller: the d-pad moves a cursor over party/raid frames and sets your focus; makes focus heal macros from your spellbook (buffs folded into one-button sequences); practice party and raid frames laid out like your real ones (`/deckkit healpad`) |
 | **QuestPad** | A big button for the quest item you need: the quest whose real area you're in, or your target's quest (`/deckkit questpad`) |
+| **PadTouchGrid** | Two 3x3 grids of actions, one under each trackpad: a grip chord opens both, a thumb on a pad lights the cell beneath it, a pad click uses it, B closes them. Spells, bag items, trinkets, macros or DeckKit actions, per character; works in combat (`/deckkit touchgrid`) |
 | **WayPad** | The controller front end for DeckKit's waypoints: dial them in with the d-pad, manage the list, map + minimap pins, `/way`; DeckHUD's compass points the way. With a TomTom-compatible waypoint addon installed, it hands waypoints to that instead (one system at a time) |
 | **DisenchantDeck** | List of disenchantable bag items, opened when you pick Disenchant: A disenchants, Y hides, LB/RB shows hidden (`/dd`) |
 | **MarketDeck** | Auction house prices with nothing to press: a snapshot each time you open the auction house (if the last is over an hour old), and auction, vendor and disenchant prices on item tooltips (`/deckkit market`) |
@@ -103,7 +104,8 @@ The keys DeckKit's setup uses. Keyboard players: these are taken while DeckKit i
 |---|---|---|
 | F1 / F2 / F3 / F4 | the Steam layout, while grip L4 / R4 / L5 / R5 is held | grip chords (`DeckKit/Core.lua` `ns.GRIPS`) |
 | F5 / F6 / F7 / F8 | the Steam layout, once L4 / R4 / L5 / R5 has been held 0.4 s | grip chord holds |
-| F9-F12 | | not used by DeckKit, free for other addons |
+| F11 | the Steam layout, on a trackpad click | PadTouchGrid: uses the touch grid cell under the pointer; bound only while the grids are open |
+| F9, F10, F12 | | not used by DeckKit, free for other addons |
 
 Nothing else: Decktation's own push-to-talk reads the controller directly.
 

@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: PadTouchGrid
+## Notes: Two 3x3 grids of actions, one under each trackpad: a grip chord opens them, a thumb on a pad picks the cell, a pad click fires it.
+## Version: @project-version@
+## Author: Ben Fillmore
+## SavedVariablesPerCharacter: PadTouchGridCharDB
+## Dependencies: DeckKit
+
+Core.lua
+Grids.lua
+Editor.lua

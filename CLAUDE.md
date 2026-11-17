@@ -83,6 +83,9 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
   LT/RT held, a claimed key clicks that layer's crossbar button (`CROSSBAR` in `Override.lua`).
   To stop one of Blizzard's crossbar actions, claim its key like this rather than hooking or closing
   what it opens: closing a menu from addon code taints the gamepad bar.
+  The one other way: a secure window that opens in combat binds its keys from its own secure header while it's
+  shown (restricted `SetBindingClick`, cleared as it closes), because "this window is open" isn't a macro
+  condition `Override` can follow. PadTouchGrid does this for F11 and B (`PadTouchGrid/Grids.lua`).
 - **The back grips are DeckKit's grip chords** (`DeckKit/Chords.lua`). Steam sends 8 plain keys
   and nothing else (`deck-setup/make-chord-layout.py` writes the layout; never hand-edit it): each
   grip's own key while held (L4 F1, R4 F2, L5 F3, R5 F4) and a second key 400 ms in, Steam's long
