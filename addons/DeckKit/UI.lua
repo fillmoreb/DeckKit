@@ -1312,7 +1312,7 @@ local function ActionArt(f, size)
     hl:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
     hl:SetBlendMode("ADD")
     hl:SetAllPoints()
-    f:SetHighlightTexture(hl)
+    if f.SetHighlightTexture then f:SetHighlightTexture(hl) end -- a button; the table cells' icons are plain frames
     f.press = f:CreateTexture(nil, "OVERLAY", nil, 2)
     f.press:SetTexture("Interface\\Buttons\\UI-Quickslot-Depress")
     f.press:SetAllPoints()
