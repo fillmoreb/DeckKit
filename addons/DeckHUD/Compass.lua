@@ -1,7 +1,7 @@
 -- DeckHUD: the compass. A strip across the middle of the status bar, centered on the way you face (180
 -- degrees of horizon in 360 px to start; both set in Screen > Status bar): ticks every 15 degrees and
--- N, NE, E... slide past as you turn, and a lilac pointer peeks out under the bar's middle (plum at
--- rest, lilac as the waypoint comes within 45 degrees). On the strip:
+-- N, NE, E... slide past as you turn, and an ornament hangs from the bar's middle as the pointer, its gem
+-- plum at rest, lilac as the waypoint comes within 45 degrees. On the strip:
 --   * the active waypoint (DeckKit.Waypoints): the gold pin, hanging below the bar, with its distance
 --     in yards under it (dropping clear of the pointer as it reaches the middle); "Arrived" when reached
 --   * Blizzard's map pin and a guard's directions (the flag), sized and hung like the pin
@@ -22,16 +22,21 @@
 local _, ns = ...
 
 local WIDTH, HEIGHT = 360, 20 -- the strip (set in the menu: Size below); the status bar's height
-local POINTER = 63            -- the pointer's width
-local POINTER_TRIM = 17       -- how far up it sits: its art's clear space (15 at this size) plus the bit hidden behind the bar (2)
+-- The pointer: Ben's drawing of a winged ornament with a gem, cut out by deck-setup/make-compass-pointer.py (which
+-- describes the texture): the metal in rows 0..25 of a 128 x 64 sheet, the gem in gray in rows 32..57, both 96 wide.
+local POINTER_FILE = "Interface\\AddOns\\DeckHUD\\media\\compass-pointer"
+local POINTER_W, POINTER_H = 96, 26
+local POINTER_TEX = { 0, 96 / 128, 0, 26 / 64 }       -- the metal
+local GEM_TEX = { 0, 96 / 128, 32 / 64, 58 / 64 }     -- the gem
+local POINTER_TOP = 5         -- its top above the frame's bottom: its 6 px of bar sit over the status bar's 4 px metal edge
+local GEM_REST = 0.35         -- the gem at rest: this far from plum toward lilac (plum itself is too dark to see)
 local POINTER_LIGHT = math.pi / 4 -- it turns from plum to lilac as the pin comes within 45 degrees of the middle
-local YARDS_DROP = 10         -- how far the distance drops below the pin at the middle, to clear the pointer
+local YARDS_DROP = 15         -- how far the distance drops below the pin at the middle, to clear the pointer
 local FOV = math.pi           -- how much of the horizon the strip shows (set in the menu)
 local PPR = WIDTH / FOV       -- pixels per radian (from the two)
 local TICK_STEP = math.pi / 12 -- 15 degrees
 local MARK = 28               -- the waypoint pin (bigger than the bar: it hangs below it)
 local MARK_Y = -4             -- its center below the strip's, so its top stays on screen
-local POINTER_ATLAS = "covenantsanctum-renown-arrow" -- the pointer's art (it points left as drawn)
 local TWO_PI = 2 * math.pi
 local LILAC, PLUM = DeckKit.COLORS.LILAC, DeckKit.COLORS.PLUM -- the suite's accent; the pointer at rest
 
@@ -51,7 +56,7 @@ local function View() return DB() and DB().compassView or DEFAULT_VIEW end
 
 local W -- DeckKit.Waypoints
 local frame, clip, backing, ticks, letters, pin, yards, dist, note, step
-local pointer
+local pointer, gem
 local over -- the layer above the strip, not clipped (the pin, the pointer, big marks)
 
 -- An angle into (-pi, pi].
@@ -111,25 +116,16 @@ local function Create()
     over = CreateFrame("Frame", nil, frame)
     over:SetAllPoints()
     over:SetFrameLevel(clip:GetFrameLevel() + 5)
-    -- The pointer: the renown arrow turned to point down, tinted, centered under the bar and behind it
-    -- (its own frame, a stratum below the bar; it still shows and hides with the compass), so it peeks
-    -- out from under the bar's bottom edge. Turned with texture coordinates on the sheet: SetRotation
-    -- on an atlas piece turns its coordinates on the whole sheet, so the neighbouring art shows through.
-    local behind = CreateFrame("Frame", nil, frame)
-    behind:SetAllPoints()
-    behind:SetFrameStrata("LOW")
-    pointer = behind:CreateTexture(nil, "OVERLAY", nil, 2)
-    local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(POINTER_ATLAS)
-    if info then
-        local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
-        pointer:SetTexture(info.file)
-        pointer:SetTexCoord(r, t, l, t, r, b, l, b) -- a quarter turn counter-clockwise: left becomes down
-        pointer:SetSize(POINTER, POINTER * info.width / info.height) -- turned: the art's height runs across
-    else
-        pointer:SetColorTexture(1, 1, 1, 1)
-        pointer:SetSize(POINTER, POINTER / 2)
-    end
-    pointer:SetDesaturated(true) -- tinted by Pointer() below
+    -- The pointer: over the status bar's metal edge, under the pin and the other marks (ARTWORK, below their
+    -- OVERLAY), the metal as drawn and the gem tinted by Pointer() below.
+    pointer = over:CreateTexture(nil, "ARTWORK", nil, 1)
+    pointer:SetTexture(POINTER_FILE)
+    pointer:SetTexCoord(unpack(POINTER_TEX))
+    pointer:SetSize(POINTER_W, POINTER_H)
+    gem = over:CreateTexture(nil, "ARTWORK", nil, 2)
+    gem:SetTexture(POINTER_FILE)
+    gem:SetTexCoord(unpack(GEM_TEX))
+    gem:SetAllPoints(pointer)
 
     pin = over:CreateTexture(nil, "OVERLAY", nil, 3)
     if not (C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("Waypoint-MapPin-Tracked")
@@ -151,7 +147,7 @@ local function Create()
     step = over:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     local sfont = step:GetFont()
     if sfont then step:SetFont(sfont, 11, "OUTLINE") end
-    step:SetPoint("TOP", pointer or frame, "BOTTOM", 0, pointer and 4 or -2)
+    step:SetPoint("TOP", pointer, "BOTTOM", 0, -1)
     step:Hide()
 end
 
@@ -164,7 +160,7 @@ local function Place()
         backing:Hide()
         if pointer then
             pointer:ClearAllPoints()
-            pointer:SetPoint("TOP", frame, "BOTTOM", 0, POINTER_TRIM) -- tucked up behind the bar
+            pointer:SetPoint("TOP", frame, "BOTTOM", 0, POINTER_TOP) -- its bar over the status bar's edge
         end
     else
         frame:SetParent(UIParent)
@@ -172,7 +168,7 @@ local function Place()
         backing:Show()
         if pointer then
             pointer:ClearAllPoints()
-            pointer:SetPoint("TOP", frame, "BOTTOM", 0, POINTER_TRIM)
+            pointer:SetPoint("TOP", frame, "BOTTOM", 0, POINTER_TOP)
         end
     end
 end
@@ -187,9 +183,10 @@ end
 local function Pointer(x)
     local t = 0
     if x then t = math.max(0, 1 - math.abs(x) / (POINTER_LIGHT * PPR)) end
-    if not pointer then return t end
-    pointer:SetVertexColor(PLUM[1] + (LILAC[1] - PLUM[1]) * t, PLUM[2] + (LILAC[2] - PLUM[2]) * t,
-        PLUM[3] + (LILAC[3] - PLUM[3]) * t)
+    if not gem then return t end
+    local c = GEM_REST + (1 - GEM_REST) * t
+    gem:SetVertexColor(PLUM[1] + (LILAC[1] - PLUM[1]) * c, PLUM[2] + (LILAC[2] - PLUM[2]) * c,
+        PLUM[3] + (LILAC[3] - PLUM[3]) * c)
     return t
 end
 
