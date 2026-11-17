@@ -54,6 +54,8 @@ local function Build()
     Place(UI.Selector(left, RW, { label = "Heal target", boxWidth = 140,
         values = { { "focus", "Focus" }, { "mouseover", "Mouseover" }, { "target", "Target" }, { "player", "Yourself" } },
         get = function() return state.target end, set = function(v) state.target = v end }))
+    Place(UI.TextBox(left, RW, { label = "Macro name", boxWidth = 180, placeholder = "type a name",
+        get = function() return state.macroName or "" end, set = function(v) state.macroName = v end }))
     Place(UI.Binding(left, RW, { label = "Quick heal",
         get = function() return state.healBind end, set = function(v) state.healBind = v end }))
     Place(UI.Binding(left, RW, { label = "Next party member",
@@ -243,6 +245,11 @@ local function Build()
         format = function(v) return v .. " yd" end,
         get = function() return state.range end, set = function(v) state.range = v end })
     stepper:SetPoint("TOPLEFT", 12, np.top)
+    -- A popover stepper sits beside other controls: the d-pad passes over it, A opens it.
+    local popover = UI.Stepper(np, 260, { label = "Level (A)", min = 1, max = 60, popover = true, any = 0,
+        anyText = "any",
+        get = function() return state.level or 20 end, set = function(v) state.level = v end })
+    popover:SetPoint("LEFT", stepper, "RIGHT", 10, 0)
     local nd = UI.Description(np, "Dials: {DPAD_UD} turns a digit, {DPAD_LR} picks one; past the last "
         .. "digit the cursor moves on to the next control. {A} does the dial's action.", W - 24)
     nd:SetPoint("TOPLEFT", 12, np.top - UI.ROW_H - 16)

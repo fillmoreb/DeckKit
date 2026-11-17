@@ -268,6 +268,10 @@ function UI.NewScreen(name, width, height, title)
     win:HookScript("OnHide", function()
         ns.Window.Sound(false)
         s:ClosePopup()
+        -- Closed mid-typing: the text box lets go of the keyboard (and keeps what was there).
+        if s.mode == "text" and s.capture and s.capture.dk.finish then s.capture.dk.finish(s.capture, false) end
+        if s.mode == "edit" and s.capture and s.capture.dk.edit then s.capture.dk.edit(s.capture, "PAD2") end
+        s:EndEdit()
         s.mode, s.capture = nil, nil
         s.pointer:Hide()
         local f = s:Focused()
@@ -471,6 +475,27 @@ end
 UI.IsDisabled = IsDisabled
 
 function Screen:Key(key)
+    -- A control being edited in place (a popover stepper): every press is its own until it says it's done.
+    if self.mode == "edit" then
+        local f = self.capture
+        local result = f and f.dk.edit and f.dk.edit(f, key)
+        if result == "done" or result == "cancel" or not f then self:EndEdit() end
+        if result then ns.Window.Tick() end
+        self:Refresh()
+        return
+    end
+    -- Typing in a text box: A keeps the text, B puts back what was there; the keyboard (the Deck's on-screen one,
+    -- a real one, dictation) types. Nothing else moves the cursor until it's done.
+    if self.mode == "text" then
+        local f = self.capture
+        if key == "PAD1" or key == "PAD2" then
+            self.mode, self.capture = nil, nil
+            if f and f.dk.finish then f.dk.finish(f, key == "PAD1") end
+            ns.Window.Tick()
+            self:Refresh()
+        end
+        return
+    end
     -- A question on a control ("replace that binding?"): A yes, B no.
     if self.mode == "confirm" then
         if key ~= "PAD1" and key ~= "PAD2" then return end
@@ -522,6 +547,9 @@ function Screen:Key(key)
     end
     if key == "PAD2" or key == "PADFORWARD" then
         if self.popup and self.popup:IsShown() then self:ClosePopup() return end
+        -- A screen with places to go back from (a category drilled into, a detail view) says so: B goes back there
+        -- first, and only closes the window from the top.
+        if key == "PAD2" and self.OnBack and self:OnBack() then ns.Window.Tick() self:Refresh() return end
         -- The player closed it (not combat or another window): screens that care set OnPlayerClose.
         if self.OnPlayerClose then self:OnPlayerClose() end
         self:Hide()
@@ -577,7 +605,18 @@ end
 function Screen:UpdatePrompts()
     local parts = {}
     local left = ""
-    if self.mode == "capture" then
+    if self.mode == "edit" and self.capture and self.capture.dk.editPrompts then
+        for _, p in ipairs(self.capture.dk.editPrompts(self.capture)) do parts[#parts + 1] = p end
+    elseif self.mode == "edit" then
+        parts[#parts + 1] = { "DPAD", "Change", glyphs = Glyph("DPAD_UD", LEGEND_GLYPH) }
+        parts[#parts + 1] = { "LT", "x10", glyphs = Glyph("LT", LEGEND_GLYPH) .. Glyph("RT", LEGEND_GLYPH) }
+        parts[#parts + 1] = { "A", "Done" }
+        parts[#parts + 1] = { "B", "Cancel" }
+    elseif self.mode == "text" then
+        parts[#parts + 1] = { nil, Hex(UI.Color.gold) .. "Type (Steam + X: keyboard)" .. "|r" }
+        parts[#parts + 1] = { "A", "Done" }
+        parts[#parts + 1] = { "B", "Cancel" }
+    elseif self.mode == "capture" then
         parts[#parts + 1] = { nil, Hex(UI.Color.gold) .. (self.capture and self.capture.dk.captureText or "Press a button") .. "|r" }
         parts[#parts + 1] = { "B", "Cancel" }
     elseif self.mode == "confirm" then
@@ -595,7 +634,8 @@ function Screen:UpdatePrompts()
             end
         end
         local inPopup = self.popup and self.popup:IsShown()
-        parts[#parts + 1] = { "B", inPopup and "Cancel" or "Close" }
+        local back = not inPopup and self.BackLabel and self:BackLabel()
+        parts[#parts + 1] = { "B", inPopup and "Cancel" or back or "Close" }
         if inPopup and self.popup.onShoulder then
             parts[#parts + 1] = { "LB", self.popup.shoulderText or "Tabs",
                 glyphs = Glyph("LB", LEGEND_GLYPH) .. Glyph("RB", LEGEND_GLYPH) }
@@ -810,11 +850,15 @@ function UI.Selector(parent, width, opts)
         for _, c in ipairs(opts.values) do if c[1] == v then return c[2] end end
         return tostring(v)
     end
+    -- opts.listOnly: left/right move the cursor past it (it sits beside other controls); A opens its list.
     return Register(f, {
         disabled = opts.disabled, reason = opts.reason, onFocus = opts.onFocus,
-        prompts = function() return { { "DPAD_LR", "Change" }, { "A", "Choose" } } end,
-        left = function() opts.set(Cycle(opts.values, opts.get(), -1)) end,
-        right = function() opts.set(Cycle(opts.values, opts.get(), 1)) end,
+        prompts = function()
+            if opts.listOnly then return { { "A", "Choose" } } end
+            return { { "DPAD_LR", "Change" }, { "A", "Choose" } }
+        end,
+        left = not opts.listOnly and function() opts.set(Cycle(opts.values, opts.get(), -1)) end or nil,
+        right = not opts.listOnly and function() opts.set(Cycle(opts.values, opts.get(), 1)) end or nil,
         activate = function(self)
             local screen = TabOf(self).screen
             screen:OpenList(self, opts.values, opts.get(), opts.set)
@@ -826,6 +870,95 @@ function UI.Selector(parent, width, opts)
             self.arrow:SetDesaturated(not enabled)
         end,
     })
+end
+
+-- Text box: a line of text you type. A starts typing (the Deck's on-screen keyboard is Steam + X; a real keyboard or
+-- dictation types too), A or Enter keeps it, B or Escape puts back what was there. opts: label, get() -> text,
+-- set(text), placeholder (shown dim while empty), boxWidth, maxLetters, enter(text) (run after a kept edit: a
+-- search box searches). An assistant can fill the one under the cursor without typing (UI.ActiveTextBox).
+function UI.TextBox(parent, width, opts)
+    local f = Row(parent, width, opts.label)
+    local eb = CreateFrame("EditBox", nil, f)
+    eb:SetSize(opts.boxWidth or 260, 22)
+    eb:SetPoint("RIGHT", -6, 0)
+    eb:SetAutoFocus(false)
+    eb:SetFontObject(UI.Font.small)
+    eb:SetTextInsets(8, 8, 0, 0)
+    eb:SetMaxLetters(opts.maxLetters or 80)
+    eb:EnableMouse(false)
+    Fill(eb, 0, 0, 0, 0.6)
+    local edge = CreateFrame("Frame", nil, eb, "BackdropTemplate")
+    edge:SetAllPoints()
+    edge:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+    edge:SetBackdropBorderColor(0.45, 0.42, 0.35, 1)
+    f.edge = edge
+    f.hint = Text(eb, UI.Font.smallDim)
+    f.hint:SetPoint("LEFT", 8, 0)
+    f.box = eb
+    local function Finish(keep)
+        if not f.editing then return end
+        f.editing = false
+        local text = eb:GetText() or ""
+        eb:ClearFocus()
+        edge:SetBackdropBorderColor(0.45, 0.42, 0.35, 1)
+        if keep then
+            opts.set(text)
+            if opts.enter then opts.enter(text) end
+        end
+        f.dk.refresh(f)
+    end
+    -- Enter and Escape from the keyboard end it the same as A and B (the screen leaves its typing mode too).
+    local function FromKeyboard(keep)
+        local screen = TabOf(f).screen
+        if screen.mode == "text" and screen.capture == f then
+            screen.mode, screen.capture = nil, nil
+            Finish(keep)
+            screen:Refresh()
+        else
+            Finish(keep)
+        end
+    end
+    eb:SetScript("OnEnterPressed", function() FromKeyboard(true) end)
+    eb:SetScript("OnEscapePressed", function() FromKeyboard(false) end)
+    eb:SetScript("OnTextChanged", function(self) f.hint:SetShown((self:GetText() or "") == "") end)
+    f.textbox = { label = opts.label, get = opts.get,
+        fill = function(text, run)
+            opts.set(text)
+            f.dk.refresh(f)
+            if run and opts.enter then opts.enter(text) end
+        end }
+    return Register(f, {
+        disabled = opts.disabled, reason = opts.reason, onFocus = opts.onFocus,
+        prompts = function() return { { "A", "Type" } } end,
+        activate = function(self)
+            local screen = TabOf(self).screen
+            self.editing = true
+            eb:SetText(opts.get() or "")
+            eb:SetFocus()
+            eb:HighlightText()
+            edge:SetBackdropBorderColor(1, 0.82, 0, 1)
+            screen.mode, screen.capture = "text", self
+        end,
+        finish = function(_, keep) Finish(keep) end,
+        refresh = function(self)
+            local enabled = RowEnabled(self)
+            if not self.editing then eb:SetText(opts.get() or "") end
+            f.hint:SetText(opts.placeholder or "")
+            f.hint:SetShown((eb:GetText() or "") == "")
+            eb:SetAlpha(enabled and 1 or 0.5)
+        end,
+    })
+end
+
+-- The text box under the cursor of an open DeckKit window, for an assistant asked to "type X into this box":
+-- { label, get() -> text, fill(text, run) } (run: what the box's own Enter does, e.g. search), or nil.
+function UI.ActiveTextBox()
+    for _, s in ipairs(screens) do
+        if s.win:IsShown() then
+            local f = s:Focused()
+            if f and f.textbox and f:IsVisible() and not f.editing then return f.textbox end
+        end
+    end
 end
 
 -- Binding: shows the assigned button(s) as glyphs. A: press a button to bind. X: clear.
@@ -883,6 +1016,122 @@ function UI.Button(parent, width, opts)
 end
 
 -- Stepper: a number changed with left/right ("<  170  >"). opts: min, max, step, format(v).
+------------------------------------------------------------------------
+-- Editing in place: a control takes the controller for a moment (a popover stepper, and later others). The window
+-- fades behind it; its popover, if it has one, shows bright on the top layer. The control's dk.edit(f, key) gets
+-- every press while it's open and returns "done" or "cancel" to end it (anything else: still open).
+------------------------------------------------------------------------
+
+-- Behind an open popover the window is veiled: a dark layer over it at this alpha, the window itself still opaque, so
+-- nothing of the world shows through (fading the window's own alpha let player names read through it).
+local EDIT_VEIL = { 1, 1, 1, 0.2 } -- white, frosting it (black at 0.55 tried first; white 0.25 a touch strong)
+
+-- A popover panel above `anchor` (a region of the control; with `center`, over its middle instead), on the top layer so the faded window and any list
+-- around the control leave it bright and unclipped. pop:SetLegend({ { "DPAD", "change" }, ... }, ...) writes its
+-- legend lines (each argument one line of button glyphs and what they do) under whatever the control puts at
+-- pop.top (its content's TOP anchor offset, -14 by default).
+local POP_GLYPH = 24
+function UI.Popover(anchor, width, height, center)
+    local pop = CreateFrame("Frame", nil, UIParent)
+    pop:SetSize(width, height)
+    if center then pop:SetPoint("CENTER", anchor, "CENTER", 0, 0) else pop:SetPoint("BOTTOM", anchor, "TOP", 0, 4) end
+    pop:SetFrameStrata("FULLSCREEN_DIALOG")
+    -- The game's gamepad legend slot, as the window's footer legend wears it: made for something this small.
+    pop.bg = pop:CreateTexture(nil, "BACKGROUND")
+    pop.bg:SetAllPoints()
+    if not pop.bg:SetAtlas("gamepad-footer-slot-bg") then pop.bg:SetColorTexture(0, 0, 0, 0.85) end
+    pop.frame = pop:CreateTexture(nil, "BORDER")
+    pop.frame:SetAllPoints()
+    pop.frame:SetAtlas("gamepad-footer-slot-frameneutral")
+    pop.top = -14
+    pop.lines = {}
+    function pop:SetLegend(...)
+        local after
+        for i = 1, select("#", ...) do
+            local items = select(i, ...)
+            local line = self.lines[i] or Text(self, UI.Font.body, "CENTER")
+            self.lines[i] = line
+            local parts = {}
+            for _, it in ipairs(items) do
+                local glyphs = ""
+                for key in it[1]:gmatch("%S+") do glyphs = glyphs .. Glyph(key, POP_GLYPH) end
+                parts[#parts + 1] = glyphs .. " " .. it[2]
+            end
+            line:SetText(table.concat(parts, "    "))
+            line:ClearAllPoints()
+            if after then line:SetPoint("TOP", after, "BOTTOM", 0, -6) else line:SetPoint("BOTTOM", 0, 8 + (select("#", ...) - 1) * 30) end
+            line:Show()
+            after = line
+        end
+        for i = select("#", ...) + 1, #self.lines do self.lines[i]:Hide() end
+    end
+    pop:Hide()
+    return pop
+end
+
+-- Starts f's editing session: f takes every press (its dk.edit), the window is veiled, its popover shows.
+function Screen:BeginEdit(f, popover)
+    self.mode, self.capture, self.editPopover = "edit", f, popover
+    if not self.veil then
+        local v = CreateFrame("Frame", nil, self.win)
+        v:SetAllPoints()
+        v:SetFrameLevel(self.win:GetFrameLevel() + 50) -- over every control in the window
+        local t = v:CreateTexture(nil, "OVERLAY")
+        t:SetAllPoints()
+        t:SetColorTexture(unpack(EDIT_VEIL))
+        self.veil = v
+    end
+    self.veil:Show()
+    if popover then popover:Show() end
+end
+
+-- Ends it: the veil lifts, the popover goes.
+function Screen:EndEdit()
+    if self.editPopover then self.editPopover:Hide() end
+    self.editPopover = nil
+    if self.veil then self.veil:Hide() end
+    if self.mode == "edit" then self.mode, self.capture = nil, nil end
+end
+
+-- A question that blocks the window until it's answered, in a popover over its middle (the window veiled, as for a
+-- spinner): opts.text (a line or two), opts.yes / opts.no (labels, "Yes" / "No"), opts.onYes() / opts.onNo().
+-- A answers yes, B no; onYes runs inside that A press, so things the game wants a real press for (posting, buying,
+-- cancelling an auction) can happen there.
+local ASK_W = 380
+function Screen:Ask(opts)
+    if not self.askPop then
+        local pop = UI.Popover(self.win, ASK_W, 110, true)
+        pop.text = Text(pop, UI.Font.body, "CENTER")
+        pop.text:SetPoint("TOP", 0, -16)
+        pop.text:SetWidth(ASK_W - 32)
+        pop.text:SetWordWrap(true)
+        self.askPop = pop
+    end
+    local pop = self.askPop
+    local yes, no = opts.yes or "Yes", opts.no or "No"
+    pop.text:SetText(ns.Window.Glyphs(opts.text or ""))
+    pop:SetLegend({ { "A", yes }, { "B", no } })
+    pop:SetHeight(math.max(96, math.ceil(pop.text:GetStringHeight() or 20) + 70))
+    local question = { dk = {
+        edit = function(_, key)
+            if key == "PAD1" then if opts.onYes then opts.onYes() end return "done" end
+            if key == "PAD2" then if opts.onNo then opts.onNo() end return "cancel" end
+        end,
+        editPrompts = function() return { { "A", yes }, { "B", no } } end,
+    } }
+    self:BeginEdit(question, pop)
+    self:UpdatePrompts()
+end
+
+-- Stepper: a number changed a step at a time. Left/right step it while it has the cursor. With opts.popover the
+-- d-pad passes over it like any control and A opens it: up/right add, down/left subtract, LT/RT ten steps, A keeps,
+-- B puts back the old value (for steppers that sit beside other controls, where left/right must move the cursor).
+-- opts.done(v): after an A keeps a popover's value (do the expensive part there, e.g. search again).
+-- opts.widest: the widest value it shows (default 999), so the popover is sized once and doesn't wiggle as it changes.
+-- opts.min / opts.max: numbers, or functions read each time (so two spinners can bound each other: "from" never above
+-- "to"). opts.any + opts.anyText: a value that means "no limit" (0, shown "any"), just below the minimum: stepping
+-- down from the minimum reaches it, stepping up from it reaches the minimum; the min/max don't apply to it.
+-- opts.bigStep: how many steps LT/RT take (10).
 function UI.Stepper(parent, width, opts)
     local f = Row(parent, width, opts.label)
     f.value = Text(f, UI.Font.body, "CENTER")
@@ -894,11 +1143,113 @@ function UI.Stepper(parent, width, opts)
     f.gt = Text(f, UI.Font.heading, "CENTER")
     f.gt:SetPoint("LEFT", f.value, "RIGHT", 2, 0)
     f.gt:SetText(">")
+    local function Lo() return type(opts.min) == "function" and opts.min() or opts.min end
+    local function Hi() return type(opts.max) == "function" and opts.max() or opts.max end
+    local userFormat = opts.format
+    local function Show(v)
+        if opts.any ~= nil and v == opts.any then return opts.anyText or "any" end
+        return userFormat and userFormat(v) or tostring(v)
+    end
     local function Step(d)
-        local v = opts.get() + d * (opts.step or 1)
-        v = math.max(opts.min, math.min(opts.max, v))
-        v = math.floor(v / (opts.step or 1) + 0.5) * (opts.step or 1) -- no float drift
-        if v ~= opts.get() then opts.set(v) end
+        local step = opts.step or 1
+        local cur, lo, hi = opts.get(), Lo(), Hi()
+        local v
+        if opts.any ~= nil and cur == opts.any then
+            if d <= 0 then return end -- "any" is the bottom
+            v = lo + (d - 1) * step
+        else
+            v = cur + d * step
+            if v < lo then
+                if opts.any ~= nil then v = opts.any else v = lo end
+            end
+        end
+        if v ~= opts.any then
+            v = math.max(lo, math.min(hi, v))
+            v = math.floor(v / step + 0.5) * step -- no float drift
+        end
+        if v ~= cur then opts.set(v) end
+    end
+    local bigStep = opts.bigStep or 10
+    if opts.popover then
+        -- Its popover: one line, the d-pad's left/right glyph (the footer legend's size) and then the value (Ben,
+        -- 2026-11-17). A keeps, B cancels and LT/RT step ten, as the footer says.
+        local pop = UI.Popover(f.value, 120, 44)
+        -- The glyph in a fixed spot on the left; the number in a quiet field box (dark fill, a dark edge: just enough
+        -- to set it apart, no focus look), fixed width, centred: nothing moves as the number changes.
+        local PAD, GAP = 12, 8
+        pop.glyph = Text(pop, UI.Font.title, "LEFT")
+        pop.glyph:SetPoint("LEFT", PAD, 0)
+        pop.glyph:SetText(Glyph("DPAD_LR", LEGEND_GLYPH))
+        local glyphW = math.ceil(pop.glyph:GetStringWidth() or LEGEND_GLYPH)
+        pop.box = CreateFrame("Frame", nil, pop)
+        Fill(pop.box, 0, 0, 0, 0.6)
+        local edge = CreateFrame("Frame", nil, pop.box, "BackdropTemplate")
+        edge:SetAllPoints()
+        edge:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+        edge:SetBackdropBorderColor(0.25, 0.24, 0.21, 1)
+        pop.box:SetPoint("LEFT", pop, "LEFT", PAD + glyphW + GAP, 0)
+        pop.value = Text(pop.box, UI.Font.title, "CENTER")
+        pop.value:SetPoint("CENTER", 0, 0)
+        -- Sized once to the widest thing it shows: its minimum, its maximum (up to 999) and opts.widest, as formatted
+        -- (0 can read "any", wider than 70). A format that can't show one is skipped rather than break the window.
+        local widest = 0
+        local samples = { Lo(), math.min(Hi() or 999, 999), opts.widest }
+        if opts.any ~= nil then samples[#samples + 1] = opts.any end
+        for _, v in pairs(samples) do
+            local ok, shown = pcall(Show, v)
+            if ok and shown then
+                pop.value:SetText(shown)
+                widest = math.max(widest, pop.value:GetStringWidth() or 0)
+            end
+        end
+        local boxW = math.ceil(math.max(widest, 24) + 20)
+        pop.box:SetSize(boxW, 28)
+        pop:SetWidth(PAD + glyphW + GAP + boxW + PAD)
+        f.pop = pop
+        f.glow = f:CreateTexture(nil, "BACKGROUND")
+        f.glow:SetPoint("TOPLEFT", f.lt, "TOPLEFT", -4, 4)
+        f.glow:SetPoint("BOTTOMRIGHT", f.gt, "BOTTOMRIGHT", 4, -4)
+        f.glow:SetColorTexture(1, 0.82, 0, 0.18)
+        f.glow:Hide()
+        local before
+        return Register(f, {
+            disabled = opts.disabled, reason = opts.reason, onFocus = opts.onFocus,
+            prompts = function() return { { "A", "Change" } } end,
+            activate = function(self)
+                before = opts.get()
+                self.spinning = true
+                TabOf(self).screen:BeginEdit(self, self.pop)
+            end,
+            edit = function(self, key)
+                if key == "PADDUP" or key == "PADDRIGHT" then Step(1) return "step" end
+                if key == "PADDDOWN" or key == "PADDLEFT" then Step(-1) return "step" end
+                if key == "PADRTRIGGER" then Step(bigStep) return "step" end
+                if key == "PADLTRIGGER" then Step(-bigStep) return "step" end
+                if key == "PAD1" then
+                    self.spinning = false
+                    if opts.done then opts.done(opts.get()) end
+                    return "done"
+                end
+                if key == "PAD2" then
+                    self.spinning = false
+                    if before ~= nil and before ~= opts.get() then opts.set(before) end
+                    return "cancel"
+                end
+            end,
+            refresh = function(self)
+                local enabled = RowEnabled(self)
+                local v = opts.get()
+                self.value:SetText(Show(v))
+                self.value:SetFontObject(self.spinning and UI.Font.heading or (enabled and UI.Font.body or UI.Font.dim))
+                local open = self.spinning and true or false
+                self.lt:SetShown(open)
+                self.gt:SetShown(open)
+                self.glow:SetShown(open)
+                if open then
+                    self.pop.value:SetText(Show(v))
+                end
+            end,
+        })
     end
     return Register(f, {
         disabled = opts.disabled, reason = opts.reason, onFocus = opts.onFocus,
@@ -908,10 +1259,10 @@ function UI.Stepper(parent, width, opts)
         refresh = function(self)
             local enabled = RowEnabled(self)
             local v = opts.get()
-            self.value:SetText(opts.format and opts.format(v) or tostring(v))
+            self.value:SetText(Show(v))
             self.value:SetFontObject(enabled and UI.Font.body or UI.Font.dim)
-            self.lt:SetFontObject(v > opts.min and enabled and UI.Font.heading or UI.Font.dim)
-            self.gt:SetFontObject(v < opts.max and enabled and UI.Font.heading or UI.Font.dim)
+            self.lt:SetFontObject((v > Lo() or (opts.any ~= nil and v ~= opts.any)) and enabled and UI.Font.heading or UI.Font.dim)
+            self.gt:SetFontObject(v < Hi() and enabled and UI.Font.heading or UI.Font.dim)
         end,
     })
 end
@@ -1089,7 +1440,9 @@ end
 function Screen:Refresh()
     for _, tab in ipairs(self.tabs) do
         for _, f in ipairs(tab.items) do
-            if f.dk.refresh and not (self.mode and self.capture == f) then f.dk.refresh(f) end
+            -- A control capturing a key isn't redrawn mid-capture; one being edited in place (a popover) is: it shows
+            -- the change.
+            if f.dk.refresh and not (self.mode and self.mode ~= "edit" and self.capture == f) then f.dk.refresh(f) end
         end
         if tab.onRefresh then tab.onRefresh(tab) end
     end
