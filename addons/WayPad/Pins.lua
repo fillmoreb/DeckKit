@@ -85,13 +85,15 @@ end
 
 ------------------------------------------------------------------------
 -- The walk on the minimap: a lilac dotted trail along the path on foot to where the guidance points
--- (DeckKit.Route.Walk, with ForeverNav installed), from you onward, inside the minimap only. MapDeck draws the same
--- path on the peek map.
+-- (DeckKit.Route.Walk, with ForeverNav installed), from you onward, inside the minimap only. Each dot has a white ring
+-- and a black one around it, so it shows on light and dark ground alike. MapDeck draws the same path on the peek map.
 ------------------------------------------------------------------------
 
 local crumbs = {}
 local crumbFrame
-local CRUMB_PX, CRUMB_GAP_PX = 5, 9 -- dot size and the gap between dots, on screen
+local CRUMB_PX, CRUMB_GAP_PX = 5, 9 -- the lilac dot's size and the gap between dots, on screen
+local RING_PX = 1 -- each ring's width (white, then black outside it)
+local CRUMB_OUTER_PX = CRUMB_PX + 4 * RING_PX
 local CRUMB_TEXTURE = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask" -- a white disc
 local LILAC = DeckKit.COLORS.LILAC
 
@@ -103,10 +105,23 @@ local function Crumb(i)
             crumbFrame:SetAllPoints(Minimap)
             crumbFrame:SetFrameLevel(Minimap:GetFrameLevel() + 9) -- under the waypoint pins (+10)
         end
-        t = crumbFrame:CreateTexture(nil, "OVERLAY")
+        -- Three discs stacked: black, white a ring smaller, lilac a ring smaller again. `t` is the black one;
+        -- the others are anchored to its centre and move with it.
+        t = crumbFrame:CreateTexture(nil, "OVERLAY", nil, 1)
         t:SetTexture(CRUMB_TEXTURE)
-        t:SetVertexColor(LILAC[1], LILAC[2], LILAC[3], 0.9)
-        t:SetSize(CRUMB_PX, CRUMB_PX)
+        t:SetVertexColor(0, 0, 0, 0.9)
+        t:SetSize(CRUMB_OUTER_PX, CRUMB_OUTER_PX)
+        local white = crumbFrame:CreateTexture(nil, "OVERLAY", nil, 2)
+        white:SetTexture(CRUMB_TEXTURE)
+        white:SetVertexColor(1, 1, 1, 1)
+        white:SetSize(CRUMB_PX + 2 * RING_PX, CRUMB_PX + 2 * RING_PX)
+        white:SetPoint("CENTER", t, "CENTER")
+        local dot = crumbFrame:CreateTexture(nil, "OVERLAY", nil, 3)
+        dot:SetTexture(CRUMB_TEXTURE)
+        dot:SetVertexColor(LILAC[1], LILAC[2], LILAC[3], 1)
+        dot:SetSize(CRUMB_PX, CRUMB_PX)
+        dot:SetPoint("CENTER", t, "CENTER")
+        t.rings = { white, dot }
         crumbs[i] = t
     end
     return t
@@ -121,7 +136,7 @@ local function UpdateCrumbs(view, radius, rotates, square)
         local cosT, sinT = math.cos(turn), math.sin(turn)
         local perYard = radius / view
         local step = (CRUMB_PX + CRUMB_GAP_PX) / perYard -- yards between dots
-        local edge = radius - CRUMB_PX
+        local edge = radius - CRUMB_OUTER_PX
         -- From you along the rest of the path; a dot every `step` yards, while within reach of the minimap.
         local ax, ay = me.north, me.west
         local at, travelled = step, 0 -- the next dot's distance along the current stretch: the first a gap ahead of you
@@ -143,6 +158,7 @@ local function UpdateCrumbs(view, radius, rotates, square)
                     t:ClearAllPoints()
                     t:SetPoint("CENTER", Minimap, "CENTER", sx, sy)
                     t:Show()
+                    for _, r in ipairs(t.rings) do r:Show() end
                 end
                 at = at + step
             end
@@ -152,7 +168,10 @@ local function UpdateCrumbs(view, radius, rotates, square)
             ax, ay = b.x, b.y
         end
     end
-    for i = n + 1, #crumbs do crumbs[i]:Hide() end
+    for i = n + 1, #crumbs do
+        crumbs[i]:Hide()
+        for _, r in ipairs(crumbs[i].rings) do r:Hide() end
+    end
 end
 
 
