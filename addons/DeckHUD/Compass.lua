@@ -8,8 +8,10 @@
 --   * the focused quest (the game's super-tracked one), drawn as Blizzard's map and objective tracker draw
 --     it: its classification's disc (gold, blue for dailies...) with the dots, or the ? once complete;
 --     pulsing with the map's quest glow while you stand in its area (DeckKit.Map.QuestArea)
+--   * your corpse, while you're dead or a ghost: the tombstone the world map draws for it, with its distance
+--     in yards under it, as the waypoint's
 --   * your group: class-colored dots, or the raid marker one wears
--- Waypoint-like marks stay on the strip: out of view they wait at the nearer end, side by side (Park).
+-- Waypoint-like marks (the corpse too) stay on the strip: out of view they wait at the nearer end, side by side (Park).
 -- Group dots fade toward the ends like the ticks. Each kind of mark is a menu toggle.
 --
 -- The strip isn't one long image: the ticks and letters are separate pieces placed each frame inside a
@@ -205,9 +207,9 @@ end
 local marks = {}      -- { bearing, kind, unit or label } from the last Collect
 local markPool = {}   -- textures, reused
 local RAID_ICON = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_%d"
-local MARK_SIZE = { blizzard = 22, guard = 26, quest = 26, member = 12, marked = 14 } -- guard: sized by eye against the pin (its flag fills its cell; the pin has margin)
+local MARK_SIZE = { blizzard = 22, guard = 26, quest = 26, corpse = 20, member = 12, marked = 14 } -- guard: sized by eye against the pin (its flag fills its cell; the pin has margin)
 -- Waypoint-like marks: on the unclipped layer, level with the waypoint pin, kept in view (Park).
-local BIG = { guard = true, blizzard = true, quest = true }
+local BIG = { guard = true, blizzard = true, quest = true, corpse = true }
 local PULSE = 4 -- the in-area glow's beat (radians a second: about one and a half a second)
 local MARK_DROP = { guard = 2 }  -- hung this much lower than the pin
 local SOLID = { guard = true }   -- full strength even while waiting at an end
@@ -300,6 +302,27 @@ local function Collect()
             if b then marks[#marks + 1] = { bearing = b, kind = "guard", index = info.textureIndex } end
         end
     end
+    -- Your corpse while you're dead or a ghost: asked on your map first, then the maps above it (a ghost at a
+    -- graveyard in the next zone still gets a bearing from the continent's map).
+    if Shows("compassCorpse") and UnitIsDeadOrGhost("player") and C_DeathInfo and C_DeathInfo.GetCorpseMapPosition then
+        local m = pmap
+        for _ = 1, 4 do
+            if not m or m == 0 then break end
+            local ok, pos = pcall(C_DeathInfo.GetCorpseMapPosition, m)
+            local cx, cy
+            if ok and pos then cx, cy = pos:GetXY() end
+            if DeckKit.Readable(cx) and DeckKit.Readable(cy) and (cx ~= 0 or cy ~= 0) then
+                local b = Bearing(pmap, px, py, m, cx, cy)
+                local _, fn, fw = DeckKit.Map.WorldPosition(pmap, px, py)
+                local _, tn, tw = DeckKit.Map.WorldPosition(m, cx, cy)
+                local yd = fn and tn and math.sqrt((tn - fn) ^ 2 + (tw - fw) ^ 2) or nil
+                if b then marks[#marks + 1] = { bearing = b, kind = "corpse", yards = yd } end
+                break
+            end
+            local info = C_Map.GetMapInfo(m)
+            m = info and info.parentMapID
+        end
+    end
     -- Party or raid members, as class-colored dots, or their raid marker.
     if Shows("compassGroup") and IsInGroup() then
         local raid = IsInRaid()
@@ -337,7 +360,7 @@ local function MarkTexture(pool, i, layer)
         t.glow:SetPoint("CENTER", t)
         t.glow:Hide()
         local hide, alpha = t.Hide, t.SetAlpha
-        function t:Hide() hide(self); self.top:Hide(); self.glow:Hide() end
+        function t:Hide() hide(self); self.top:Hide(); self.glow:Hide(); if self.yards then self.yards:Hide() end end
         function t:SetAlpha(a) alpha(self, a); self.top:SetAlpha(a) end
         pool[i] = t
     end
@@ -359,6 +382,11 @@ local function Paint(t, m)
         t.top:Show()
     elseif m.kind == "blizzard" then
         t:SetAtlas("Waypoint-MapPin-Untracked")
+    elseif m.kind == "corpse" then
+        -- The world map's tombstone (MapDeck draws it the same); the gray pin if this client lacks it.
+        if not (C_Texture.GetAtlasInfo("poi-graveyard-neutral") and t:SetAtlas("poi-graveyard-neutral")) then
+            t:SetAtlas("Waypoint-MapPin-Untracked")
+        end
     elseif m.kind == "guard" then
         -- The guard's flag, as the world map draws it: a cell of the minimap's POI sheet.
         local x1, x2, y1, y2
@@ -452,6 +480,23 @@ local function DrawMarks(facing, waypoint, elapsed)
             At(t, m.px, MARK_Y - (MARK_DROP[m.kind] or 0))
             t:SetAlpha((m.parked and not SOLID[m.kind]) and 0.6 or 1)
             t:Show()
+            -- The corpse's distance, under it as the waypoint's is under the pin: dropping clear of the pointer
+            -- as it comes to the middle.
+            if m.kind == "corpse" and m.yards then
+                if not t.yards then
+                    t.yards = over:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                    local yfont = t.yards:GetFont()
+                    if yfont then t.yards:SetFont(yfont, 11, "OUTLINE") end
+                end
+                local near = m.parked and 0 or math.max(0, 1 - math.abs(m.px) / (POINTER_LIGHT * PPR))
+                t.yards:ClearAllPoints()
+                t.yards:SetPoint("TOP", t, "BOTTOM", 0, 1 - (YARDS_DROP + 1) * near)
+                t.yards:SetText(string.format("%d", m.yards + 0.5))
+                t.yards:SetAlpha(m.parked and 0.6 or 1)
+                t.yards:Show()
+            elseif t.yards then
+                t.yards:Hide()
+            end
             if m.inside then
                 local s = MARK_SIZE.quest * 2 -- the glow's art is twice the disc's
                 t.glow:SetSize(s, s)
