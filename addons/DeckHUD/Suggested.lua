@@ -63,7 +63,7 @@ local function Set(s, on)
     end
 end
 
-local items = { { type = "section", tab = "Screen", label = "Suggested settings", order = 1 } }
+local items = { { type = "section", tab = "Setup", label = "Suggested game settings", order = 2 } }
 for _, s in ipairs(SUGGESTED) do
     if GetCVar(s.cvar) ~= nil then -- only settings this client has
         table.insert(items, { type = "toggle", label = s.label, hint = s.hint,
@@ -73,7 +73,7 @@ for _, s in ipairs(SUGGESTED) do
 end
 -- One button for a first install: every suggested setting above, and the suggested Edit Mode layout
 -- (Layout.lua: unit frames, party, focus, raid, buffs, the compact crossbar), then a reload.
-table.insert(items, { type = "toggle", label = "Free the grip keys (F1-F8)",
+table.insert(items, { type = "toggle", label = "Free the grip keys (F1-F8)", permanent = true,
     hint = "Clears the game's own key bindings on the keys the back grips send (F1-F5 target you and "
         .. "your party by default). Can't be undone from here: rebind them in Key Bindings.",
     get = function() return #GripKeysBound() == 0 end,
@@ -106,22 +106,21 @@ end
 
 -- For the welcome window: why the layout can't be changed, in words for that window (nil when it can).
 local function LayoutProblem()
-    local info, layout = ns.Layout.Active()
-    if info and not layout then
-        return "Your Edit Mode layout is one of the game's presets, which can't be changed. Open Edit Mode "
-            .. "(game menu > Edit Mode), copy it to a new layout of your own, then come back here."
-    end
+    local can, why = ns.Layout.CanChange()
+    if not can and why ~= "not in combat" then return "The layout can't be changed: " .. why .. "." end
 end
 
-local EVERYTHING_HINT = "Turns every suggestion above on, frees the grip keys, and applies the suggested layout: "
+local EVERYTHING_HINT = "Turns on every suggested game setting (Suggested game settings, above), frees the grip keys, and applies the suggested layout: "
     .. "your frame and the target's, the party frames in a row between them, the focus frame centered, raid "
     .. "frames top-left and buffs under the status bar, the compact crossbar near the bottom. Backs up your "
     .. "Edit Mode layout first (one undo), then reloads."
 
+table.insert(items, { type = "info", label = "Switching one off puts back what you had before (all but the grip keys)." })
+-- Setup > Layout: the one-button setup, then every layout action (Layout.lua), Undo last.
+table.insert(items, { type = "section", tab = "Setup", label = "Layout", order = 3 })
 table.insert(items, { type = "action", label = "Apply everything suggested", keepOpen = true,
     hint = EVERYTHING_HINT, run = ApplyEverything })
-table.insert(items, { type = "info", label = "Switching one off puts back what you had before." })
-for _, item in ipairs(ns.Layout and ns.Layout.MenuItems or {}) do table.insert(items, item) end -- Undo the last layout change
+for _, item in ipairs(ns.Layout and ns.Layout.MenuItems or {}) do table.insert(items, item) end
 ns.AddSettings(items)
 
 if DeckKit.Setup then
@@ -130,10 +129,10 @@ if DeckKit.Setup then
         title = "Suggested settings and layout",
         text = "Classic chat, auto loot, no button legend, the game's own UI scale, and every frame placed for "
             .. "the Deck's screen. Also clears the game's bindings on F1-F8 (the grips' keys). Your layout is "
-            .. "backed up first (Screen > Suggested settings > Undo the last layout change), then the UI reloads.",
+            .. "backed up first (Setup > Layout > Undo the last layout change), then the UI reloads.",
         done = function() return ns.db.suggestedApplied == true end,
         problem = LayoutProblem,
         action = { label = "Apply everything suggested", verb = "Apply", reloads = true, run = ApplyEverything,
-                   doneReason = "change single settings in Screen > Suggested settings" },
+                   doneReason = "change single settings in Setup > Suggested game settings" },
     })
 end

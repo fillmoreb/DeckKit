@@ -1,7 +1,7 @@
 -- The DeckKit menu: every module's settings in one window, run entirely from the controller.
 --
--- Tabs (LB/RB) group settings by what they're about, not by addon: Controls, Screen, Map & travel,
--- Healing, Tools. Each tab is a scrolling list of sections on the left (each addon's rows under a
+-- Tabs (LB/RB) group settings by what they're about, not by addon: Setup, Controls, Screen, Quests,
+-- Chat, Party, Trade, Advanced. Each tab is a scrolling list of sections on the left (each addon's rows under a
 -- gold heading) and, on the right, what the focused setting does. Look and behavior come from
 -- UI.lua (the game's pointer, 45 degree d-pad moves, A / B / footer prompts).
 --
@@ -30,6 +30,48 @@ local DEFAULT_HINT = {
     bindings = "{X} chooses what it does.",
 }
 
+-- Marks after a row's label: kept for this character only (lilac), needs a /reload, can't be undone here.
+local SETTING = { toggle = true, choice = true, range = true, binding = true }
+-- The game's two-people icon (socialqueuing-icon-group), tinted the suite's lilac.
+local function CharMark()
+    local c = ns.COLORS and ns.COLORS.LILAC or { 0.72, 0.48, 1 }
+    return string.format("|A:socialqueuing-icon-group:16:16:2:0:%d:%d:%d|a", c[1] * 255, c[2] * 255, c[3] * 255)
+end
+local RELOAD_MARK = "|A:UI-RefreshButton:14:14:2:0|a"
+local PERMANENT_MARK = " |cffff6a5a!|r"
+
+local function Marks(item)
+    local m = ""
+    if item.scope == "char" and SETTING[item.type] then m = m .. " " .. CharMark() end
+    if item.reload then m = m .. " " .. RELOAD_MARK end
+    if item.permanent then m = m .. PERMANENT_MARK end
+    return m
+end
+
+local function MarkedLabel(item)
+    local m = Marks(item)
+    if m == "" then return item.label end
+    if type(item.label) == "function" then return function() return (item.label() or "") .. m end end
+    return (item.label or "") .. m
+end
+
+-- What the marks mean, under the hint beside the list.
+local function MarkNotes(item)
+    local notes = {}
+    if SETTING[item.type] then
+        if item.scope == "char" then
+            notes[#notes + 1] = CharMark() .. "  Kept for this character only: your others keep their own."
+        elseif item.scope == "session" then
+            notes[#notes + 1] = "Only until the next /reload."
+        else
+            notes[#notes + 1] = "Shared by all your characters."
+        end
+    end
+    if item.reload then notes[#notes + 1] = RELOAD_MARK .. "  Takes effect after a /reload." end
+    if item.permanent then notes[#notes + 1] = "|cffff6a5a!  Can't be undone from here.|r" end
+    return table.concat(notes, "\n")
+end
+
 local function BuildTab(tabName, sections)
     local tab = screen:AddTab(tabName)
     local bodyH = HEIGHT - 76 - 42
@@ -55,12 +97,16 @@ local function BuildTab(tabName, sections)
     local dFrom = UI.Description(right, "", RW)
     dFrom:SetFontObject(UI.Font.smallDim)
     dFrom:SetPoint("BOTTOMLEFT", 14, 12)
+    local dNotes = UI.Description(right, "", RW)
+    dNotes:SetFontObject(UI.Font.smallDim)
+    dNotes:SetPoint("BOTTOMLEFT", dFrom, "TOPLEFT", 0, 8)
 
     local function Details(item)
         local label = item.label
         if type(label) == "function" then label = label() end
         dHead:SetText(ns.Window.Glyphs(label or ""))
         dText:SetText(ns.Window.Glyphs(item.hint or DEFAULT_HINT[item.type] or ""))
+        dNotes:SetText(MarkNotes(item))
         dFrom:SetText(item.from and ("From " .. item.from) or "")
     end
 
@@ -79,12 +125,14 @@ local function BuildTab(tabName, sections)
         for _, item in ipairs(section.rows) do
             local f, h2
             local focus = function() Details(item) end
-            local opts = { label = item.label, get = item.get, set = item.set, onFocus = focus,
+            local INDENT = item.indent and 22 or 0
+            local W = W - INDENT
+            local opts = { label = MarkedLabel(item), get = item.get, set = item.set, onFocus = focus,
                 disabled = item.disabled, reason = item.reason }
             if item.type == "toggle" then
                 f = UI.Checkbox(content, W, opts)
             elseif item.type == "choice" then
-                opts.values = item.values
+                opts.values, opts.listOnly = item.values, item.listOnly
                 f = UI.Selector(content, W, opts)
             elseif item.type == "range" then
                 opts.min, opts.max, opts.step, opts.format = item.min, item.max, item.step, item.format
@@ -120,6 +168,7 @@ local function BuildTab(tabName, sections)
                         local details = { label = cell.title, hint = cell.hint or item.hint, from = item.from }
                         local cf = UI.ActionCell(content, cellW - 4, {
                             get = cell.get, set = cell.set, mine = cell.mine, title = cell.title,
+                            marked = cell.marked, mark = cell.mark, markText = cell.markText,
                             onFocus = function() Details(details) end,
                         })
                         cf:SetPoint("TOPLEFT", LABEL_W + (c - 1) * cellW, -y)
@@ -132,11 +181,11 @@ local function BuildTab(tabName, sections)
                 h2 = 24
             elseif item.type == "info" then
                 local d = UI.Description(content, item.label, W - 20)
-                d:SetPoint("TOPLEFT", 10, -y - 2)
+                d:SetPoint("TOPLEFT", 10 + INDENT, -y - 2)
                 y = y + d:GetStringHeight() + 8
             end
             if f then
-                f:SetPoint("TOPLEFT", 0, -y)
+                f:SetPoint("TOPLEFT", INDENT, -y)
                 y = y + (h2 or UI.ROW_H) + 2
             end
         end
@@ -200,7 +249,11 @@ end)
 
 -- The core's own rows.
 ns.Settings.Add("DeckKit", ns.TITLE, {
-    { type = "section", tab = "Controls", label = "Menu", order = 1 },
+    { type = "section", tab = "Setup", label = "Welcome", order = 1 },
+    { type = "action", label = "Setup steps", verb = "Open",
+      hint = "The welcome window: the few things to set up once, and how each is going. Also /deckkit setup.",
+      run = function() Menu.Close(); if ns.Setup then ns.Setup.Open() end end },
+    { type = "section", tab = "Controls", label = "Menu", order = 5 },
     { type = "toggle", label = "Double-tap {MENU} opens this",
       hint = "Press {MENU} twice quickly to open this menu. Typing /deckkit always works.",
       get = function() return ns.db.menuDouble ~= false end,
@@ -208,13 +261,9 @@ ns.Settings.Add("DeckKit", ns.TITLE, {
           ns.db.menuDouble = on
           if not on then ns.Print("double-tap Menu is off. Type /deckkit to open the menu.") end
       end },
-    { type = "action", label = "Setup", verb = "Open",
-      hint = "The welcome window: the few things to set up once, and how each is going. Also /deckkit setup.",
-      run = function() Menu.Close(); if ns.Setup then ns.Setup.Open() end end },
-    { type = "section", tab = "Tools", label = "DeckKit", order = 9 },
+    { type = "section", tab = "Advanced", label = "Help and testing", order = 1 },
     { type = "info", label = "Chat commands: /deckkit help" },
-    { type = "section", tab = "Controls", label = "Bindings", order = 9 },
-    { type = "status", label = "Reload UI", hint = "A keyboard key, for testing at a desk.",
+    { type = "status", label = "Reload UI key", hint = "A keyboard key that reloads the interface, for testing at a desk.",
       get = function()
           local k = GetBindingKey("DECKKIT_RELOAD")
           return k or "Not bound", (not k) and UI.Color.dim or nil

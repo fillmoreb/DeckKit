@@ -257,8 +257,16 @@ function UI.NewScreen(name, width, height, title)
         s:StickScroll(stickY, elapsed)
     end)
 
-    local handlers = {}
-    for _, key in ipairs(PAD_KEYS) do handlers[key] = function() s:Key(key) end end
+    -- The grip keys are only the screen's while a binding control waits for a button: otherwise they reach
+    -- the grip chords, so the chord that opened a window also closes it.
+    local GRIP_KEY = {}
+    for _, g in ipairs(ns.GRIPS) do GRIP_KEY[g.key] = true end
+    local handlers = setmetatable({}, { __index = function(_, key)
+        if GRIP_KEY[key] and s.mode == "capture" then return function() s:Key(key) end end
+    end })
+    for _, key in ipairs(PAD_KEYS) do
+        if not GRIP_KEY[key] then handlers[key] = function() s:Key(key) end end
+    end
     s.input = ns.Input.New(win, handlers, { release = function(key) s:KeyUp(key) end })
 
     win:HookScript("OnShow", function()
@@ -601,7 +609,7 @@ function Screen:KeyUp(key)
 end
 
 -- Footer prompts for the focused control. Each control's dk.prompts returns
--- { {"A", "Toggle"}, {"X", "Clear"} }; B and LB/RB are added here.
+-- { {"A", "Toggle"}, {"X", "Clear"} }; B is added here (LB/RB show on the tab strip instead).
 function Screen:UpdatePrompts()
     local parts = {}
     local left = ""
@@ -636,13 +644,7 @@ function Screen:UpdatePrompts()
         local inPopup = self.popup and self.popup:IsShown()
         local back = not inPopup and self.BackLabel and self:BackLabel()
         parts[#parts + 1] = { "B", inPopup and "Cancel" or back or "Close" }
-        if inPopup and self.popup.onShoulder then
-            parts[#parts + 1] = { "LB", self.popup.shoulderText or "Tabs",
-                glyphs = Glyph("LB", LEGEND_GLYPH) .. Glyph("RB", LEGEND_GLYPH) }
-        end
-        if #self.tabs > 1 and not inPopup then
-            parts[#parts + 1] = { "LB", "Tabs", glyphs = Glyph("LB", LEGEND_GLYPH) .. Glyph("RB", LEGEND_GLYPH) }
-        end
+        -- LB / RB aren't listed: the tab strip (or a popup's list strip) shows them at its ends.
     end
     self:SetLegend(parts)
     self.footerLeft:SetText(left)
@@ -1730,7 +1732,6 @@ function Screen:OpenPicker(opts)
         pop.name:SetPoint("BOTTOM", 0, 16)
         pop.name:SetWidth(PICK_W)
         pop.cells = {}
-        pop.shoulderText = "Lists"
         pop:Hide()
         self.picker = pop
     end
@@ -1879,16 +1880,36 @@ function UI.ActionCell(parent, width, opts)
     f.value:SetPoint("LEFT", f.slot, "RIGHT", 8, 0)
     f.value:SetPoint("RIGHT", -6, 0)
     f.value:SetWordWrap(false)
+    -- opts.marked() / opts.mark(): a second flag the cell carries (the grip slots: on the cheat sheet), shown as a
+    -- check at its right and toggled with Y; opts.markText names it in the prompts.
+    if opts.marked then
+        f.check = f:CreateTexture(nil, "OVERLAY")
+        f.check:SetSize(14, 14)
+        f.check:SetPoint("RIGHT", -6, 0)
+        if C_Texture.GetAtlasInfo("common-icon-checkmark") then f.check:SetAtlas("common-icon-checkmark")
+        else f.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check") end
+        f.value:SetPoint("RIGHT", f.check, "LEFT", -4, 0)
+    end
     return Register(f, {
         onFocus = opts.onFocus,
-        prompts = function() return { { "X", opts.get() and "Change" or "Bind" } } end,
+        prompts = function()
+            local p = { { "X", opts.get() and "Change" or "Bind" } }
+            if opts.marked and opts.get() then p[#p + 1] = { "Y", opts.markText or "Mark" } end
+            return p
+        end,
         x = function(self)
             local title = opts.title
             if type(title) == "function" then title = title() end
             TabOf(self).screen:OpenPicker({ owner = self, current = opts.get(), choose = opts.set, title = title })
         end,
+        y = opts.marked and function(self)
+            if not opts.get() then return end
+            opts.mark(not opts.marked())
+            ns.Window.Tick()
+        end or nil,
         refresh = function(self)
             local id = opts.get()
+            if self.check then self.check:SetShown(id ~= nil and opts.marked() == true) end
             DrawAction(self.slot, id)
             self.slot.empty:SetShown(false)
             local text = id and ns.Actions.Label(id) or (Hex(UI.Color.dim) .. "Empty|r")

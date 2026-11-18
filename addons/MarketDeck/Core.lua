@@ -136,7 +136,7 @@ local function Ago(t)
 end
 
 ns.AddSettings({
-    { type = "section", tab = "Tools", label = "Auction prices" },
+    { type = "section", tab = "Trade", label = "Auction house", order = 3 },
     { type = "toggle", label = "Scan when the auction house opens",
       hint = "Takes a snapshot of every auction when you open the auction house, if the last one is over an "
           .. "hour old (Blizzard allows one every 15 minutes). Prices are kept per auction house, for all your "

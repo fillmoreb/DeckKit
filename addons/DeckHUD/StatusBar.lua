@@ -370,7 +370,9 @@ ns.On("PLAYER_LOGIN", FillValues)
 local function SlotRow(group, i, title)
     return { type = "choice", label = title .. " " .. i, values = VALUES,
         hint = "What shows here. Readings from the Steam Deck itself (battery, temperature...) need "
-            .. "DeckKitAfterDark's DeckTelemetry, and stay blank without it.",
+            .. "DeckKitAfterDark's DeckTelemetry, and stay blank without it."
+            .. (group == "middle" and " While the compass is on (Quests > Compass), the middle readings show "
+                .. "at the right side instead." or ""),
         get = function() return Slots(group)[i] or "" end,
         set = function(v)
             DB().statusSlots = DB().statusSlots or {}
@@ -391,55 +393,12 @@ local rows = {
     { type = "toggle", label = "Status bar",
       hint = "A dark bar across the top of the screen with the readings below, and an XP line along it.",
       get = On, set = function(on) DB().statusBar = on; Apply() end },
-    { type = "toggle", label = "Compass",
-      hint = "In the middle of the bar: the way you face, with your active waypoint and its distance on it. "
-          .. "The middle readings move to the right side.",
-      get = function() return ns.CompassOn() end,
-      set = function(on) DB().compass = on; if ns.CompassApply then ns.CompassApply() end end },
-    { type = "range", label = "Compass: width", min = 240, max = 720, step = 40,
-      format = function(v) return v .. " px" end,
-      hint = "How long the compass strip is. Very wide, it can run into the readings either side.",
-      get = function() return DB().compassWidth or 360 end,
-      set = function(v) DB().compassWidth = v; if ns.CompassApply then ns.CompassApply() end end },
-    { type = "range", label = "Compass: view", min = 90, max = 270, step = 15,
-      format = function(v) return v .. "\194\176" end,
-      hint = "How much of the horizon the strip shows. Less: things move further as you turn, easier to line up. "
-          .. "More: a wider look around.",
-      get = function() return DB().compassView or 180 end,
-      set = function(v) DB().compassView = v; if ns.CompassApply then ns.CompassApply() end end },
-    { type = "toggle", label = "Compass: Blizzard's map pin",
-      hint = "The pin you place on the world map, as a dim gold pin on the compass.",
-      get = function() return DB().compassBlizzardPin ~= false end, set = function(on) DB().compassBlizzardPin = on end },
-    { type = "toggle", label = "Compass: focused quest",
-      hint = "The quest the game has focused (super tracked) on the map and objective tracker, as its icon there: "
-          .. "the dots while you work on it, the ? once it's ready to turn in.",
-      get = function() return DB().compassQuest ~= false end, set = function(on) DB().compassQuest = on end },
-    { type = "toggle", label = "Compass: guard directions",
-      hint = "The flag a city guard puts on your map when you ask the way.",
-      get = function() return DB().compassGuard ~= false end, set = function(on) DB().compassGuard = on end },
-    { type = "toggle", label = "Compass: your corpse",
-      hint = "While you're dead or a ghost, a tombstone on the compass shows which way your body is.",
-      get = function() return DB().compassCorpse ~= false end, set = function(on) DB().compassCorpse = on end },
-    { type = "toggle", label = "Compass: party and raid",
-      hint = "Your group as dots in their class colors.",
-      get = function() return DB().compassGroup ~= false end, set = function(on) DB().compassGroup = on end },
-    { type = "toggle", label = "Compass: raid markers",
-      hint = "A group member wearing a raid marker shows as that marker. (Markers on enemies can't be shown: "
-          .. "the game only gives positions for your group.)",
-      get = function() return DB().compassRaidMarks ~= false end, set = function(on) DB().compassRaidMarks = on end },
     { type = "toggle", label = "Hide Blizzard's XP bar",
       hint = "While the status bar shows. Its XP line and reading take over.",
       get = HideXP, set = function(on) DB().statusHideXP = on; BlizzardBars() end },
     { type = "toggle", label = "XP line",
       hint = "Purple along the bottom of the bar; the rested part beyond it in blue.",
       get = ShowXPLine, set = function(on) DB().statusXPLine = on; if bar then UpdateXP() end end },
-    { type = "action", label = "Buffs under the bar", verb = "Move", keepOpen = true,
-      hint = "Moves your buffs down to just under the bar, keeping them where they are across. "
-          .. "Backs up your Edit Mode layout, then reloads.",
-      run = function()
-          local ok, info = ns.Layout.BuffsUnderBar()
-          if ok then ns.ReloadSoon("Buffs moved under the bar.") else ns.Print("Not changed: " .. info .. ".") end
-      end },
     { type = "range", label = "Opacity", min = 0.2, max = 1, step = 0.1,
       format = function(v) return math.floor(v * 100 + 0.5) .. "%" end,
       get = Alpha, set = function(v) DB().statusAlpha = v; if bar then bar:SetAlpha(v) end end },
@@ -448,3 +407,46 @@ for i = 1, SLOTS.left do rows[#rows + 1] = SlotRow("left", i, "Left") end
 for i = 1, SLOTS.middle do rows[#rows + 1] = SlotRow("middle", i, "Middle") end
 for i = 1, SLOTS.right do rows[#rows + 1] = SlotRow("right", i, "Right") end
 ns.AddSettings(rows)
+
+-- The compass's own rows: Quests > Compass (what it points at is about getting places, not the bar).
+local compassRows = {
+    { type = "section", tab = "Quests", label = "Compass", order = 2 },
+    { type = "toggle", label = "Compass",
+      hint = "In the middle of the status bar: the way you face, with your active waypoint and its distance on it. "
+          .. "It moves the bar's middle readings to the right side.",
+      get = function() return ns.CompassOn() end,
+      set = function(on) DB().compass = on; if ns.CompassApply then ns.CompassApply() end end },
+    { type = "range", label = "Width", min = 240, max = 720, step = 40,
+      format = function(v) return v .. " px" end,
+      hint = "How long the compass strip is. Very wide, it can run into the readings either side.",
+      get = function() return DB().compassWidth or 360 end,
+      set = function(v) DB().compassWidth = v; if ns.CompassApply then ns.CompassApply() end end },
+    { type = "range", label = "View", min = 90, max = 270, step = 15,
+      format = function(v) return v .. "\194\176" end,
+      hint = "How much of the horizon the strip shows. Less: things move further as you turn, easier to line up. "
+          .. "More: a wider look around.",
+      get = function() return DB().compassView or 180 end,
+      set = function(v) DB().compassView = v; if ns.CompassApply then ns.CompassApply() end end },
+    { type = "toggle", label = "Blizzard's map pin",
+      hint = "The pin you place on the world map, as a dim gold pin on the compass.",
+      get = function() return DB().compassBlizzardPin ~= false end, set = function(on) DB().compassBlizzardPin = on end },
+    { type = "toggle", label = "Focused quest",
+      hint = "The quest the game has focused (super tracked) on the map and objective tracker, as its icon there: "
+          .. "the dots while you work on it, the ? once it's ready to turn in. Not while the leveling guide is showing: "
+          .. "its waypoint is the one to follow.",
+      get = function() return DB().compassQuest ~= false end, set = function(on) DB().compassQuest = on end },
+    { type = "toggle", label = "Guard directions",
+      hint = "The flag a city guard puts on your map when you ask the way.",
+      get = function() return DB().compassGuard ~= false end, set = function(on) DB().compassGuard = on end },
+    { type = "toggle", label = "Your corpse",
+      hint = "While you're dead or a ghost, a tombstone on the compass shows which way your body is.",
+      get = function() return DB().compassCorpse ~= false end, set = function(on) DB().compassCorpse = on end },
+    { type = "toggle", label = "Party and raid",
+      hint = "Your group as dots in their class colors.",
+      get = function() return DB().compassGroup ~= false end, set = function(on) DB().compassGroup = on end },
+    { type = "toggle", label = "Raid markers",
+      hint = "A group member wearing a raid marker shows as that marker. (Markers on enemies can't be shown: "
+          .. "the game only gives positions for your group.)",
+      get = function() return DB().compassRaidMarks ~= false end, set = function(on) DB().compassRaidMarks = on end },
+}
+ns.AddSettings(compassRows)

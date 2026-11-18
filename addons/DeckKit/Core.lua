@@ -113,7 +113,7 @@ function ns.NewModule(addonNS, name, title)
     addonNS.Debug = ns.Logger(name)
     addonNS.Notice = function(...) if ns.Notice then ns.Notice(...) end end
     addonNS.AddCommand = ns.AddCommand
-    addonNS.AddSettings = function(items) ns.Settings.Add(name, title, items) end
+    addonNS.AddSettings = function(items) ns.Settings.Add(name, title, items, addonNS.settingsScope) end
     table.insert(modules, { name = name, title = title,
         version = GetMetadata and GetMetadata(name, "Version") or "?" })
     return addonNS

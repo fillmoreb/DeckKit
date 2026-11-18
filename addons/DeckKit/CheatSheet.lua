@@ -1,6 +1,6 @@
 -- Grip cheat sheet: a small list on screen of what the grip chords do, each row a chord glyph
 -- (the Deck's back, held grips lit, a bar for a hold) and its action. Which slots it shows is picked
--- in the menu (Controls > Cheat sheet); everything assigned shows until it's unticked, so a newly
+-- in the grip tables (Controls > Grips: Y on a slot); everything assigned shows until it's taken off, so a newly
 -- filled slot turns up by itself. It takes no input, and hides with its side (Hide left / right side).
 -- On and off: the menu, a chord slot ("Cheat sheet"), or /deckkit sheet.
 local _, ns = ...
@@ -138,14 +138,21 @@ ns.AddCommand("sheet", function()
 end, "show or hide the grip cheat sheet")
 
 ------------------------------------------------------------------------
--- Settings: Controls > Cheat sheet
+-- Settings: Controls > Cheat sheet (which slots it shows: Y in the grip tables)
 ------------------------------------------------------------------------
 
+-- Which slots it shows: {Y} on a slot in the grip tables (Chords.lua) ticks it on or off.
+function Chords.OnSheet(chord, gesture) return Chords.Get(chord, gesture) ~= nil and Sheet.Shown(chord, gesture) end
+function Chords.SetOnSheet(chord, gesture, on)
+    DB().off[Key(chord, gesture)] = (not on) or nil
+    Sheet.Refresh()
+end
+
 local items = {
-    { type = "section", tab = "Controls", label = "Cheat sheet", order = 3.4 },
+    { type = "section", tab = "Controls", label = "Cheat sheet", order = 2 },
     { type = "toggle", label = "Show cheat sheet",
-      hint = "A small list on screen of what your grips do. Tick the slots it shows below. Also on a "
-          .. "chord slot (\"Cheat sheet\") or /deckkit sheet.",
+      hint = "A small list on screen of what your grips do. {Y} on a slot in the grip tables above puts it on the "
+          .. "sheet or takes it off. Also on a chord slot (\"Cheat sheet\") or /deckkit sheet.",
       get = function() return DB().on end,
       set = function(on) DB().on = on; Sheet.Refresh() end },
     { type = "choice", label = "Where", values = SPOT_VALUES,
@@ -153,20 +160,4 @@ local items = {
       get = function() return Spot()[1] end,
       set = function(v) DB().pos = v; Sheet.Refresh() end },
 }
-for _, chord in ipairs(Chords.LIST) do
-    for _, gesture in ipairs(GESTURES) do
-        items[#items + 1] = {
-            type = "toggle",
-            label = function()
-                local id = Chords.Get(chord, gesture)
-                return Chords.Glyph(chord, gesture) .. "  " .. (id and Chords.Label(id) or "Nothing")
-            end,
-            hint = Chords.Describe(chord, gesture) .. ". Ticked: it shows on the cheat sheet.",
-            disabled = function() return not Chords.Get(chord, gesture) end,
-            reason = "Nothing on this slot",
-            get = function() return Chords.Get(chord, gesture) ~= nil and Sheet.Shown(chord, gesture) end,
-            set = function(on) DB().off[Key(chord, gesture)] = (not on) or nil; Sheet.Refresh() end,
-        }
-    end
-end
 ns.Settings.Add("DeckKit", ns.TITLE, items)

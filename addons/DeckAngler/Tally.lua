@@ -20,6 +20,7 @@
 local ADDON, ns = ...
 
 DeckKit.NewModule(ns, ADDON, "|cff3fd0c0DeckAngler|r")
+ns.settingsScope = "char" -- its settings are kept per character (SavedVariablesPerCharacter)
 local MAIN_HAND = 16
 local LINGER = 20      -- seconds the final tally stays up after a session
 local MAX_ROWS = 14
@@ -542,8 +543,8 @@ local soundChoices = {}
 for _, snd in ipairs(IDLE_SOUNDS) do table.insert(soundChoices, { snd.key, snd.label }) end
 
 ns.AddSettings({
-    { type = "section", tab = "Tools", label = "Fishing", order = 1 },
-    { type = "toggle", label = "X casts Fishing", tab = "Controls", section = "Buttons", sectionOrder = 2, hint = "With a fishing pole equipped, out of combat.",
+    { type = "section", tab = "Trade", label = "Fishing", order = 1 },
+    { type = "toggle", label = "X casts Fishing", hint = "With a fishing pole equipped, out of combat.",
       get = function() return db.oneButton ~= false end,
       set = function(on) db.oneButton = on; if ns.OneButtonApply then ns.OneButtonApply() end end },
     { type = "toggle", label = "Missed-catch chime", hint = "Plays when the bobber times out without a bite.",

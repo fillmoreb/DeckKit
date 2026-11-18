@@ -9,6 +9,7 @@
 local ADDON, ns = ...
 
 DeckKit.NewModule(ns, ADDON, "|cffb87affPadTouchGrid|r")
+ns.settingsScope = "char" -- its settings are kept per character (SavedVariablesPerCharacter)
 
 ns.SIDES = { "left", "right" }
 ns.SIDE_NAMES = { left = "Left pad", right = "Right pad" }

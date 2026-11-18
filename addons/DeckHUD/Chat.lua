@@ -142,7 +142,7 @@ end)
 
 ns.AddSettings({
     { type = "section", tab = "Chat", label = "Chat window", order = 1 },
-    { type = "toggle", label = "Chat: thin frame",
+    { type = "toggle", label = "Thin frame", reload = true,
       hint = "A thin dark edge instead of Blizzard's chat art. Turning it off needs a /reload.",
       get = function() return DB().chatThin ~= false end,
       set = function(on)
@@ -150,11 +150,11 @@ ns.AddSettings({
           Thin()
           if not on then ns.Print("Type /reload to bring back the original chat frame art.") end
       end },
-    { type = "toggle", label = "Chat: hide the button hints",
+    { type = "toggle", label = "Hide the button hints",
       hint = "No {A} Send / {X} Chat Channels / {Y} Tab Settings bar under the chat box.",
       get = function() return DB().chatNoLegend ~= false end,
       set = function(on) DB().chatNoLegend = on; NoLegend() end },
-    { type = "toggle", label = "Chat: tuck into the corner",
+    { type = "toggle", label = "Tuck into the corner", reload = true,
       hint = "Bottom-left, close to the edges. Turning it off needs a /reload.",
       get = function() return DB().chatTuck ~= false end,
       set = function(on)

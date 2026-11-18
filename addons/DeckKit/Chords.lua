@@ -439,7 +439,7 @@ local HINT = {
 }
 
 local rows = {
-    { type = "section", tab = "Controls", label = "Grips", order = 3 },
+    { type = "section", tab = "Controls", label = "Grips", order = 1 },
     { type = "toggle", label = "Grip chords",
       hint = "The back grips, alone or together, pressed or held: each one a slot below. Needs DeckKit's "
           .. "Steam layout (deck-setup/make-chord-layout.py).",
@@ -449,6 +449,7 @@ local rows = {
       hint = "All characters: the slots every character shares. This character: changes kept for this "
           .. "character only, on top of the shared ones (class spells, say); those show in lilac.",
       values = { { "all", "All characters" }, { "char", "This character" } },
+      scope = "char",
       get = function() return Chords.Scope() end,
       set = function(v)
           DeckKitCharDB = DeckKitCharDB or {}
@@ -461,7 +462,7 @@ local rows = {
 local GROUPS = { { 1, "Grips: one" }, { 2, "Grips: two together" }, { 3, "Grips: three or four together" } }
 -- Each group is a table: a row per chord, its press and hold side by side. {X} on a slot opens the action picker.
 for gi, group in ipairs(GROUPS) do
-    if gi > 1 then rows[#rows + 1] = { type = "section", tab = "Controls", label = group[2], order = 3 + gi * 0.1 } end
+    if gi > 1 then rows[#rows + 1] = { type = "section", tab = "Controls", label = group[2], order = 1 + gi * 0.1 } end
     local table_ = { type = "bindings", columns = { "Press", "Hold" }, rows = {}, labelWidth = 150 }
     for _, chord in ipairs(Chords.LIST) do
         local size = select(2, chord:gsub("+", "")) + 1
@@ -470,8 +471,12 @@ for gi, group in ipairs(GROUPS) do
             for _, gesture in ipairs(Chords.GESTURES) do
                 cells[#cells + 1] = {
                     title = Chords.Glyph(chord, gesture) .. "  " .. Chords.Describe(chord, gesture),
-                    hint = HINT[gesture],
+                    hint = HINT[gesture] .. " {Y} puts it on the cheat sheet, or takes it off (a check shows it's there).",
                     mine = function() return Chords.Own(chord, gesture) ~= nil end,
+                    -- On the cheat sheet (CheatSheet.lua fills these in).
+                    marked = function() return Chords.OnSheet and Chords.OnSheet(chord, gesture) or false end,
+                    mark = function(on) if Chords.SetOnSheet then Chords.SetOnSheet(chord, gesture, on) end end,
+                    markText = "Cheat sheet",
                     get = function() return Chords.Get(chord, gesture) end,
                     set = function(id) Chords.Set(chord, gesture, id) end,
                 }

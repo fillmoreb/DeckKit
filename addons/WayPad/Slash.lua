@@ -178,10 +178,10 @@ ns.On("PLAYER_LOGIN", function()
 end)
 
 ns.AddSettings({
-    { type = "section", tab = "Map & travel", label = "Waypoints", order = 1 },
+    { type = "section", tab = "Quests", label = "Waypoints", order = 3 },
     { type = "choice", label = "Waypoints go to",
-      hint = "Auto: another waypoint addon (TomTom-compatible) if one is installed, otherwise WayPad's own.",
-      values = { { "auto", "Auto" }, { "waypad", "WayPad" }, { "other", "Waypoint addon" } },
+      hint = "DeckKit: its own compass, map pins, walks and arrival. Waypoint addon: hand them to a TomTom-compatible addon you have installed instead.",
+      values = { { "waypad", "DeckKit" }, { "other", "Waypoint addon" } },
       get = function() return ns.HandOff.Mode() end,
       set = function(mode)
           ns.HandOff.SetMode(mode)
@@ -189,17 +189,17 @@ ns.AddSettings({
               ns.Print("No TomTom-compatible waypoint addon is installed, so WayPad keeps its own waypoints.")
           end
       end },
-    { type = "toggle", label = "Plan routes",
+    { type = "toggle", label = "Plan routes", scope = "account",
       hint = "A far waypoint is reached by legs (walk to the zeppelin tower, take the zeppelin, walk on) and the compass"
           .. " shows each step. Needs a route planner installed. Off: the compass points straight at the waypoint.",
       get = function() return DeckKit.Route.Enabled() end,
       set = function(on) DeckKit.Route.SetEnabled(on) end },
-    { type = "toggle", label = "Follow roads",
+    { type = "toggle", label = "Follow roads", scope = "account",
       hint = "The walk drawn on the minimap and peek map keeps to roads where that adds less than half again:"
           .. " safer while levelling. Off: the shortest line, cliffs and all.",
       get = function() return DeckKit.Route.FollowRoads() end,
       set = function(on) DeckKit.Route.SetFollowRoads(on) end },
-    { type = "toggle", label = "Share ride times",
+    { type = "toggle", label = "Share ride times", scope = "account",
       hint = "Boats and zeppelins you ride tell other players on your shard when they leave, and theirs tell you, so"
           .. " plans wait for the real departure. Sends only ride times, over a hidden addon channel.",
       get = function() return DeckKit.Route.Sharing() end,

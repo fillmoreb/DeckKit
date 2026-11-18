@@ -10,6 +10,7 @@
 local ADDON, ns = ...
 
 DeckKit.NewModule(ns, ADDON, "|cff4fc3f7WayPad|r") -- Print, On, Input, Window
+ns.settingsScope = "char" -- its settings are kept per character (SavedVariablesPerCharacter)
 
 local W = DeckKit.Waypoints
 ns.W = W

@@ -105,7 +105,7 @@ ns.AddCommand("auction", function()
 end)
 
 ns.AddSettings({
-    { type = "section", tab = "Tools", label = "Auction house" },
+    { type = "section", tab = "Trade", label = "Auction house", order = 3 },
     { type = "info", label = "Talking to an auctioneer opens AuctionPad instead of Blizzard's window: LB/RB switch "
         .. "between Sell and My auctions. In Sell, pick an item on the left, set its price, amount and length on the "
         .. "right, and {A} posts it. In Buy, open a category (or search), set the level, rarity and usable filters, "

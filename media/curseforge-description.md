@@ -42,6 +42,10 @@ Waypoints without a keyboard. Dial in coordinates with the d-pad (`✚`), and th
 
 A waypoint across the world is reached leg by leg: walk to the zeppelin tower, take the zeppelin to Grom'gol, walk on. ForeverNav joins walks over the real terrain with the flights you've found, boats, zeppelins, lifts, the Deeprun Tram, portals and your Hearthstone. The compass shows each step, and the walk is drawn on the minimap (lilac dots) and the peek map (a lilac line), keeping to roads unless you turn that off. Rides you take teach it their real schedules. Its walking maps, travel data and route planner come from **Shortest Path Forever** by Cillian Berragan, with thanks; any addon can use it.
 
+## GuidePad and ForeverGuide (leveling guide)
+
+The leveling guide sits where the quest tracker was, drawn in its style: the step you're on, each goal ticking off as the game confirms it, your other quests below. The guides are **Polestar**'s, by Fitz ([github.com/fitzforge/polestar](https://github.com/fitzforge/polestar)): every route from 1 to 60, every step and tip, with huge thanks. If you play with a mouse, play Polestar itself: it does far more. ForeverGuide is the engine that plays them, and any addon can use it.
+
 ## PackPad
 
 Your bags, controller first, on Blizzard's own gamepad bag window: the bag icons in their own column, the slots in one grid, item marks, and a full-screen bag peek on a grip slot with Pawn's upgrade arrows.

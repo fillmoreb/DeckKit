@@ -36,6 +36,10 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 - `SetRotation` on an atlas piece turns its coordinates on the whole texture sheet (neighbouring art shows
   through, and it undoes `SetTexCoord`): turn atlas art with 8-argument `SetTexCoord` on `info.file`
   (`DeckHUD/Compass.lua`). Moving 1 px textures flicker from pixel snapping: `SetSnapToPixelGrid(false)`.
+- Macro conditions (so `Override` claims and state drivers) see the gamepad's soft-interact target only when it's a
+  creature (`[@softinteract,exists]`); a soft-interact game object (mailbox, herb, ore, chest) reads exactly like
+  nothing there. So a claim on X (the game's Interact) can't step aside for objects: claim X only under conditions
+  that rule interacting out, like `[harm,nodead]` (Wand shoot). Tested at a mailbox 2026-11-17.
 - Old texture paths may be missing (e.g. `Interface\WorldMap\WorldMapCorpse`) and draw as nothing,
   with no error. Check with `tex:GetTextureFileID()` (nil = missing) or prefer atlases checked
   via `C_Texture.GetAtlasInfo`.
@@ -147,8 +151,13 @@ Every feature has to work with a gamepad alone. A mouse or keyboard is never ass
 - Module commands go under `/deckkit <name>` (`ns.AddCommand`), not new slash commands.
 - Module settings go in the DeckKit menu (`ns.AddSettings`, see `DeckKit/Settings.lua`): toggles,
   choices, ranges, actions, status and info rows. The menu is grouped by topic, not by
-  addon: start each call with a `{ type = "section", tab = ..., label = ... }` row (tabs: Controls,
-  Screen, Map & travel, Healing, Tools); actions a player triggers with a button are offered to
+  addon: start each call with a `{ type = "section", tab = ..., label = ... }` row (tabs: Setup (one-time
+  setup and every Edit Mode layout action), Controls, Screen (graphics and the HUD), Quests (guide, compass,
+  waypoints, map), Chat (chat and voice), Party (frames and healing), Trade (professions, auction house),
+  Advanced). Mark rows that need a /reload (`reload = true`) and can't be undone (`permanent = true`); a module
+  whose settings are kept per character sets `ns.settingsScope = "char"` (rows override with `scope`), which gets
+  them the lilac per-character mark. No label prefixes a section already says ("Compass: ..."): indent sub-options
+  (`indent = true`). Actions a player triggers with a button are offered to
   the grip chord slots (`ns.Chords.Offer`, below), not given their own binding rows. Everything a player can change should be
   reachable there with the controller alone. Use `{A}`, `{MENU}`, `{LB}`, `{DPAD_LR}`... tokens for
   button icons.
@@ -236,3 +245,8 @@ when Ben asks for a release; pushing a tag publishes to CurseForge.
   (any addon may use it), so it doesn't use `DeckKit.NewModule`; keep it that way. Its `Data/` and `Nav/` are synced,
   never edited (corrections to their data go in `addons/ForeverNav/Fixes.lua`, each guarded on the bad value so a sync
   that fixes it retires it; we don't send fixes upstream); its `Routing/` and `Transport/` files are upstream's as written (credited) so fixes port from a diff.
+- `guide/`: ForeverGuide's tools: the guide sync from Polestar (`tools/sync_polestar.py`, pinned in `UPSTREAM.json`)
+  and the engine's offline test (`lua5.1 tests/test_engine.lua`, from `guide/`: the real guides, a stand-in game).
+  `addons/ForeverGuide` is the engine (`ForeverGuide.v1`), independent of the DeckKit core like ForeverNav;
+  `ForeverGuide_Horde` / `_Alliance` are each side's guides, loaded on demand. The synced `Guides.lua` and
+  `MapFrames.lua` files are never edited (they are GPL-3.0-only, Polestar's; sync again). GuidePad is the panel.

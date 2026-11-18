@@ -1,0 +1,13 @@
+{
+  "source": "https://github.com/fitzforge/polestar",
+  "release": "v0.4.1",
+  "commit": "c85dd863d1628c8d6b5e7d233428710334cd72d6",
+  "synced": "2026-11-18T01:03:04Z",
+  "files": {
+    "addon/Polestar_Guides/MapFrames.lua": "b82989b6333dbcbfacf3e19bbaade982ab88b21644aa346047738a46282e8e10",
+    "addon/Polestar_Guides/Guides.lua": "c9c6b82fa44f92a3baa5f51e8b65e2c00682a8a90049177878b37f4ce9f449b4",
+    "addon/Polestar_Guides_Horde/Guides.lua": "fb9326c394d488954897c3e04387946d36e631b7791723c1f3e9289110727af4",
+    "addon/Polestar_Guides_Alliance/Guides.lua": "ed334fef48d6b2126c5fedabf864d14084248e15aea0fc429a5490558ebb8605",
+    "addon/Polestar_Guides/LICENSE-DATA.txt": "7dd5ce63e99ca49bafd12f06de7c3c2f1af142619e1406a3fe8d0252bfe594aa"
+  }
+}

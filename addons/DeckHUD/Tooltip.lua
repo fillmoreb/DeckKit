@@ -42,7 +42,7 @@ local function Create()
         f:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
         f:SetBackdropColor(0, 0, 0, 0.85)
     end
-    f:SetFrameStrata("TOOLTIP")
+    f:SetFrameStrata("HIGH") -- above the HUD, under DeckKit's windows and peeks (DIALOG and up)
     f:Hide()
     lefts, rights = {}, {}
     -- The lines go on a layer above the backdrop (TooltipBackdropTemplate's NineSlice is a child frame, so
@@ -179,14 +179,14 @@ GameTooltip:HookScript("OnHide", function()
 end)
 
 ns.AddSettings({
-    { type = "section", tab = "Screen", label = "Tooltips", order = 7 },
+    { type = "section", tab = "Screen", label = "Tooltips", order = 6 },
     { type = "choice", label = "Mouseover tooltip",
       values = { { "top", "Top of the screen" }, { "blizzard", "Blizzard's corner" } },
       hint = "Where the tooltip for players, NPCs and objects under the reticle shows. Item and button "
           .. "tooltips keep their own places.",
       get = function() return On() and "top" or "blizzard" end,
       set = function(v) DB().tooltipPlace = v end },
-    { type = "range", label = "Mouseover tooltip: opacity",
+    { type = "range", label = "Opacity", indent = true,
       min = 0.2, max = 1, step = 0.1, format = function(v) return math.floor(v * 100 + 0.5) .. "%" end,
       hint = "How solid the tooltip at the top is.",
       get = Opacity,

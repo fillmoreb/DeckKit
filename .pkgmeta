@@ -14,6 +14,10 @@ move-folders:
   DeckKit/addons/DeckHUD: DeckHUD
   DeckKit/addons/DeckSundries: DeckSundries
   DeckKit/addons/ForeverNav: ForeverNav
+  DeckKit/addons/ForeverGuide: ForeverGuide
+  DeckKit/addons/ForeverGuide_Horde: ForeverGuide_Horde
+  DeckKit/addons/ForeverGuide_Alliance: ForeverGuide_Alliance
+  DeckKit/addons/GuidePad: GuidePad
   DeckKit/addons/DisenchantDeck: DisenchantDeck
   DeckKit/addons/HealPad: HealPad
   DeckKit/addons/MapDeck: MapDeck
@@ -28,6 +32,7 @@ move-folders:
 ignore:
   - deck-setup
   - nav
+  - guide
   - tests
   - patches
   - media

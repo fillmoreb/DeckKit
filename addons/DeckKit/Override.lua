@@ -8,6 +8,8 @@
 -- when:     macro conditions under which this claim wants the button ("" = always)
 -- priority: when several claims match, the highest wins
 -- macro:    what the press runs
+-- icon:     what the crossbar shows on that button while the claim has it (a texture, or a function
+--           giving one): the wand for Wand shoot, Fishing for the fishing pole. Optional.
 --
 -- Each button has one secure button of ours and one secure state driver. The driver's state is
 -- the winning claim's id (or "none"), worked out from the claims' conditions in secure code, so it
@@ -31,8 +33,8 @@ ns.Override = Override
 -- bottom (both). The right face group's buttons: Square (PAD3) is its first, Triangle (PAD4) its
 -- second.
 local CROSSBAR = {
-    PAD3 = { group = "Right", button = "ActionButton1" },
-    PAD4 = { group = "Right", button = "ActionButton2" },
+    PAD3 = { group = "Right", button = "ActionButton1", top = 5 },
+    PAD4 = { group = "Right", button = "ActionButton2", top = 6 },
 }
 local BARS = { LT = "leftBar", RT = "rightBar", LTRT = "bottomBar" }
 
@@ -112,7 +114,71 @@ local function Key(key)
 
     k = { claims = {}, button = button, driver = driver }
     keys[key] = k
+    -- After the secure snippet has picked the winner: show its icon on the crossbar (insecure, our own frame).
+    driver:HookScript("OnAttributeChanged", function(_, name)
+        if name == "state-claim" then Override.ShowIcon(key) end
+    end)
     return k
+end
+
+------------------------------------------------------------------------
+-- The winner's icon on the crossbar: our own round icon laid over the game's button for the key (the
+-- plain layer, no trigger held), so X shows the wand while X shoots it. The game's button is never
+-- touched (the gamepad bar taints easily); the icon follows it and goes when the claim lets go.
+------------------------------------------------------------------------
+
+-- The crossbar's plain-layer button for a key that's showing now (the top bar, or a stance or possess bar
+-- in its place).
+local function TopButton(key)
+    local where = CROSSBAR[key]
+    if not where then return nil end
+    for _, bar in ipairs({ "TopBar", "StanceBar", "PossessBar" }) do
+        local b = _G["GamepadMainActionBarFramePageUnitTopCenteredAnchor" .. bar .. "ActionButton" .. where.top]
+        if b and b:IsVisible() then return b end
+    end
+end
+
+local function IconFrame(k)
+    if k.icon then return k.icon end
+    local f = CreateFrame("Frame", nil, UIParent)
+    f:Hide()
+    f.tex = f:CreateTexture(nil, "ARTWORK")
+    f.tex:SetPoint("TOPLEFT", 3, -3)
+    f.tex:SetPoint("BOTTOMRIGHT", -3, 3)
+    local mask = f:CreateMaskTexture()
+    mask:SetTexture("Interface\\Masks\\CircleMaskScalable", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    mask:SetAllPoints(f.tex)
+    f.tex:AddMaskTexture(mask)
+    k.icon = f
+    return f
+end
+
+local function Texture(claim)
+    local t = claim and claim.icon
+    if type(t) == "function" then t = t() end
+    return t
+end
+
+function Override.ShowIcon(key)
+    local k = keys[key]
+    if not k or not CROSSBAR[key] then return end
+    local active = k.button:GetAttribute("dk-active")
+    local tex = active and Texture(k.claims[active])
+    local b = tex and TopButton(key)
+    if not b then
+        if k.icon then k.icon:Hide() end
+        return
+    end
+    local f = IconFrame(k)
+    if f.over ~= b then
+        f:ClearAllPoints()
+        f:SetAllPoints(b.icon or b)
+        f:SetFrameStrata(b:GetFrameStrata())
+        f.over = b
+    end
+    f:SetFrameLevel(b:GetFrameLevel() + 3)
+    f.tex:SetTexture(tex)
+    f:Show()
 end
 
 -- Out of combat: rebuild a key's driver from its claims.
@@ -151,6 +217,7 @@ local function Rebuild(key)
     RegisterStateDriver(k.driver, "claim", table.concat(clauses, "; "))
     k.driver:SetAttribute("dk-on", (#list > 0 and InGame()) or nil)
     SecureHandlerExecute(k.driver, [[ self:RunAttribute("dk-eval") ]])
+    Override.ShowIcon(key)
 end
 
 local function RebuildAll()
@@ -168,8 +235,10 @@ function Override.Set(key, id, opts)
     local k = Key(key)
     local old = k.claims[id]
     if opts then
-        opts = { when = opts.when or "", priority = opts.priority or 0, macro = opts.macro }
+        opts = { when = opts.when or "", priority = opts.priority or 0, macro = opts.macro, icon = opts.icon }
         if old and old.when == opts.when and old.priority == opts.priority and old.macro == opts.macro then
+            old.icon = opts.icon -- no rebuild needed
+            Override.ShowIcon(key)
             return
         end
     elseif not old then
@@ -191,7 +260,14 @@ ns.On("CVAR_UPDATE", RebuildAll)
 -- Re-check when the pad moves between the game and a gamepad window, and retry until the game's
 -- crossbar is built after login.
 local lastInGame, wait, retry = nil, 0, 0
+local iconWait = 0
 CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
+    -- The crossbar icons follow the game every 0.1 s, in combat too (our own frames only).
+    iconWait = iconWait - elapsed
+    if iconWait <= 0 then
+        iconWait = 0.1
+        for key in pairs(keys) do Override.ShowIcon(key) end
+    end
     wait = wait - elapsed
     if wait > 0 or InCombatLockdown() then return end
     wait = 0.1

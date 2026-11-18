@@ -19,3 +19,4 @@ ActionBars.lua
 LootRolls.lua
 Tooltip.lua
 Suggested.lua
+Graphics.lua

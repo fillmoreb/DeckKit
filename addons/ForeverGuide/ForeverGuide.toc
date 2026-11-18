@@ -1,0 +1,17 @@
+## Interface: 16001
+## Title: ForeverGuide
+## Notes: Leveling guides for WoW: Forever, as a library: which guide and step you're on and what each goal still needs. The guides are Polestar's, by Fitz.
+## Author: Ben Fillmore
+## Version: @project-version@
+## Category: Libraries
+## X-License: GPL-3.0-or-later (the guides in Data/ and the faction parts: GPL-3.0-only, Polestar's)
+## SavedVariablesPerCharacter: ForeverGuideCharDB
+## X-Credits: Polestar (https://github.com/fitzforge/polestar) by Fitz: the leveling guides, their facts and the rules for when a goal is done. Data sources: Data/LICENSE-DATA.txt
+
+Core.lua
+Game.lua
+Text.lua
+Engine.lua
+API.lua
+Data\MapFrames.lua
+Data\Guides.lua

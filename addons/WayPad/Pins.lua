@@ -1,5 +1,5 @@
 -- Pins for every waypoint: on the world map (a map data provider) and on the minimap.
--- The active waypoint is gold; the others are gray.
+-- The active waypoint is lilac (the suite's color, as on the compass); the others are gray.
 local _, ns = ...
 
 local Pins = {}
@@ -7,11 +7,15 @@ ns.Pins = Pins
 
 local PIN = "WayPadMapPinTemplate"
 
+local LILAC = DeckKit.COLORS.LILAC
+
 local function SetIcon(texture, active, size)
     local atlas = active and "Waypoint-MapPin-Tracked" or "Waypoint-MapPin-Untracked"
     if texture.SetAtlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
         texture:SetAtlas(atlas)
-        texture:SetVertexColor(1, 1, 1)
+        -- The active one in the suite's lilac (Blizzard's gold, desaturated and tinted), as on the compass.
+        texture:SetDesaturated(active and true or false)
+        if active then texture:SetVertexColor(LILAC[1], LILAC[2], LILAC[3]) else texture:SetVertexColor(1, 1, 1) end
     else
         texture:SetTexture("Interface\\Common\\Indicator-Yellow")
         if active then texture:SetVertexColor(1, 1, 1) else texture:SetVertexColor(0.6, 0.6, 0.6) end

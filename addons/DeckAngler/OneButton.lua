@@ -24,6 +24,7 @@ function ns.OneButtonApply()
         when = "[nocombat,nochanneling]",
         priority = 10,
         macro = "/cast " .. FishingName(),
+        icon = function() return C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(FishingName()) or 136245 end,
     } or nil)
 end
 

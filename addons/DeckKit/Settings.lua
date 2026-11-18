@@ -5,6 +5,7 @@
 --       { type = "section", tab = "Chat", label = "Chat peek", order = 2 },  -- where the rows below go
 --       { type = "toggle", label = "Wand shoot", hint = "...", get = function() ... end, set = function(on) ... end },
 --       { type = "choice", label = "Idle reminder", values = { { false, "Off" }, { 60, "1 min" } }, get, set },
+--         (listOnly = true: A opens the list and nothing changes until one is picked; no left/right cycling)
 --       { type = "range",  label = "Font size", min = 12, max = 40, step = 2, format = fn(v) -> text, get, set },
 --       { type = "action", label = "Add a waypoint", verb = "Add", run = function() ... end },
 --         (keepOpen = true runs it straight from the A press instead of after closing the menu:
@@ -17,7 +18,12 @@
 --       { type = "info",   label = "Plain text that explains something." },
 --   })
 --
--- Tabs: Controls, Screen, Chat, Map & travel, Healing, Tools. A section row sets the tab/section for the
+-- Row fields every kind can have: indent = true (a sub-option, under the row above it), reload = true (takes
+-- effect after a /reload: marked, and said beside the list), permanent = true (can't be undone from here),
+-- scope = "char", "account" or "session" (where it's kept; session: until the next /reload; the module's default otherwise: ns.settingsScope, set before
+-- AddSettings). Per-character settings get a lilac mark.
+--
+-- Tabs: Setup, Controls, Screen, Quests, Chat, Party, Trade, Advanced. A section row sets the tab/section for the
 -- rows after it (in that call); any row can also carry its own tab/section. Without one, rows go to
 -- Tools under the addon's name. order sorts sections within a tab (default 5).
 -- get/set read and write the module's own saved settings; the menu only calls them while it's open
@@ -28,7 +34,7 @@ local _, ns = ...
 local Settings = { rows = {}, sections = {} }
 ns.Settings = Settings
 
-Settings.TABS = { "Controls", "Screen", "Chat", "Map & travel", "Healing", "Tools" }
+Settings.TABS = { "Setup", "Controls", "Screen", "Quests", "Chat", "Party", "Trade", "Advanced" }
 
 local function Section(tab, label, order, title)
     for _, s in ipairs(Settings.sections) do
@@ -42,15 +48,17 @@ local function Section(tab, label, order, title)
     return s
 end
 
--- name: the addon; title: its colored title (shown beside the list as "From ...").
-function Settings.Add(name, title, items)
-    local tab, label, order = "Tools", (title or name), nil
+-- name: the addon; title: its colored title (shown beside the list as "From ..."); scope: where its settings are
+-- kept unless a row says otherwise ("account", the default, or "char": this character only).
+function Settings.Add(name, title, items, scope)
+    local tab, label, order = "Advanced", (title or name), nil
     for _, item in ipairs(items) do
         if item.type == "section" then
             tab, label, order = item.tab or tab, item.label or label, item.order
             Section(tab, label, order, title)
         else
             item.from = item.from or title
+            item.scope = item.scope or scope
             local s = Section(item.tab or tab, item.section or label, item.section and item.sectionOrder or order, title)
             table.insert(s.rows, item)
         end

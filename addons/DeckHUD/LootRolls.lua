@@ -258,7 +258,7 @@ ns.On("PLAYER_LOGIN", function() C_Timer.After(1, function() Build(); Place() en
 ns.On("EDIT_MODE_LAYOUTS_UPDATED", function() C_Timer.After(0, Place) end)
 
 ns.AddSettings({
-    { type = "section", tab = "Screen", label = "Loot rolls", order = 6 },
+    { type = "section", tab = "Screen", label = "Loot rolls", order = 5 },
     { type = "toggle", label = "Loot rolls in the top-left corner",
       hint = "Need / Greed / Pass shows in the top-left corner, under the XP bar, instead of over the chat.",
       get = TopLeft,
@@ -268,12 +268,12 @@ ns.AddSettings({
           .. "{VIEW} brings up the game's window to roll.",
       get = Compact,
       set = function(on) ns.db.lootRollsCompact = on; if list then Update() end end },
-    { type = "choice", label = "Compact: time left",
+    { type = "choice", label = "Time left", indent = true,
       values = { { "line", "Thin bar" }, { "seconds", "Seconds" }, { "behind", "Bar behind the name" } },
       hint = "How each item in the compact list shows the time left to roll.",
       get = TimerStyle,
       set = function(v) ns.db.lootRollsTimer = v; if list then Update() end end },
-    { type = "range", label = "Compact: opacity",
+    { type = "range", label = "Opacity", indent = true,
       min = 0.2, max = 1, step = 0.1, format = function(v) return math.floor(v * 100 + 0.5) .. "%" end,
       hint = "How solid the compact list is. The game's window ({VIEW}) always shows at full.",
       get = ListAlpha,

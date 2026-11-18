@@ -43,6 +43,51 @@ function Layout.Active()
     return info, layout, presets
 end
 
+-- The active layout, made editable: a preset (the game's Modern / Classic, which a new character starts
+-- on) can't be changed, so it's copied into an account-wide layout named "DeckKit" and that one is
+-- made active, the way Edit Mode's own "copy layout" does. An existing "DeckKit" layout is reused.
+-- Returns info, layout, or nil and why.
+local OUR_LAYOUT = "DeckKit"
+local function Copy(t)
+    if type(t) ~= "table" then return t end
+    local c = {}
+    for k, v in pairs(t) do c[k] = Copy(v) end
+    return c
+end
+
+function Layout.Editable()
+    local info, layout, presets = Layout.Active()
+    if not info then return nil, nil, "this client has no Edit Mode layouts" end
+    if layout then return info, layout end
+    local ACCOUNT = Enum.EditModeLayoutType and Enum.EditModeLayoutType.Account
+    local at
+    for i, l in ipairs(info.layouts) do
+        if l.layoutName == OUR_LAYOUT and l.layoutType == ACCOUNT then at = i end
+    end
+    if not at then
+        local mgr = _G.EditModePresetLayoutManager
+        local ok, all = pcall(mgr and mgr.GetCopyOfPresetLayouts, mgr)
+        local preset = ok and type(all) == "table" and all[info.activeLayout]
+        if not (preset and ACCOUNT) then return nil, nil, "couldn't copy the game's preset layout" end
+        local new = Copy(preset)
+        new.layoutType, new.layoutName = ACCOUNT, OUR_LAYOUT
+        -- Account layouts come before character ones.
+        at = 1
+        for i, l in ipairs(info.layouts) do if l.layoutType == ACCOUNT then at = i + 1 end end
+        -- Edit Mode's own sequence (EditModeManagerFrameMixin:MakeNewLayout): insert, save, announce.
+        table.insert(info.layouts, at, new)
+        C_EditMode.SaveLayouts(info)
+        if C_EditMode.OnLayoutAdded then C_EditMode.OnLayoutAdded(presets + at, true, false)
+        else C_EditMode.SetActiveLayout(presets + at) end
+    else
+        C_EditMode.SetActiveLayout(presets + at)
+    end
+    info.activeLayout = presets + at
+    ns.Print("Your Edit Mode layout was one of the game's presets; it's now copied to \"" .. OUR_LAYOUT
+        .. "\", which DeckKit changes.")
+    return info, info.layouts[at]
+end
+
 function Layout.Dump()
     local out = {}
     local info, layout, presets = Layout.Active()
@@ -88,8 +133,8 @@ end
 -- relativePoint, offsetX, offsetY (any of them). Takes effect after a /reload.
 function Layout.SetAnchor(system, index, fields)
     if InCombatLockdown() then return false, "not in combat" end
-    local info, layout = Layout.Active()
-    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
+    local info, layout, why = Layout.Editable()
+    if not layout then return false, why end
     local sys = FindSystem(layout, system, index)
     if not sys then return false, "that frame isn't in your layout" end
     if not Backup(layout) then return false, "couldn't back up the layout first" end
@@ -170,17 +215,16 @@ end
 -- Can the layout be changed? false and why when not (a preset can't be edited, or in combat).
 function Layout.CanChange()
     if InCombatLockdown() then return false, "not in combat" end
-    local info, layout = Layout.Active()
+    local info = Layout.Active()
     if not info then return false, "this client has no Edit Mode layouts" end
-    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
-    return true
+    return true -- a preset is copied to a layout of our own first (Layout.Editable)
 end
 
 -- The whole suggested layout in one change (one backup, so one undo). Takes effect after a reload.
 function Layout.ApplySuggested()
     if InCombatLockdown() then return false, "not in combat" end
-    local info, layout = Layout.Active()
-    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
+    local info, layout, why = Layout.Editable()
+    if not layout then return false, why end
     if not Backup(layout) then return false, "couldn't back up the layout first" end
     local n = 0
     for _, s in ipairs(Suggested()) do
@@ -241,8 +285,8 @@ function Layout.PartyRow()
     local titleH = (CompactPartyFrame and CompactPartyFrame.title and CompactPartyFrame.title:GetHeight()) or TITLE_H
     local top = math.min(pBottom, tBottom) - GAP
 
-    local info, layout = Layout.Active()
-    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
+    local info, layout, why = Layout.Editable()
+    if not layout then return false, why end
     local sys = FindSystem(layout, SYSTEMS.UnitFrame, PARTY)
     if not sys then return false, "party frames aren't in your layout" end
     if not Backup(layout) then return false, "couldn't back up the layout first" end
@@ -318,8 +362,8 @@ function Layout.FocusCenter()
     local cy = (pBottom + pTop) / 2 - ((aBottom + aTop) / 2 - (fBottom + fTop) / 2)
     -- Edit Mode stores offsets in screen (UIParent) units and divides by the frame's own scale when
     -- it places it (the focus frame is drawn at 0.75), so these are plain screen positions.
-    local info, layout = Layout.Active()
-    if not layout then return false, "your active Edit Mode layout is a preset; pick or copy a custom one" end
+    local info, layout, why = Layout.Editable()
+    if not layout then return false, why end
     local sys = FindSystem(layout, SYSTEMS.UnitFrame, focus)
     if not sys then return false, "the focus frame isn't in your layout" end
     if not Backup(layout) then return false, "couldn't back up the layout first" end
@@ -406,16 +450,25 @@ local function NoGroupPrompt()
 end
 ns.On("PLAYER_LOGIN", function() C_Timer.NewTicker(0.25, NoGroupPrompt) end)
 
-ns.AddSettings({
-    { type = "section", tab = "Healing", label = "Party, raid and focus frames", order = 2 },
-    { type = "toggle", label = "Hide the LB prompt under party frames",
+-- The LB prompt row goes with the focus frame's rows (Focus.lua puts it in Party > Frames).
+Layout.LBPromptRow = { type = "toggle", label = "Hide the LB prompt under party frames",
       hint = "Forever's \"LB\" reminder under party and raid frames. LB still jumps to them.",
       get = function() return not ns.db.groupPromptShown end,
-      set = function(on) ns.db.groupPromptShown = not on or nil; NoGroupPrompt() end },
+      set = function(on) ns.db.groupPromptShown = not on or nil; NoGroupPrompt() end }
+
+-- Setup > Layout: every action that changes the Edit Mode layout (each backs it up first: one backup, one undo),
+-- with Undo last. Suggested.lua puts them after "Apply everything suggested".
+Layout.MenuItems = {
+    { type = "action", label = "Buffs under the bar", verb = "Move", keepOpen = true,
+      hint = "Moves your buffs down to just under the status bar, keeping them where they are across. "
+          .. "Backs up your Edit Mode layout, then reloads.",
+      run = function()
+          local ok, info = Layout.BuffsUnderBar()
+          if ok then ReloadSoon("Buffs moved under the bar.") else ns.Print("Not changed: " .. info .. ".") end
+      end },
     { type = "action", label = "Line up party frames", keepOpen = true,
       hint = "Raid-style party frames in a row, filling the gap between your frame and the target frame, just "
-          .. "under them. Backs up your Edit Mode layout, then reloads. \"Undo the last layout change\" "
-          .. "(Screen tab) puts it back.",
+          .. "under them. Backs up your Edit Mode layout, then reloads.",
       run = function()
           local ok, info = Layout.PartyRow()
           if ok then ReloadSoon("Party frames lined up.") else ns.Print("Not changed: " .. info .. ".") end
@@ -435,10 +488,7 @@ ns.AddSettings({
           local ok, info = Layout.RaidTopLeft()
           if ok then ReloadSoon("Raid frames lined up.") else ns.Print("Not changed: " .. info .. ".") end
       end },
-})
 
--- On the Suggested settings page (Suggested.lua makes the page; these go after its rows).
-Layout.MenuItems = {
     { type = "action", label = "Undo the last layout change", keepOpen = true,
       hint = "Puts back your Edit Mode layout from before DeckKit's last change, then reloads.",
       run = function()

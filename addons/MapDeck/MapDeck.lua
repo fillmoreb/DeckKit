@@ -636,7 +636,7 @@ loader:SetScript("OnEvent", function(self)
 end)
 
 ns.AddSettings({
-    { type = "section", tab = "Map & travel", label = "Map", order = 2 },
+    { type = "section", tab = "Quests", label = "Map", order = 5 },
     { type = "toggle", label = "Show recorded streets on the map peek",
       hint = "The streets you've recorded (the \"Record streets\" grip action, or /deckkit streets start) as green "
           .. "squares. While recording they always show.",

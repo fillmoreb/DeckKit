@@ -11,6 +11,7 @@
 --   LootRolls.lua    loot rolls as a compact list
 --   Tooltip.lua      the mouseover tooltip as a see-through card at the top
 --   Suggested.lua    suggested game settings, a page of the DeckKit menu
+--   Graphics.lua     Steam Deck graphics presets (from DeckForever, MIT), Screen > Graphics
 --
 -- Settings live in the DeckKit menu (double-tap Menu, or /deckkit), mostly under Screen.
 local ADDON, ns = ...

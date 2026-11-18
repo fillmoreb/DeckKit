@@ -9,11 +9,16 @@
 -- Settings live in the DeckKit menu (double-tap Menu, or /deckkit).
 local _, ns = ...
 
-local DEFAULTS = { square = true, hideButtons = true, border = true, overlayRoom = true, matchTracker = true, size = 170 }
+local DEFAULTS = { square = true, hideButtons = true, border = true, overlayRoom = true }
 ns.Defaults(DEFAULTS)
 local OVERLAY_PX = 30 -- screen pixels kept clear for the Steam battery overlay (it's about 26 tall)
 local MARGIN_PX = 4   -- gap to the screen edges
 local DIALOG_PX = 4   -- extra gap on the right for the dialog border
+-- The map's size, fixed (the Deck's screen is known: 1280 x 800 UI units). Measured on Ben's priest on
+-- 2026-11-17, where it was sized to the quest tracker: 260 wide with its border (256 of map inside the dialog
+-- border's gap), 253.44 tall, so its bottom sits about 6 above the tracker's top (514 up from the screen's
+-- bottom; GuidePad's panel takes the same spot).
+local MAP_W, MAP_H, RIGHT = 260, 253.44, 5 -- 253.44: 256 with a 1% cut (masks/crop_01)
 local DIALOG_OUT = 3  -- how far the dialog border sits outside the map
 
 local function DB() return ns.db end
@@ -78,12 +83,6 @@ local placed = {} -- last width / height / right / top, to skip needless re-plac
 local function PixelsToUnits(px)
     local _, physical = GetPhysicalScreenSize()
     return px * UIParent:GetHeight() / (physical or 800)
-end
-
--- The quest tracker the map lines up with, if it's on screen.
-local function Tracker()
-    local t = _G.ObjectiveTrackerFrame or _G.QuestWatchFrame or _G.WatchFrame
-    if t and t:IsShown() and t:GetLeft() and t:GetTop() then return t end
 end
 
 -- The map sits centered in a holder the size of the part you see. The minimap itself stays
@@ -165,22 +164,14 @@ end
 
 -- Width, height and offsets from the top-right corner, in UIParent units.
 local function Layout()
-    local margin = PixelsToUnits(MARGIN_PX)
     -- Under the status bar while it shows (StatusBar.lua); else clear of the Steam overlay, if asked.
     local bar = ns.StatusBarHeight and ns.StatusBarHeight() or 0
     local top = bar > 0 and (bar + PixelsToUnits(MARGIN_PX))
         or PixelsToUnits(MARGIN_PX + (DB().overlayRoom ~= false and OVERLAY_PX or 0))
-    local size = DB().size or DEFAULTS.size
     -- The dialog border sticks out past the map; keep it clear of the screen's right edge.
     local inset = (DB().square ~= false and BorderStyle() == "dialog") and PixelsToUnits(DIALOG_PX) or 0
-    local t = DB().matchTracker ~= false and DB().square ~= false and Tracker()
-    if not t then return size, size, margin + inset, top end
-    local k = t:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    local w = (t:GetRight() - t:GetLeft()) * k
-    local right = UIParent:GetRight() - t:GetRight() * k + inset
-    w = w - inset
-    local h = (UIParent:GetTop() - top) - (t:GetTop() * k + margin) -- down to just above the tracker
-    return w, math.max(60, math.min(w, h)), right, top
+    local w = MAP_W - inset
+    return w, DB().square ~= false and MAP_H or w, RIGHT + inset, top
 end
 
 local function Place(force)
@@ -265,8 +256,7 @@ ns.On("PLAYER_LOGIN", function()
     hooksecurefunc(Minimap, "SetPoint", function()
         if not placing then C_Timer.After(0, function() Place(true) end) end
     end)
-    -- Follow the quest tracker if it moves or changes width (checked, not hooked: hooking the
-    -- tracker's own scripts risks tainting it).
+    -- The status bar showing or hiding moves the map's top: checked now and then.
     C_Timer.NewTicker(2, function() Place() end)
 end)
 ns.On("DISPLAY_SIZE_CHANGED", function() if Minimap then Place(true) end end)
@@ -285,7 +275,7 @@ ns.AddSettings({
       hint = "Dialog: the classic dialog box edge. Thin metal: the frame of DeckKit's windows. Thin line: a 1-pixel dark edge.",
       get = function() return BorderStyle() end,
       set = function(v) DB().borderStyle = v; Shape(); Place(true) end },
-    { type = "toggle", label = "Hide buttons around the edge",
+    { type = "toggle", label = "Hide buttons around the edge", reload = true,
       hint = "Zone text, tracking, calendar, mail, zoom and addon buttons. Turning it off needs a /reload.",
       get = function() return DB().hideButtons ~= false end,
       set = function(on)
@@ -296,13 +286,6 @@ ns.AddSettings({
       hint = "Moves the map down so the Steam performance overlay's battery doesn't cover it.",
       get = function() return DB().overlayRoom ~= false end,
       set = function(on) DB().overlayRoom = on; Place(true) end },
-    { type = "toggle", label = "As wide as the quest tracker",
-      hint = "Lines the map up with the tracker below it; it gets shorter to fit above it.",
-      get = function() return DB().matchTracker ~= false end,
-      set = function(on) DB().matchTracker = on; Place(true) end },
-    { type = "range", label = "Size (when not matching the tracker)", min = 120, max = 260, step = 10,
-      get = function() return DB().size or DEFAULTS.size end,
-      set = function(v) DB().size = v; Place(true) end },
     { type = "range", label = "Zoom", min = 0, max = 5, step = 1,
       hint = "0 is the widest view.",
       get = function() return Minimap:GetZoom() end,

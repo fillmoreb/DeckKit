@@ -247,7 +247,7 @@ SLASH_DISENCHANTDECK2 = "/disenchantdeck"
 SlashCmdList.DISENCHANTDECK = function() List.Toggle() end
 
 ns.AddSettings({
-    { type = "section", tab = "Tools", label = "Disenchanting", order = 2 },
+    { type = "section", tab = "Trade", label = "Disenchanting", order = 2 },
     { type = "action", label = "Open the disenchant list", run = List.Open },
     { type = "toggle", label = "Open it when you pick Disenchant",
       hint = "Choosing Disenchant from the spellbook, professions or an action button opens this list instead of the pick-an-item cursor.",

@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: ForeverGuide (Horde)
+## Notes: The Horde's leveling guides for ForeverGuide, from Polestar by Fitz. Loaded on demand for Horde characters.
+## Author: Ben Fillmore
+## Version: @project-version@
+## Category: Libraries
+## LoadOnDemand: 1
+## Dependencies: ForeverGuide
+## X-License: GPL-3.0-only (Polestar's guides; data sources in LICENSE-DATA.txt)
+
+Guides.lua

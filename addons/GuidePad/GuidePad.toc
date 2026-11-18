@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: GuidePad
+## Notes: The leveling guide in the quest tracker's place and style: the step you're on, what's done, your other quests below. Guides by Polestar, played by ForeverGuide.
+## Version: @project-version@
+## Author: Ben Fillmore
+## SavedVariablesPerCharacter: GuidePadDB
+## Dependencies: DeckKit, ForeverGuide
+
+Panel.lua
+Waypoint.lua
+Core.lua

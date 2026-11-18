@@ -203,7 +203,7 @@ local function NavApi()
     return type(nav) == "table" and type(nav.v1) == "table" and nav.v1.Walk and nav.v1 or nil
 end
 
--- Follow roads (Map & travel > Waypoints, on by default): the walk keeps to roads where that costs less than half
+-- Follow roads (Quests > Waypoints, on by default): the walk keeps to roads where that costs less than half
 -- again, which is safer while levelling; off, the shortest line, cliffs and all.
 function R.FollowRoads()
     return not (ns.db and ns.db.walkRoads == false)
@@ -286,6 +286,52 @@ function R.UpdateWalk(g)
     if not asked.handle then walking = nil end
 end
 
+-- Where you are along the walk, for the compass: `me` the player (Waypoints.player), `target` the guidance's point.
+-- Returns steer (the next corner of the walk at least AHEAD_YARDS away: { north, west }), the yards still to walk
+-- along it, and how far you are from it; nil when there's no walk to that target, or you've strayed off it.
+R.AHEAD_YARDS = 8
+function R.Progress(me, target)
+    local w = walk
+    if not (w and me and me.continent and w.continent == me.continent and target and target.north) then return nil end
+    local pts = w.points
+    local last = pts[#pts]
+    local eN, eW = last.x - target.north, last.y - target.west
+    if eN * eN + eW * eW > 30 * 30 then return nil end -- a walk to somewhere else (the target just changed)
+    local best, seg, pN, pW = math.huge, 1, pts[1].x, pts[1].y
+    for i = 1, #pts - 1 do
+        local a, b = pts[i], pts[i + 1]
+        local abN, abW = b.x - a.x, b.y - a.y
+        local len2 = abN * abN + abW * abW
+        local t = len2 > 0 and (((me.north - a.x) * abN + (me.west - a.y) * abW) / len2) or 0
+        t = t < 0 and 0 or t > 1 and 1 or t
+        local qN, qW = a.x + abN * t, a.y + abW * t
+        local dN, dW = qN - me.north, qW - me.west
+        local d = math.sqrt(dN * dN + dW * dW)
+        if d < best then best, seg, pN, pW = d, i, qN, qW end
+    end
+    if best > R.OFF_PATH_YARDS then return nil end
+    -- Yards left: from where you are on the path to the corner after it, then corner to corner.
+    local nxt = pts[seg + 1]
+    local left = math.sqrt((nxt.x - pN) ^ 2 + (nxt.y - pW) ^ 2)
+    for i = seg + 1, #pts - 1 do
+        left = left + math.sqrt((pts[i + 1].x - pts[i].x) ^ 2 + (pts[i + 1].y - pts[i].y) ^ 2)
+    end
+    local steer = pts[#pts]
+    for i = seg + 1, #pts do
+        local dN, dW = pts[i].x - me.north, pts[i].y - me.west
+        if dN * dN + dW * dW >= R.AHEAD_YARDS * R.AHEAD_YARDS then steer = pts[i] break end
+    end
+    return { north = steer.x, west = steer.y }, left + best, best
+end
+
+-- Planned seconds of the route's legs after the one being guided now (0 without a route).
+function R.LaterSeconds()
+    if not (route and route.steps and route.at) then return 0 end
+    local s = 0
+    for i = route.at + 1, #route.steps do s = s + (route.steps[i].seconds or 0) end
+    return s
+end
+
 function R.SetFollowRoads(on)
     if ns.db then ns.db.walkRoads = on and true or false end
     DropWalk() -- walked again on the next tick, the new way
@@ -319,7 +365,7 @@ end
 -- The current route in words, for /deckkit route.
 function R.Describe()
     if not R.Available() then return "ForeverNav isn't loaded: waypoints are guided to directly." end
-    if not R.Enabled() then return "Routing is off (Map & travel > Waypoints)." end
+    if not R.Enabled() then return "Routing is off (Quests > Waypoints)." end
     if not route then return "No route (no active waypoint, or not planned yet)." end
     if route.none then return "Walking straight to the waypoint is the way." end
     local lines = { string.format("Route, %d steps, %.0f min (%s):", #route.steps, (route.seconds or 0) / 60,

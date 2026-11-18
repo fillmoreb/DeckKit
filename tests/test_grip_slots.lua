@@ -32,11 +32,13 @@ end
 
 local function LastAction() return H.actions[#H.actions] end
 
-step("the menu opens on Controls, with the grip slots as a table")
+step("the menu opens on Setup; RB goes to Controls, with the grip slots as a table")
 DeckKit.Menu.Open()
 local screen = MenuScreen()
 check(screen and screen.win:IsShown(), "the menu is open")
-eq(screen.tabs[screen.tab].title, "Controls", "first tab")
+eq(screen.tabs[screen.tab].title, "Setup", "first tab")
+H.pad("PADRSHOULDER")
+eq(screen.tabs[screen.tab].title, "Controls", "second tab")
 local l4press, l4hold = Cell(screen, "L4", 1), Cell(screen, "L4", 2)
 local r4hold = Cell(screen, "R4", 2)
 

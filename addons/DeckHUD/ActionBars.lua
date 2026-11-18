@@ -43,7 +43,7 @@ ns.On("ACTIONBAR_SLOT_CHANGED", Apply)
 ns.On("UPDATE_MACROS", Apply)
 
 ns.AddSettings({
-    { type = "section", tab = "Screen", label = "Action bars", order = 5 },
+    { type = "section", tab = "Screen", label = "Action bars", order = 7 },
     { type = "toggle", label = "Hide macro names",
       hint = "No macro name across the buttons on the crossbar and the action bars. The icon still shows.",
       get = HideNames,

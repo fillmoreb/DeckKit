@@ -338,6 +338,6 @@ if DeckKit.Setup then
         action = { label = "Choose heal macros", verb = "Choose", opensWindow = true, run = function()
             ns.MakeMoveMacros()
             ns.OpenHealMacros(true)
-        end, doneReason = "Healing > HealPad remakes them" },
+        end, doneReason = "Party > HealPad remakes them" },
     })
 end

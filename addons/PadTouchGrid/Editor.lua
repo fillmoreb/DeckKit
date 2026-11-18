@@ -56,7 +56,7 @@ ns.Editor = function() return screen end
 ns.AddCommand("touchgrid", function() ns.OpenEditor() end, "bind the touch grids' cells")
 
 ns.AddSettings({
-    { type = "section", tab = "Controls", label = "Touch grids", order = 3.5 },
+    { type = "section", tab = "Controls", label = "Touch grids", order = 4 },
     { type = "action", label = "Set the touch grids' cells", verb = "Open",
       hint = "Two 3x3 grids of actions, one under each trackpad. A grip chord slot set to Touch grids opens them;"
           .. " a thumb on a pad lights its cell, a pad click uses it, {B} closes them. Works in combat.",

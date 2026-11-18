@@ -4,7 +4,7 @@
 -- DeckHUD's status bar shows the active one; DeckAgent and MapDeck read and change the list through
 -- the WayPad_* functions at the bottom, which work whether or not WayPad is installed.
 --
--- Waypoints are tables { id, mapID, x, y, label } with x, y in 0..1. Ids (1-65535) stay put while the
+-- Waypoints are tables { id, mapID, x, y, label, behind } with x, y in 0..1 (behind: see W.Add). Ids (1-65535) stay put while the
 -- list shifts, and aren't reused while the waypoint they named is still there.
 --
 -- Hand-off: a front end can hand the waypoints to another waypoint addon (WayPad's HandOff.lua). It
@@ -49,6 +49,7 @@ end
 -- Guidance: where a point is, relative to the player
 --   state: "ok", "far" (another continent), "nopos" (can't read position here)
 --   yards, bearing (radians counter-clockwise from north), angle (counter-clockwise from facing)
+--   steer ({ yards, bearing }: the next corner of the walk there, when there is one) and eta (seconds), see Steer
 -- W.guide, what the displays show, is the active waypoint's; or, while it has a route (Route.lua, ForeverNav), the
 -- current leg's: its point is where that leg goes, `leg` says what it is ({ text, method, ride, index, count }) and
 -- `goal` is the waypoint's own guidance. Arriving is always the waypoint's.
@@ -145,7 +146,7 @@ local function Save()
     if not db then return end
     local out = {}
     for i, p in ipairs(W.points) do
-        out[i] = { id = p.id, mapID = p.mapID, x = p.x, y = p.y, label = p.label }
+        out[i] = { id = p.id, mapID = p.mapID, x = p.x, y = p.y, label = p.label, behind = p.behind }
     end
     db.waypoints = out
     db.activeWaypoint = W.active
@@ -163,13 +164,18 @@ function W.Changed()
     StartTicker()
 end
 
-function W.Add(mapID, x, y, label)
-    table.insert(W.points, { id = NewId(), mapID = mapID, x = x, y = y, label = label })
-    W.active = #W.points
-    W.arrival = nil
-    Tell("Added", W.points[W.active])
+-- behind: a waypoint that stays behind the player's own (the leveling guide's): it's only made active when
+-- nothing else is, and when the active one goes, the player's own are picked before it.
+function W.Add(mapID, x, y, label, behind)
+    table.insert(W.points, { id = NewId(), mapID = mapID, x = x, y = y, label = label, behind = behind or nil })
+    local p = W.points[#W.points]
+    if not (behind and W.active) then
+        W.active = #W.points
+        W.arrival = nil
+    end
+    Tell("Added", p)
     W.Changed()
-    return W.points[W.active]
+    return p
 end
 
 function W.Edit(i, x, y)
@@ -194,7 +200,10 @@ function W.Remove(i)
     Tell("Removed", W.points[i])
     table.remove(W.points, i)
     if W.active == i then
-        W.active = #W.points > 0 and #W.points or nil -- the newest left
+        W.active = #W.points > 0 and #W.points or nil -- the newest left, the player's own before one kept behind
+        for j = #W.points, 1, -1 do
+            if not W.points[j].behind then W.active = j break end
+        end
         if W.active then Tell("Activated", W.points[W.active]) end -- a hand-off target points at it too
     elseif W.active and W.active > i then
         W.active = W.active - 1
@@ -214,7 +223,8 @@ local function Load(saved, active)
     for _, p in ipairs(saved or {}) do
         if type(p.mapID) == "number" and type(p.x) == "number" and type(p.y) == "number" then
             local id = type(p.id) == "number" and not InUse(p.id) and p.id or nil
-            table.insert(W.points, { id = id or NewId(), mapID = p.mapID, x = p.x, y = p.y, label = p.label })
+            table.insert(W.points, { id = id or NewId(), mapID = p.mapID, x = p.x, y = p.y, label = p.label,
+                                     behind = p.behind == true or nil })
         end
     end
     W.active = W.points[active or 0] and active or (#W.points > 0 and #W.points or nil)
@@ -251,6 +261,34 @@ end
 
 local inTick
 
+-- The compass's view of the guidance: `steer` ({ bearing, yards }), the next corner of the walk to it, so the pin
+-- follows the path rather than the straight line; and `eta`, seconds to the waypoint at your run speed (mounts
+-- included): the walk left along the path, plus the later legs of a route. Without a walk: the straight line.
+local function Steer(g)
+    if not (g and g.state == "ok") then return end
+    local speed = select(2, GetUnitSpeed("player"))
+    if not speed or speed <= 0 then speed = 7 end
+    local steer, left = nil, g.yards
+    if ns.Route and ns.Route.Progress then
+        local s, l = ns.Route.Progress(player, g.point)
+        if s then
+            steer, left = s, l
+            local dN, dW = s.north - player.north, s.west - player.west
+            g.steer = { yards = math.sqrt(dN * dN + dW * dW), bearing = math.atan2(dW, dN) }
+        end
+    end
+    g.eta = left / speed + (g.leg and ns.Route.LaterSeconds() or 0)
+end
+
+-- Seconds as the compass shows them: "45s", "3:05", "1h 12m".
+function W.FormatETA(sec)
+    if not sec then return "" end
+    sec = math.floor(sec + 0.5)
+    if sec < 60 then return sec .. "s" end
+    if sec < 3600 then return string.format("%d:%02d", sec / 60, sec % 60) end
+    return string.format("%dh %02dm", sec / 3600, (sec % 3600) / 60)
+end
+
 local function TickBody()
     ReadPlayer()
     -- Another waypoint addon has the waypoints: it does the guiding and arriving.
@@ -274,6 +312,7 @@ local function TickBody()
     end
     W.guide = g
     if ns.Route then ns.Route.UpdateWalk(g) end -- the path on foot to it, for the peek map (ForeverNav)
+    Steer(g)
     Each(tickFns, g)
     if W.debug and GetTime() >= debugNext then
         debugNext = GetTime() + 1

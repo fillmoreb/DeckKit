@@ -23,6 +23,7 @@
 local ADDON, ns = ...
 
 DeckKit.NewModule(ns, ADDON, "|cff8fd16aPackPad|r")
+ns.settingsScope = "char" -- its settings are kept per character (SavedVariablesPerCharacter)
 
 local NATIVE_COLUMNS, SPACING = 10, 5 -- Blizzard's own grid
 local MIN_COLUMNS, MAX_COLUMNS = 6, 20 -- the setting's range (Blizzard's 10 by default)
@@ -494,7 +495,7 @@ if ns.Chords and ns.Chords.OfferPress then
 end
 
 ns.AddSettings({
-    { type = "section", tab = "Screen", label = "Bags" },
+    { type = "section", tab = "Screen", label = "Bags", order = 4 },
     { type = "info", label = "Bag peek: hold its grip slot (Controls > Grips, \"Bag peek\") to see everything you carry, full screen. Both sticks stay yours." },
     { type = "action", label = "Clear item marks", verb = "Clear",
       hint = "Takes the stars off every marked item (the ones Decky flagged, for one).",

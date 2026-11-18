@@ -9,14 +9,15 @@
 -- Asking it to add a waypoint that already exists hands back the existing one, so WayPad needs
 -- no ids of its own and nothing breaks across reloads.
 --
--- "Waypoints go to" (DeckKit menu, Map & travel > Waypoints): Auto (the other addon if one is installed),
--- WayPad, or the other addon.
+-- "Waypoints go to" (DeckKit menu, Quests > Waypoints): DeckKit's own (the default, always: having
+-- another addon installed that speaks the interface, as Shortest Path Forever does, is no reason to hand
+-- off), or the other addon, only when chosen. The old "auto" choice reads as DeckKit's own.
 local _, ns = ...
 
 local HandOff = {}
 ns.HandOff = HandOff
 
-local MODES = { auto = true, waypad = true, other = true }
+local MODES = { waypad = true, other = true }
 
 -- The other waypoint addon, if one that speaks the interface is installed.
 local function Other()
@@ -29,7 +30,7 @@ HandOff.Available = function() return Other() ~= nil end
 
 function HandOff.Mode()
     local mode = ns.db and ns.db.waypoints
-    return MODES[mode] and mode or "auto"
+    return MODES[mode] and mode or "waypad"
 end
 
 -- The addon waypoints go to right now, or nil for WayPad's own.

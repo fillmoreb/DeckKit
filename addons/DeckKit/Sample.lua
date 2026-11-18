@@ -387,7 +387,7 @@ ns.AddCommand("sample", function(arg)
     end
 end, "the DeckKit design sample window")
 ns.Settings.Add("DeckKit", ns.TITLE, {
-    { type = "section", tab = "Tools", label = "DeckKit", order = 9 },
+    { type = "section", tab = "Advanced", label = "Help and testing", order = 1 },
     { type = "action", label = "Design sample", run = Open,
       hint = "Every DeckKit control in one window, to try with the controller." },
 })

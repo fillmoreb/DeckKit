@@ -3,9 +3,9 @@
 -- Adapted from Improved Forever's WandShoot.lua (MIT License, Copyright (c) 2026 markg).
 --
 -- Square is the game's Interact: on an enemy it swings the melee weapon. With a wand in the
--- ranged slot this claims Square through DeckKit.Override while a living enemy is targeted, and
--- casts "!Shoot" (the "!" keeps a second press from stopping it). On anything else (loot, an NPC,
--- an object) Square stays the game's own press. It outranks DeckAngler's one-button fishing.
+-- ranged slot this claims Square through DeckKit.Override while a living enemy is targeted, and casts "!Shoot"
+-- (the "!" keeps a second press from stopping it). On anything else (loot, an NPC, an object) Square stays the
+-- game's own press. It outranks DeckAngler's one-button fishing.
 -- /deckkit wandshoot turns it on and off.
 local _, ns = ...
 
@@ -25,13 +25,19 @@ local function ShootName()
     return info and info.name
 end
 
+-- Only while a living enemy is targeted. X is also the game's Interact (loot, NPCs, mailboxes, skinning,
+-- gathering), and a claim that wanted X the rest of the time can't step aside for those: macro conditions see a
+-- soft-interact creature ([@softinteract,exists]) but not a soft-interact object, so the mailbox, herbs and ore
+-- would be lost (tried 2026-11-17). The rest of the time X and its crossbar icon stay the game's.
 local function Apply()
     local name = ns.db.wandShoot ~= false and Wielding() and ShootName()
     ns.Override.Set("PAD3", "wand", name and {
         when = "[harm,nodead]",
         priority = 20,
         macro = "/cast [harm,nodead] !" .. name,
+        icon = function() return GetInventoryItemTexture("player", RANGED_SLOT) end, -- the wand on the crossbar
     } or nil)
+    ns.Override.Set("PAD3", "wandnear", nil) -- the always-on claim tried that day: gone for good
 end
 
 ns.On("PLAYER_LOGIN", Apply)
@@ -39,9 +45,10 @@ ns.On("PLAYER_EQUIPMENT_CHANGED", Apply)
 ns.On("SPELLS_CHANGED", Apply)
 
 ns.AddSettings({
-    { type = "section", tab = "Controls", label = "Buttons", order = 2 },
+    { type = "section", tab = "Controls", label = "Buttons", order = 3 },
     { type = "toggle", label = "Wand shoot",
-      hint = "X fires your wand at a living enemy instead of a melee swing.",
+      hint = "X fires your wand at a living enemy instead of a melee swing, and the crossbar shows the wand on X while it "
+          .. "does. Anything else (loot, NPCs, mailboxes, skinning) stays X's own.",
       get = function() return ns.db.wandShoot ~= false end,
       set = function(on) ns.db.wandShoot = on; Apply() end },
 })

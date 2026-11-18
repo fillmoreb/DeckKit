@@ -9,6 +9,7 @@
 local ADDON, ns = ...
 
 DeckKit.NewModule(ns, ADDON, "|cffffd060QuestPad|r")
+ns.settingsScope = "char" -- its settings are kept per character (SavedVariablesPerCharacter)
 
 BINDING_HEADER_QUESTPAD = "QuestPad"
 BINDING_NAME_QUESTPAD_USE = "Use the quest item"
@@ -268,7 +269,7 @@ ns.AddCommand("questpad", function(arg)
 end, "list quests with items and what the button shows; preview: show the button for a few seconds")
 
 ns.AddSettings({
-    { type = "section", tab = "Tools", label = "Quest items", order = 3 },
+    { type = "section", tab = "Quests", label = "Quest items", order = 4 },
     { type = "toggle", label = "Quest item button",
       hint = "A big button for the quest item you need: the quest whose area you're in, or the one your target belongs to.",
       get = function() return db.enabled end,

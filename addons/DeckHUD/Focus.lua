@@ -1,4 +1,4 @@
--- The focus frame, slimmed down for healing. Three looks (Screen > Unit frames > Focus frame):
+-- The focus frame, slimmed down for healing. Three looks (Party > Frames > Focus frame):
 --   Blizzard's     as the game draws it
 --   No portrait    a thin border around the name and bars: no portrait, no level badge
 --   Name and health  just a big first name in the player's class color over a tall health bar,
@@ -270,16 +270,13 @@ ns.On("PLAYER_REGEN_ENABLED", function() if pending then pending = false; Apply(
 ns.On("UNIT_NAME_UPDATE", function(unit) if unit == "focus" then Name() end end)
 
 ns.AddSettings({
-    { type = "section", tab = "Screen", label = "Unit frames", order = 4 },
-    { type = "action", label = "Focus auras", verb = "Choose",
-      hint = "With the Name and health look: which buffs show under the focus frame, your own debuffs "
-          .. "(a priest's Weakened Soul), and debuffs you can dispel.",
-      run = function() ns.OpenFocusAuras() end },
+    { type = "section", tab = "Party", label = "Frames", order = 1 },
     { type = "choice", label = "Focus frame",
       values = { { "blizzard", "Blizzard's" }, { "noportrait", "No portrait" }, { "compact", "Name and health" } },
       hint = "No portrait: a thin border around the focus's name and bars. Name and health: just a big first "
           .. "name in their class color over a tall health bar. Handy when the focus is who your heals go to. "
           .. "Going back to Blizzard's look takes a reload.",
+      reload = true,
       get = Style,
       set = function(v)
           ns.db.focusStyle = v
@@ -287,4 +284,9 @@ ns.AddSettings({
           Apply()
           if v == "blizzard" then ns.Print("Reload the UI to get Blizzard's focus frame back.") end
       end },
+    { type = "action", label = "Focus auras", verb = "Choose",
+      hint = "With the Name and health look: which buffs show under the focus frame, your own debuffs "
+          .. "(a priest's Weakened Soul), and debuffs you can dispel.",
+      run = function() ns.OpenFocusAuras() end },
+    ns.Layout.LBPromptRow,
 })

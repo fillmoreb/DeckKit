@@ -1,9 +1,10 @@
 -- DeckHUD: the compass. A strip across the middle of the status bar, centered on the way you face (180
--- degrees of horizon in 360 px to start; both set in Screen > Status bar): ticks every 15 degrees and
+-- degrees of horizon in 360 px to start; both set in Quests > Compass): ticks every 15 degrees and
 -- N, NE, E... slide past as you turn, and an ornament hangs from the bar's middle as the pointer, its gem
 -- plum at rest, lilac as the waypoint comes within 45 degrees. On the strip:
---   * the active waypoint (DeckKit.Waypoints): the gold pin, hanging below the bar, with its distance
---     in yards under it (dropping clear of the pointer as it reaches the middle); "Arrived" when reached
+--   * the active waypoint (DeckKit.Waypoints): the lilac pin, hanging below the bar, pointing along the walk
+--     there (its next corner, when ForeverNav has a walk), with the time to get there under it at your run
+--     speed (dropping clear of the pointer as it reaches the middle); "Arrived" when reached
 --   * Blizzard's map pin and a guard's directions (the flag), sized and hung like the pin
 --   * the focused quest (the game's super-tracked one), drawn as Blizzard's map and objective tracker draw
 --     it: its classification's disc (gold, blue for dailies...) with the dots, or the ? once complete;
@@ -130,8 +131,11 @@ local function Create()
     pin = over:CreateTexture(nil, "OVERLAY", nil, 3)
     if not (C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("Waypoint-MapPin-Tracked")
         and pin:SetAtlas("Waypoint-MapPin-Tracked")) then
-        pin:SetColorTexture(1, 0.82, 0, 1)
-    end -- the pin keeps Blizzard's gold; the strip's own marks are lilac
+        pin:SetColorTexture(1, 1, 1, 1)
+    end
+    -- The suite's lilac: Blizzard's gold pin, its color taken out, then tinted (WayPad's map pins match).
+    pin:SetDesaturated(true)
+    pin:SetVertexColor(LILAC[1], LILAC[2], LILAC[3])
     pin:SetSize(MARK, MARK)
     Glide(pin)
     -- The distance in yards, just a number, under the pin's tip (over the game, below the bar).
@@ -277,7 +281,9 @@ local function Collect()
     end
     -- The focused quest (super tracked: the one the map and objective tracker single out), and whether
     -- you're in its area (kept from the last answer while the area can't tell yet).
-    if Shows("compassQuest") and C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID then
+    -- Not while the leveling guide is on screen (GuidePad's panel): its waypoint is the one to follow.
+    local guide = _G.GuidePadPanel and _G.GuidePadPanel:IsShown()
+    if Shows("compassQuest") and not guide and C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID then
         local q = C_SuperTrack.GetSuperTrackedQuestID()
         if q and q > 0 then
             questArea = questArea or DeckKit.Map.QuestArea()
@@ -570,8 +576,10 @@ local function Draw(_, elapsed)
     end
 
     local g = W.guide
-    local wp = (not W.arrival and g and g.state == "ok" and g.bearing)
-        and { x = -Wrap(g.bearing - facing) * PPR, size = MARK, id = "waypoint" } or nil
+    -- The pin follows the walk (the next corner of the path), else points straight at the waypoint.
+    local bearing = g and (g.steer and g.steer.bearing or g.bearing)
+    local wp = (not W.arrival and g and g.state == "ok" and bearing)
+        and { x = -Wrap(bearing - facing) * PPR, size = MARK, id = "waypoint" } or nil
     DrawMarks(facing, wp, elapsed)
     Pointer(nil)
     if W.arrival then
@@ -591,7 +599,7 @@ local function Draw(_, elapsed)
         yards:SetPoint("TOP", pin, "BOTTOM", 0, 1 - (YARDS_DROP + 1) * near)
         pin:SetAlpha(off and 0.6 or 1)
         pin:Show()
-        yards:SetText(string.format("%d", g.yards + 0.5))
+        yards:SetText(g.eta and W.FormatETA(g.eta) or string.format("%d", g.yards + 0.5))
         yards:SetAlpha(off and 0.6 or 1)
         yards:Show()
         dist:Hide()

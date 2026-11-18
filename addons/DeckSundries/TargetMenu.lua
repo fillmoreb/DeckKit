@@ -22,7 +22,7 @@ end
 ns.On("PLAYER_LOGIN", Apply)
 
 ns.AddSettings({
-    { type = "section", tab = "Controls", label = "Buttons", order = 2 },
+    { type = "section", tab = "Controls", label = "Buttons", order = 3 },
     { type = "toggle", label = "No target menu in combat",
       hint = "{Y} on its own doesn't open your target's menu during a fight. "
           .. "With a trigger held, {Y} works as usual.",

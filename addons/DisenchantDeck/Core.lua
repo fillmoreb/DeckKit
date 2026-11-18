@@ -5,6 +5,7 @@
 local ADDON, ns = ...
 
 DeckKit.NewModule(ns, ADDON, "|cffb070ffDisenchantDeck|r") -- Print, On, Input, Window
+ns.settingsScope = "char" -- its settings are kept per character (SavedVariablesPerCharacter)
 ns.DISENCHANT = 13262
 
 ns.On("ADDON_LOADED", function(name)

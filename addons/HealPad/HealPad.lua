@@ -491,7 +491,7 @@ ns.AddCommand("healpad", function(arg)
 end, "d-pad cursor on the raid frames: macros, heals, party, raid")
 
 ns.AddSettings({
-    { type = "section", tab = "Healing", label = "HealPad", order = 1 },
+    { type = "section", tab = "Party", label = "HealPad", order = 2 },
     { type = "action", label = "Make the d-pad macros", run = MakeMacros,
       hint = "Makes HealPad Up / Down / Left / Right. Put them on your healing page's d-pad." },
     { type = "action", label = "Make heal macros",
@@ -499,15 +499,16 @@ ns.AddSettings({
           .. "page's face buttons. Pick which in the list.",
       run = function() ns.OpenHealMacros() end },
     { type = "info", label = ns.Window.Glyphs(PLACE_HINT) },
-    { type = "toggle", label = "Practice party",
+    { type = "info", label = "Heal macros aim at the selection with [@focus]." },
+    { type = "section", tab = "Party", label = "Practice frames", order = 3 },
+    { type = "toggle", label = "Practice party", scope = "session",
       hint = "Five frames where your party frames would be (your Edit Mode party layout), to see it and try "
           .. "the cursor while solo. Every one is you. Off again after a /reload.",
       get = PracticePartyShown, set = SetPracticeParty },
-    { type = "toggle", label = "Practice raid",
+    { type = "toggle", label = "Practice raid", scope = "session",
       hint = "Raid frames where yours would be (your Edit Mode raid layout), to see it and try the cursor "
           .. "while solo. Every one is you. Off again after a /reload.",
       get = PracticeRaidShown, set = SetPracticeRaid },
-    { type = "choice", label = "Practice raid size", values = { { 10, "10" }, { 25, "25" }, { 40, "40" } },
+    { type = "choice", label = "Raid size", indent = true, scope = "session", values = { { 10, "10" }, { 25, "25" }, { 40, "40" } },
       get = function() return raidSize end, set = SetRaidSize },
-    { type = "info", label = "Heal macros aim at the selection with [@focus]." },
 })
