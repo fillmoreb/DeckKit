@@ -369,8 +369,32 @@ end
 -- The view an addon draws
 ------------------------------------------------------------------------
 
+-- A goal with candidates (a trainer, vendor or innkeeper "nearest you": Polestar lists every one) and no place of its
+-- own: the nearest that fits the character (faction, class, race), else the first that fits.
+local FACTION = { Horde = "H", Alliance = "A" }
+function E.Candidate(g)
+    if g.map or not g.candidates then return nil end
+    local side = FACTION[Game.Faction()] or ""
+    local best, bestD, first
+    for _, c in ipairs(g.candidates) do
+        local fits = (not c.faction or c.faction:find(side, 1, true)) and InList(c.classes, Game.Class())
+            and InList(c.races, Game.Race())
+        if fits and c.map and c.x then
+            first = first or c
+            local d = Game.Distance(c.map, c.x, c.y, c.f)
+            if d and (not bestD or d < bestD) then best, bestD = c, d end
+        end
+    end
+    return best or first
+end
+
 local function GoalView(guide, s)
     local g = s.goal
+    local cand = not s.done and E.Candidate(g)
+    if cand and not g.text and not g.npcName then
+        -- Name the one picked: "Train at Akeri Duskblade", "Visit Dalia the Collector".
+        g = setmetatable({ npcName = cand.npcName }, { __index = g })
+    end
     local text = FG.Text.Goal(guide, g, s.obj)
     -- Counts the quest log doesn't give: bags for a collect or buy outside a quest.
     if not s.obj and s.need and s.need > 1 and (g.t == "collect" or g.t == "buy" or g.t == "auction" or g.t == "craft") then
@@ -379,8 +403,9 @@ local function GoalView(guide, s)
     return {
         t = g.t, text = text, done = s.done == true, info = s.info, optional = g.optional == true,
         quest = g.quest, questTitle = g.quest and (g.title or Game.QuestTitle(g.quest)),
-        note = g.note and Text.Resolve(guide, g.note), npc = g.npc, item = g.item,
-        map = g.map, x = g.x, y = g.y, f = g.f, have = s.have, need = s.need, goal = g,
+        note = g.note and Text.Resolve(guide, g.note), npc = g.npc or (cand and cand.npc), item = g.item,
+        map = g.map or (cand and cand.map), x = g.x or (cand and cand.x), y = g.y or (cand and cand.y),
+        f = g.f or (cand and cand.f), have = s.have, need = s.need, goal = s.goal,
     }
 end
 

@@ -139,5 +139,20 @@ eq(E.View(cond).stepIndex, 2, "level 6: step 1 doesn't")
 W.done[9101] = true
 eq(E.View(cond).finished, true, "neg turnedin: step 2 doesn't either")
 
+step("a train goal with candidates: the trainer for the character's class and side, named")
+local trainGoal
+for _, st in ipairs(guide.steps) do
+    for _, g in ipairs(st.goals) do
+        if g.t == "train" and g.class and g.candidates and not g.only then trainGoal = trainGoal or g end
+    end
+end
+eq(trainGoal ~= nil, true, "Zephras Isle has a class train goal with candidates")
+local c = E.Candidate(trainGoal)
+eq(c ~= nil, true, "a candidate fits")
+local isRogue = false
+for _, cl in ipairs(c and c.classes or {}) do if cl == "ROGUE" then isRogue = true end end
+eq(isRogue, true, "a rogue trainer (" .. tostring(c and c.npcName) .. ")")
+eq(c.faction:find("H", 1, true) ~= nil, true, "for the Horde")
+
 print(("%d checks, %d failed"):format(checks, failures))
 os.exit(failures == 0 and 0 or 1)

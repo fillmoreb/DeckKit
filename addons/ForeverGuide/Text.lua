@@ -47,7 +47,7 @@ local VERB = {
     end,
     talk = function(g) return "Talk to " .. (g.npcName or "?") end,
     train = function(g)
-        if g.skill then return "Train " .. g.skill end
+        if g.skill then return "Train " .. g.skill .. (g.npcName and (" at " .. g.npcName) or "") end
         if g.npcName then return "Train at " .. g.npcName end
         return "Train your class skills"
     end,

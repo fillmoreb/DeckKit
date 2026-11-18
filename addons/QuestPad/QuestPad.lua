@@ -1,7 +1,9 @@
 -- QuestPad: one big button (in the game's Extra Action Button art) for the quest item you need
 -- right now. Which quest:
 --   1. the quest your target belongs to (from the target's tooltip quest lines), else
---   2. the quest whose area you're standing in: the real shape the map draws for it, not a
+--   2. the leveling guide's step, when ForeverGuide is running: the quest of the goal it says to do now, else of
+--      any open goal in the step
+--   3. the quest whose area you're standing in: the real shape the map draws for it, not a
 --      distance from its center (DeckKit.Map.QuestArea).
 -- A grip chord slot (Controls > Grips, R5 at first) or any key bound to QUESTPAD_USE uses it. Items need a secure click,
 -- so the item, the button and its key only change out of combat; in combat it keeps what it had.
@@ -71,6 +73,20 @@ local function TargetQuest()
                 if line.leftText == C_QuestLog.GetTitleForQuestID(questID) and Wanted(questID) then return questID end
             end
         end
+    end
+end
+
+-- The leveling guide's step (ForeverGuide, when it's running): the quest of the goal it says to do now, else of any
+-- open goal of the step, if that quest has an item to use.
+local function GuideQuest()
+    local G = _G.ForeverGuide and ForeverGuide.v1
+    local view = G and G.View and G.View()
+    if not (view and view.goals) then return end
+    for _, g in ipairs(view.goals) do
+        if g.now and g.quest and Wanted(g.quest) then return g.quest end
+    end
+    for _, g in ipairs(view.goals) do
+        if not g.done and g.quest and Wanted(g.quest) then return g.quest end
     end
 end
 
@@ -226,7 +242,7 @@ local function Update()
     if previewUntil > 0 then previewUntil = 0; Show(nil) end
     if itemsDirty then ScanItems() end
     if not InCombatLockdown() then
-        local questID = TargetQuest() or AreaQuest()
+        local questID = TargetQuest() or GuideQuest() or AreaQuest()
         if questID ~= current or (button:IsShown() and not current) then Show(questID) end
         if current and (not items[current] or button:GetAttribute("item") ~= items[current].link) then Show(current) end
     end

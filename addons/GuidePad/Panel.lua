@@ -5,7 +5,8 @@
 --
 -- Numbers from Forever's FrameXML (Blizzard_ObjectiveTracker*.xml/.lua, 1.60.1): the panel is 260 wide, modules
 -- start 38 below its top and sit 10 apart; a section header is 26 high (25 counted), its first block 10 below;
--- blocks are indented 20, 10 apart; lines 4 apart; a check is 16 px at the line's top left, -10, +2.
+-- blocks are indented 20, 10 apart; lines 4 apart; a check is 16 px at the line's top left, -10, +2; a quest's POI
+-- icon is 20 px, its top right at the title's top left, -7, +5.
 local _, ns = ...
 
 local Panel = {}
@@ -24,8 +25,8 @@ local COLOR = {
 }
 
 local frame, headerText, headerCount
-local pools = { header = {}, title = {}, line = {}, check = {} }
-local used = { header = 0, title = 0, line = 0, check = 0 }
+local pools = { header = {}, title = {}, line = {}, check = {}, poi = {} }
+local used = { header = 0, title = 0, line = 0, check = 0, poi = 0 }
 
 local function LineFont() return _G.ObjectiveTrackerLineFont or GameFontHighlight end
 local function HeaderFont() return _G.ObjectiveTrackerHeaderFont or GameFontNormalMed2 or GameFontNormal end
@@ -105,6 +106,28 @@ local function Check(line)
     c:SetPoint("TOPLEFT", line, "TOPLEFT", -10, 2)
 end
 
+-- The quest's icon left of its title, as the tracker's POI button looks (Blizzard_POIButton's art, drawn only: a
+-- real POI button ties into gamepad focus and quest focus): a disc with "..." while in progress, with "?" once
+-- ready to hand in; the map's "!" for a quest not taken yet.
+local function QuestIcon(title, questID)
+    local p = Acquire("poi", function()
+        local f = CreateFrame("Frame", nil, frame)
+        f:SetSize(20, 20)
+        f.disc = f:CreateTexture(nil, "ARTWORK")
+        f.disc:SetAllPoints()
+        Atlas(f.disc, "UI-QuestPoi-QuestNumber", false)
+        f.mark = f:CreateTexture(nil, "OVERLAY")
+        f.mark:SetAllPoints()
+        return f
+    end)
+    p:ClearAllPoints()
+    p:SetPoint("TOPRIGHT", title, "TOPLEFT", -7, 5)
+    local inLog = C_QuestLog.IsOnQuest and C_QuestLog.IsOnQuest(questID)
+    local ready = inLog and ((C_QuestLog.ReadyForTurnIn and C_QuestLog.ReadyForTurnIn(questID)) or C_QuestLog.IsComplete(questID))
+    p.disc:SetShown(inLog and true or false)
+    Atlas(p.mark, not inLog and "QuestNormal" or ready and "UI-QuestIcon-TurnIn-Normal" or "Quest-In-Progress-Icon-yellow", false)
+end
+
 local function ReleaseAll()
     for kind, list in pairs(pools) do
         for i = 1, used[kind] do list[i]:Hide() end
@@ -140,7 +163,7 @@ local function SetColor(fs, c) fs:SetTextColor(c[1], c[2], c[3]) end
 
 -- One block: an optional yellow title, then lines. line: { text, done, now, plain, sub }
 -- (plain: no dash, as a quest's "Ready for turn-in"; sub: a dim note under the line before).
-local function AddBlock(title, lines, firstOfSection)
+local function AddBlock(title, lines, firstOfSection, questID)
     local need = (title and 14 or 0) + #lines * 16
     if not Room(math.min(need, 30)) then return false end
     if not firstOfSection then y = y + BLOCK_GAP end
@@ -150,6 +173,7 @@ local function AddBlock(title, lines, firstOfSection)
         fs:SetPoint("TOPLEFT", frame, "TOPLEFT", BLOCK_X, -y)
         fs:SetText(title)
         SetColor(fs, COLOR.header)
+        if questID then QuestIcon(fs, questID) end
         y = y + fs:GetStringHeight()
     end
     for i, ln in ipairs(lines) do
@@ -185,7 +209,8 @@ local function GoalBlocks(goals)
         if g.quest then
             b = byQuest[g.quest]
             if not b then
-                b = { title = (C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(g.quest)) or g.questTitle, lines = {} }
+                b = { title = (C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(g.quest)) or g.questTitle, lines = {},
+                      quest = g.quest }
                 byQuest[g.quest] = b
                 blocks[#blocks + 1] = b
             end
@@ -202,7 +227,7 @@ end
 
 local function DrawBlocks(blocks)
     for i, b in ipairs(blocks) do
-        if not AddBlock(b.title, b.lines, i == 1) then return end
+        if not AddBlock(b.title, b.lines, i == 1, b.quest) then return end
     end
 end
 
@@ -221,7 +246,7 @@ local function OtherQuests(shown)
                     if o.text and o.text ~= "" then lines[#lines + 1] = { text = o.text, done = o.finished } end
                 end
             end
-            blocks[#blocks + 1] = { title = C_QuestLog.GetTitleForQuestID(q) or ("Quest " .. q), lines = lines }
+            blocks[#blocks + 1] = { title = C_QuestLog.GetTitleForQuestID(q) or ("Quest " .. q), lines = lines, quest = q }
         end
     end
     return blocks
