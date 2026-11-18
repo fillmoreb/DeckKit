@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: MailPad
+## Notes: The mailbox, controller first: opening a mailbox opens MailPad instead of Blizzard's window. Your mail as a list, open one to read, take from one mail or from all of them; the auction house's mail summed up. Send to your characters, recent names, friends or guild, with items, money or COD.
+## Version: @project-version@
+## Author: Ben Fillmore
+## SavedVariables: MailPadDB
+## Dependencies: DeckKit
+
+Core.lua
+Take.lua
+Inbox.lua
+Send.lua

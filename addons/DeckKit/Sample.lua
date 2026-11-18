@@ -263,6 +263,13 @@ local function Build()
     dy:SetPoint("LEFT", dx, "RIGHT", 40, 0)
     said:SetPoint("TOPLEFT", dx, "BOTTOMLEFT", 0, -16)
     said:Set("Saved", "nothing yet", UI.Color.dim)
+    -- A number asked for in a popover (Screen:AskNumber), as splitting a stack asks how many.
+    local ask = UI.Action(np, 300, { label = "How many? (a number popover)", verb = "Ask", keepOpen = true,
+        run = function()
+            screen:AskNumber({ text = "How many Linen Cloth?", min = 1, max = 19, value = 10, yes = "Take",
+                onYes = function(n) said:Set("Took", n .. " Linen Cloth", UI.Color.gold) end })
+        end })
+    ask:SetPoint("TOPLEFT", said, "BOTTOMLEFT", 0, -12)
 
     ------------------------------------------------------------------
     -- Tab 4: a layout (Layout.lua): the same kind of window described as data, the way an assistant

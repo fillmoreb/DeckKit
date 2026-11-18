@@ -22,6 +22,7 @@ move-folders:
   DeckKit/addons/HealPad: HealPad
   DeckKit/addons/MapDeck: MapDeck
   DeckKit/addons/MarketDeck: MarketDeck
+  DeckKit/addons/MailPad: MailPad
   DeckKit/addons/MenuReload: MenuReload
   DeckKit/addons/PackPad: PackPad
   DeckKit/addons/PadTouchGrid: PadTouchGrid

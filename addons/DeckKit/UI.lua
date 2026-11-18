@@ -1125,6 +1125,53 @@ function Screen:Ask(opts)
     self:UpdatePrompts()
 end
 
+-- A number asked for, in the same popover as Ask: opts.text (what it's for), opts.min / opts.max / opts.value (start),
+-- opts.format(v) -> text (default the number), opts.yes / opts.no, opts.onYes(v) / opts.onNo(). The d-pad changes it
+-- (up / right one more, down / left one less), RT / LT ten more / less, A keeps it (onYes runs inside that press), B
+-- cancels. Splitting a stack asks this way: how many.
+function Screen:AskNumber(opts)
+    if not self.numPop then
+        local pop = UI.Popover(self.win, ASK_W, 120, true)
+        pop.text = Text(pop, UI.Font.body, "CENTER")
+        pop.text:SetPoint("TOP", 0, -14)
+        pop.text:SetWidth(ASK_W - 32)
+        pop.text:SetWordWrap(true)
+        pop.value = Text(pop, UI.Font.heading, "CENTER")
+        pop.value:SetPoint("TOP", pop.text, "BOTTOM", 0, -10)
+        self.numPop = pop
+    end
+    local pop = self.numPop
+    local lo, hi = opts.min or 1, opts.max or 1
+    local v = math.max(lo, math.min(hi, opts.value or lo))
+    local fmt = opts.format or tostring
+    local yes, no = opts.yes or "OK", opts.no or "Cancel"
+    local function Show() pop.value:SetText(Glyph("DPAD_UD", 22) .. "  " .. fmt(v)) end
+    pop.text:SetText(ns.Window.Glyphs(opts.text or ""))
+    Show()
+    pop:SetLegend({ { "A", yes }, { "B", no } })
+    pop:SetHeight(math.max(110, math.ceil(pop.text:GetStringHeight() or 20) + 96))
+    local STEP = { PADDUP = 1, PADDRIGHT = 1, PADDDOWN = -1, PADDLEFT = -1, PADRTRIGGER = 10, PADLTRIGGER = -10 }
+    local question = { dk = {
+        edit = function(_, key)
+            if key == "PAD1" then if opts.onYes then opts.onYes(v) end return "done" end
+            if key == "PAD2" then if opts.onNo then opts.onNo() end return "cancel" end
+            local d = STEP[key]
+            if d then
+                v = math.max(lo, math.min(hi, v + d))
+                Show()
+                return "changed"
+            end
+        end,
+        editPrompts = function()
+            return { { "DPAD", "Change", glyphs = Glyph("DPAD_UD", LEGEND_GLYPH) },
+                     { "LT", "x10", glyphs = Glyph("LT", LEGEND_GLYPH) .. Glyph("RT", LEGEND_GLYPH) },
+                     { "A", yes }, { "B", no } }
+        end,
+    } }
+    self:BeginEdit(question, pop)
+    self:UpdatePrompts()
+end
+
 -- Stepper: a number changed a step at a time. Left/right step it while it has the cursor. With opts.popover the
 -- d-pad passes over it like any control and A opens it: up/right add, down/left subtract, LT/RT ten steps, A keeps,
 -- B puts back the old value (for steppers that sit beside other controls, where left/right must move the cursor).

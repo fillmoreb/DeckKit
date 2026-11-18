@@ -432,6 +432,13 @@ The slots now:
 | (note) | | Talking to an auctioneer opens AuctionPad instead of Blizzard's window. LB/RB switch between Sell and My auctions. In **Sell**, pick an item on the left, set price, amount and length on the right, and A posts it. In **Buy**, open a category (or search), set the level, rarity and usable filters, A on an item shows its listings, and A buys. B goes back a step. |
 
 
+### Mailbox
+*From MailPad*
+
+| Option | Now | What it does |
+|---|---|---|
+| MailPad instead of Blizzard's mailbox | On | Opening a mailbox opens MailPad. **Inbox:** your mail as a list, A opens one, X takes everything from it, Y takes everything from every mail (COD mail is left alone). **Send:** pick who (your characters, recent names, friends, guild) or type a name, money or COD, A attaches items from your bags, Y takes one back out. Off: Blizzard's own window. |
+
 ---
 
 ## Advanced

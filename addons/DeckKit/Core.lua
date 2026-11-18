@@ -13,6 +13,7 @@
 --   Displays.lua  where a layout shows on its own: window, card or tracker (UI.ShowLayout / ShowCard / ShowTracker)
 --   Override.lua  shared pad button overrides, e.g. X for wand shoot and fishing (DeckKit.Override)
 --   Settings.lua  the settings registry modules add their options to (ns.AddSettings)
+--   Bags.lua      small bag helpers: a split stack onto the cursor, a free slot, LT held (the split gesture)
 --   Menu.lua      the DeckKit menu: double-tap Menu (three lines) or /deckkit
 --   Actions.lua   what a player can bind, anywhere: spells, items, macros, offered actions (DeckKit.Actions)
 --   Widgets.lua   layouts kept by name and shown as trackers; each one an action to toggle (DeckKit.Widgets)
