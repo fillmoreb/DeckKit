@@ -112,7 +112,7 @@ end
 
 local EVERYTHING_HINT = "Turns on every suggested game setting (Suggested game settings, above), frees the grip keys, and applies the suggested layout: "
     .. "your frame and the target's, the party frames in a row between them, the focus frame centered, raid "
-    .. "frames top-left and buffs under the status bar, the compact crossbar near the bottom. Backs up your "
+    .. "frames top-left and buffs under the status bar in rows of four, the compact crossbar near the bottom. Backs up your "
     .. "Edit Mode layout first (one undo), then reloads."
 
 table.insert(items, { type = "info", label = "Switching one off puts back what you had before (all but the grip keys)." })

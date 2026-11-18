@@ -7,6 +7,7 @@
 --
 --   /deckkit layout crossbar <height>   the gamepad action bar's bottom, in pixels from the bottom
 --   /deckkit layout party               raid-style party frames in a row under your frame and the target's
+--   /deckkit layout buffrow <n>         buffs n to a row (4 suggested), the next row below
 --   /deckkit layout raid <left> <top>   the raid frames' top left corner, in pixels from the screen's
 --   /deckkit layout restore             the newest backup, back into the active layout
 --   /deckkit layout backups             list them
@@ -195,7 +196,9 @@ local function Suggested()
           settings = { [UFS.UseRaidStylePartyFrames or -1] = 1, [UFS.UseHorizontalGroups or -2] = 1,
                        [UFS.FrameWidth or -3] = 8 } },
         { system = SYSTEMS.UnitFrame, index = UnitIndex("Raid"), anchor = Anchor("TOPLEFT", "TOPLEFT", SUGGESTED_EDGE, -top) },
-        { system = SYSTEMS.AuraFrame, index = AuraIndex("BuffFrame"), anchor = Anchor("TOPRIGHT", "TOPRIGHT", -255, -top) },
+        { system = SYSTEMS.AuraFrame, index = AuraIndex("BuffFrame"), anchor = Anchor("TOPRIGHT", "TOPRIGHT", -255, -top),
+          -- Rows of BUFFS_PER_ROW, the next row below (Edit Mode's icon limit is icons per row, stored as is).
+          settings = { [Enum.EditModeAuraFrameSetting and Enum.EditModeAuraFrameSetting.IconLimitBuffFrame or -1] = 4 } },
         { system = GAMEPAD_BAR, anchor = Anchor("BOTTOM", "BOTTOM", 0, 55),
           -- Compact, empty bars shown, no button prompts on the buttons, highlight on, expanding.
           settings = { [GBS.Compact or -1] = 1, [GBS.ShowEmptyBars or -2] = 1, [GBS.ShowButtonPrompts or -3] = 0,
@@ -342,6 +345,24 @@ function Layout.BuffsUnderBar()
 end
 ns.ReloadSoon = function(what) ns.Print(what .. " Reloading the interface...") ReloadUI() end
 
+-- Buffs in rows of n (Edit Mode's buff frame icon limit: icons per row, wrapping downward), the 5th of 4 starting a
+-- new row under the first. Takes effect after a /reload.
+Layout.BUFFS_PER_ROW = 4
+function Layout.BuffsPerRow(n)
+    local index = Enum.EditModeAuraFrameSystemIndices and Enum.EditModeAuraFrameSystemIndices.BuffFrame
+    local setting = Enum.EditModeAuraFrameSetting and Enum.EditModeAuraFrameSetting.IconLimitBuffFrame
+    if not (SYSTEMS.AuraFrame and index and setting) then return false, "this client has no buff frame in Edit Mode" end
+    if InCombatLockdown() then return false, "not in combat" end
+    local info, layout, why = Layout.Editable()
+    if not layout then return false, why end
+    local sys = FindSystem(layout, SYSTEMS.AuraFrame, index)
+    if not sys then return false, "the buff frame isn't in your layout" end
+    if not Backup(layout) then return false, "couldn't back up the layout first" end
+    SetSetting(sys, setting, math.max(2, math.min(32, n)))
+    C_EditMode.SaveLayouts(info)
+    return true, n
+end
+
 ------------------------------------------------------------------------
 -- The focus frame centered in the gap between your frame and the target frame, at their height.
 -- Measured from what's visible: the focus frame's border (Focus.lua's portrait-less one, or
@@ -403,6 +424,9 @@ ns.AddCommand("layout", function(arg)
     elseif cmd == "buffs" then
         local ok, info = Layout.BuffsUnderBar()
         ns.Print(ok and ("Buffs moved to " .. info .. " px from the top (layout backed up). /reload to see it.") or ("Not changed: " .. info .. "."))
+    elseif cmd == "buffrow" then
+        local ok, info = Layout.BuffsPerRow(tonumber(rest) or Layout.BUFFS_PER_ROW)
+        ns.Print(ok and ("Buffs in rows of " .. info .. " (layout backed up). /reload to see it.") or ("Not changed: " .. info .. "."))
     elseif cmd == "focus" then
         local ok, info = Layout.FocusCenter()
         if ok then ReloadSoon("Focus frame centered (layout backed up).") else ns.Print("Not changed: " .. info .. ".") end
@@ -421,7 +445,7 @@ ns.AddCommand("layout", function(arg)
         if #list == 0 then return ns.Print("No layout backups yet.") end
         for i, b in ipairs(list) do ns.Print(i .. ". " .. b.when .. "  " .. tostring(b.name)) end
     else
-        ns.Print("/deckkit layout suggested  |  party  |  focus  |  raid <left> <top>  |  crossbar <px from bottom>  |  restore  |  backups")
+        ns.Print("/deckkit layout suggested  |  party  |  focus  |  raid <left> <top>  |  buffs  |  buffrow <n>  |  crossbar <px from bottom>  |  restore  |  backups")
     end
 end, "Edit Mode layout: suggested, party, focus, buffs, raid <left> <top>, crossbar <height>, restore, backups")
 
@@ -459,6 +483,12 @@ Layout.LBPromptRow = { type = "toggle", label = "Hide the LB prompt under party 
 -- Setup > Layout: every action that changes the Edit Mode layout (each backs it up first: one backup, one undo),
 -- with Undo last. Suggested.lua puts them after "Apply everything suggested".
 Layout.MenuItems = {
+    { type = "action", label = "Buffs in rows of 4", keepOpen = true,
+      hint = "Your buffs four to a row, the fifth starting a new row below. Backs up your Edit Mode layout, then reloads.",
+      run = function()
+          local ok, info = Layout.BuffsPerRow(Layout.BUFFS_PER_ROW)
+          if ok then ReloadSoon("Buffs in rows of " .. info .. ".") else ns.Print("Not changed: " .. info .. ".") end
+      end },
     { type = "action", label = "Buffs under the bar", verb = "Move", keepOpen = true,
       hint = "Moves your buffs down to just under the status bar, keeping them where they are across. "
           .. "Backs up your Edit Mode layout, then reloads.",

@@ -192,6 +192,8 @@ local function Public(plan, options, goalName)
             to = { map = leg.to.map, x = leg.to.x, y = leg.to.y },
             seconds = (leg.arrive - leg.depart) / 1000,
             wait = (leg.wait or 0) / 1000,
+            -- A ride whose route was never timed (no sighting, own or shared): its wait is a guess (half its loop).
+            estimated = leg.estimated and leg.route ~= nil and not leg.aboard or nil,
         }
     end
     return out
@@ -316,5 +318,114 @@ function v1.Sharing()
 end
 
 v1.Streets = ns.Streets -- streets recorded by walking them (Streets.lua)
+
+-- What leaves where you're standing: every boat, zeppelin, lift or tram stop within `radius` yards (80: Durotar's
+-- Grom'gol and Undercity towers stand 50 apart) of world position map, x (north), y (west). nil when there's none;
+-- else { docks = { ids }, departures = { { kind, to (where it goes, every call, by town name), known (timed: a
+-- sighting), docked, departIn, arriveIn, thenIn (seconds; nil while untimed), dock, route, toDocks, rideSeconds (from
+-- leaving here to its next stop) } } }, the timed soonest first,
+-- the untimed last. One line per destination at each dock, as upstream's dock tooltip (Timetable.ByDestination).
+-- A dock by name as the route steps name it (Steps.PlaceName: its site, else the town nearest it), not the
+-- upstream label, which our synced data has no names for ("?").
+local function DockName(id)
+    local dock = ns.Docks[id]
+    return dock and ns.Steps.PlaceName({ kind = "dock", id = id, map = dock.map, x = dock.x, y = dock.y })
+        or ns.DockLabel(id)
+end
+
+function v1.DockBoard(map, x, y, radius)
+    if not (map and x and y and ns.Docks and ns.Timetable) then return nil end
+    radius = radius or 80
+    local Name = DockName
+    local out = { docks = {}, departures = {} }
+    for id, dock in ipairs(ns.Docks) do
+        if dock.map == map and math.sqrt((dock.x - x) ^ 2 + (dock.y - y) ^ 2) <= radius then
+            out.docks[#out.docks + 1] = id
+            -- One line per destination, grouped by our names (Timetable.ByDestination groups by the upstream labels,
+            -- all "?" here, which ran every route from a dock into one line): the soonest, then when the next leaves.
+            local byTo = {}
+            -- Each route's stop here, for its ride time to the next stop.
+            local stopOf = {}
+            for _, visit in ipairs(ns.Timetable.Visits(id)) do stopOf[visit.route] = visit.stop end
+            for _, d in ipairs(ns.Timetable.Departures(id)) do
+                local names = {}
+                for _, to in ipairs(d.to or {}) do names[#names + 1] = Name(to) end
+                local to = table.concat(names, ", then ")
+                local lead = byTo[to]
+                if not lead then
+                    local route, stop, rideSeconds = ns.Routes[d.route], stopOf[d.route], nil
+                    if route and stop and d.to and d.to[1] then
+                        for _, s2 in ipairs(route.stops) do
+                            if s2.dock == d.to[1] then rideSeconds = ns.Model.RideTime(route, stop, s2) / 1000 break end
+                        end
+                    end
+                    lead = {
+                        kind = d.kind, to = to, known = d.known or false, docked = d.docked,
+                        departIn = d.departIn and d.departIn / 1000, arriveIn = d.arriveIn and d.arriveIn / 1000,
+                        dock = id, route = d.route, toDocks = d.to, rideSeconds = rideSeconds,
+                    }
+                    byTo[to] = lead
+                    out.departures[#out.departures + 1] = lead
+                elseif lead.known and d.known and not lead.thenIn then
+                    lead.thenIn = d.departIn and d.departIn / 1000
+                end
+            end
+        end
+    end
+    if #out.docks == 0 then return nil end
+    table.sort(out.departures, function(a, b)
+        if a.known ~= b.known then return a.known end
+        return (a.departIn or 0) < (b.departIn or 0)
+    end)
+    return out
+end
+
+-- The ride you're aboard, once the ride observer has matched it (Transport/Observer.lua: moving at boat speed along a
+-- route's own track, height included, in step with its timetable; never on a flight path): { route, kind, to (the
+-- next stop, by town name), arriveIn (seconds; nil while that route's schedule isn't known yet) }, or nil.
+-- Standing aboard at a dock doesn't count: it shows once the boat is moving.
+function v1.Riding()
+    local routeID = ns.CurrentRide and ns.CurrentRide()
+    local route = routeID and ns.Routes[routeID]
+    if not route then return nil end
+    local dockID, arriveIn = ns.Timetable.NextStop(routeID)
+    return { route = routeID, kind = route.kind, to = dockID and DockName(dockID) or nil,
+             arriveIn = arriveIn and arriveIn / 1000 or nil }
+end
+
+-- The timed ride passing where you are right now: every route with a sighting (yours or shared on this shard) is
+-- placed in its loop by the clock, and the one now at a point of its loop where it passes your position while moving
+-- (Model.Phases, height included) is the one you're on. A docked boat never matches (it isn't moving), and two can't
+-- be at your spot at once. { route, kind, to (next stop, by town name), arriveIn (seconds) }, or nil.
+local NEAR_PHASE = 15000 -- ms either side of the clock's phase
+function v1.RideHere()
+    local x, y, z, map = ns.PlayerPosition()
+    if not (x and y and map and ns.Routes and ns.Model and ns.Context) then return nil end
+    local anchors, now = ns.Context.Anchors(), ns.NowMs()
+    for routeID, route in pairs(ns.Routes) do
+        local anchor = anchors[routeID]
+        if anchor and (not ns.RouteShown or ns.RouteShown(route)) then
+            local phases = ns.Model.Phases(route, map, x, y, z)
+            if phases and #phases > 0 then
+                local cur = (now - anchor.epoch) % route.period
+                for _, p in ipairs(phases) do
+                    local d = math.abs(cur - p)
+                    if math.min(d, route.period - d) <= NEAR_PHASE then
+                        -- Its next stop, and when it gets there.
+                        local soonest, dock
+                        for _, stop in ipairs(route.stops) do
+                            local docked, arriveIn = ns.Model.Visit(route, stop, cur)
+                            if not docked and arriveIn and (not soonest or arriveIn < soonest) then
+                                soonest, dock = arriveIn, stop.dock
+                            end
+                        end
+                        return { route = routeID, kind = route.kind, to = dock and DockName(dock) or nil,
+                                 arriveIn = soonest and soonest / 1000 or nil }
+                    end
+                end
+            end
+        end
+    end
+end
 
 ForeverNav.v1 = setmetatable({}, { __index = v1, __newindex = function() error("ForeverNav.v1 is read-only", 2) end })

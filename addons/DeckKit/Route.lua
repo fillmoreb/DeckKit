@@ -84,11 +84,20 @@ local function Apply(planned, p)
         local ride = not OWN_FEET[leg.mode]
         route.steps[i] = {
             text = leg.text, method = leg.mode, ride = ride, seconds = leg.seconds + leg.wait,
+            wait = leg.wait, guess = ride and leg.estimated or nil, -- guess: an untimed route's wait
             to = Point(leg.to, leg.text, p.mapID),                       -- where it ends
             board = ride and Point(leg.from, leg.text, p.mapID) or nil,  -- where a ride starts: the dock, the portal
         }
     end
     route.seconds = planned.seconds
+    -- When each leg ends, on the GetTime() clock: the plan counts from now, legs back to back (a ride's wait, then
+    -- its trip), so a ride's time left can count down to the real departure and arrival.
+    local at = GetTime()
+    for _, step in ipairs(route.steps) do
+        step.departsAt = at + (step.wait or 0)
+        at = at + (step.seconds or 0)
+        step.endsAt = at
+    end
 end
 
 -- Plans at once with the walks estimated (straight lines: the compass and DeckAgent answer straight away), then
@@ -97,7 +106,7 @@ end
 -- another way when the first one's walks turn out long.
 local function Plan(p, key)
     lastPlan = GetTime()
-    route = { key = key, at = 1, none = true }
+    route = { key = key, at = 1, none = true, continent = ns.Waypoints.player.continent }
     if measuring then measuring.Cancel() measuring = nil end
     local me = ns.Waypoints.player
     local continent, north, west = Map.WorldPosition(p.mapID, p.x, p.y)
@@ -131,7 +140,17 @@ end
 
 local function Reached(step)
     local d = step.to and YardsTo(step.to)
-    return d ~= nil and d <= (step.ride and R.RIDE_YARDS or R.WALK_YARDS)
+    if d ~= nil and d <= (step.ride and R.RIDE_YARDS or R.WALK_YARDS) then return true end
+    -- A ride across to another continent (a zeppelin, a boat) is done once you're on the far side, wherever you
+    -- walked off to: you're not always still standing at its dock when this looks (seen 2026-11-17, Tirisfal).
+    if step.ride and d ~= nil and step.board then
+        local me = ns.Waypoints.player
+        if not step.board.continent then
+            step.board.continent = Map.WorldPosition(step.board.mapID, step.board.x, step.board.y)
+        end
+        if step.board.continent and step.board.continent ~= me.continent then return true end
+    end
+    return false
 end
 
 -- Moves past every leg you've done: the furthest one whose end you're at (a shortcut skips the ones between).
@@ -166,6 +185,19 @@ function R.Leg(p)
     if not route or route.key ~= key then
         if InCombatLockdown() then return nil end   -- planning hitches: wait for the fight to end
         Plan(p, key)
+    end
+    -- Arrived on another continent (a loading screen: a zeppelin, a boat, a portal, a hearthstone): past the ride that
+    -- brought you, or planned again at once if the route isn't here (rather than after some walking, or never for a
+    -- plan that was to walk straight there).
+    local me = ns.Waypoints.player
+    if me.continent and route.continent and me.continent ~= route.continent then
+        route.continent = me.continent
+        if not route.none then Advance() end
+        local step = not route.none and route.steps[route.at]
+        local here = step and (YardsTo(step.ride and step.board or step.to) ~= nil)
+        if not here and not InCombatLockdown() then Plan(p, key) end
+    elseif me.continent and not route.continent then
+        route.continent = me.continent
     end
     if route.none then return nil end
     Advance()
@@ -322,6 +354,121 @@ function R.Progress(me, target)
         if dN * dN + dW * dW >= R.AHEAD_YARDS * R.AHEAD_YARDS then steer = pts[i] break end
     end
     return { north = steer.x, west = steer.y }, left + best, best
+end
+
+-- Seconds until the leg being guided now ends (a ride: its wait and trip, counting down to the timetable's
+-- departure and arrival), or nil.
+function R.CurrentSeconds()
+    local step = route and route.steps and route.at and route.steps[route.at]
+    if not step then return nil end
+    if step.endsAt then return math.max(0, step.endsAt - GetTime()) end
+    return step.seconds
+end
+
+-- The ride being guided now, counting down: { departIn (seconds until it leaves, 0 once it has), arriveIn, guess
+-- (true when the route was never timed: the wait is half its loop) }, or nil when the current leg isn't a ride.
+function R.CurrentRide()
+    local step = route and route.steps and route.at and route.steps[route.at]
+    if not (step and step.ride and step.endsAt) then return nil end
+    local now = GetTime()
+    return { departIn = math.max(0, step.departsAt - now), arriveIn = math.max(0, step.endsAt - now),
+             guess = step.guess or false }
+end
+
+-- The ride you're aboard, read once a second, or nil: { kind, to, arriveIn, route }.
+--   * ForeverNav's ride observer (v1.Riding): sure, but only once the boat's samples fit its timetable, often half
+--     way across, and it starts over after a continent change (a zeppelin's loading screen);
+--   * carried: your position moving much faster than your own speed (on a boat or zeppelin, standing or walking), off a
+--     flight path: the timed ride passing your spot right now (v1.RideHere), else the departure from the dock you
+--     were standing at, from the second it moves.
+-- Kept once known, until a few seconds past its arrival, so the far side of a loading screen still shows it.
+local riding, ridingAt, kept = nil, 0, nil
+local lastPos, lastBoard -- { continent, north, west, at }; { board, at, north, west } of the dock you stood at
+local carriedAt = -math.huge -- the last time you were being carried
+
+local function Carried(now)
+    local mapID, x, y = Map.PlayerPosition()
+    local continent, north, west
+    if mapID then continent, north, west = Map.WorldPosition(mapID, x, y) end
+    local moved
+    if continent and lastPos and lastPos.continent == continent and now > lastPos.at then
+        moved = math.sqrt((north - lastPos.north) ^ 2 + (west - lastPos.west) ^ 2) / (now - lastPos.at)
+    end
+    lastPos = continent and { continent = continent, north = north, west = west, at = now } or nil
+    local own = GetUnitSpeed("player") or 0
+    if continent and own < 0.5 and not (moved and moved > 1) then
+        -- Standing still: remember the dock board here, if any (the ride, if one comes, leaves from it).
+        local nav = ForeverNav and ForeverNav.v1
+        local b = nav and nav.DockBoard and nav.DockBoard(continent, north, west)
+        if b then lastBoard = { board = b, at = now } end
+    end
+    -- Moving much faster than your own legs (walking about on the deck still counts).
+    return moved and moved - own > 8 and not UnitOnTaxi("player")
+end
+
+local function FromDock(now)
+    if not (lastBoard and now - lastBoard.at < 120) then return nil end
+    -- The departure that was boarding (or due soonest) at the dock you stood at; the only one there, if just one.
+    local best
+    for _, d in ipairs(lastBoard.board.departures) do
+        if not best or (d.docked and not best.docked)
+            or (d.docked == best.docked and (d.departIn or 1e9) < (best.departIn or 1e9)) then best = d end
+    end
+    if not (best and best.rideSeconds) then return nil end
+    return { kind = best.kind, to = best.to, route = best.route, arriveIn = best.rideSeconds, guess = not best.known }
+end
+
+function R.Riding()
+    local now = GetTime()
+    if now - ridingAt < 1 then return riding end
+    ridingAt = now
+    local nav = ForeverNav and ForeverNav.v1
+    local sure = nav and nav.Riding and nav.Riding() or nil
+    local carried = Carried(now)
+    if carried then carriedAt = now end
+    -- Docked at the far end: still for a few seconds at a dock is the ride over (the observer holds its match for
+    -- half a minute more, pointing at the next stop: the way back).
+    local walking = (GetUnitSpeed("player") or 0) > 0.5
+    if not carried and ((now - carriedAt > 3 and lastBoard and lastBoard.at == now)   -- still, at a dock
+        or (walking and now - carriedAt > 5)) then                                    -- or walked off
+        kept, riding = nil, nil
+        return nil
+    end
+    -- The observer's match only while you've been carried lately (20 s covers a loading screen).
+    if sure and now - carriedAt > 20 then sure = nil end
+    if sure and sure.arriveIn then
+        kept = { ride = sure, arriveAt = now + sure.arriveIn }
+    elseif carried and not kept then
+        -- Which ride: the timed one passing here now (ForeverNav.v1.RideHere), else the dock you stood at.
+        local here = nav and nav.RideHere and nav.RideHere()
+        local r = (here and here.arriveIn) and here or FromDock(now)
+        if r then kept = { ride = r, arriveAt = now + r.arriveIn } end
+    end
+    if kept and now < kept.arriveAt + 5 then
+        local r = kept.ride
+        riding = { route = r.route, kind = r.kind, to = r.to, arriveIn = math.max(0, kept.arriveAt - now) }
+    else
+        kept = nil
+        riding = sure
+    end
+    return riding
+end
+
+-- What leaves the dock you're standing at (ForeverNav.v1.DockBoard), read once a second; nil away from a dock.
+local board, boardAt = nil, 0
+function R.DockBoard()
+    local now = GetTime()
+    if now - boardAt < 1 then return board end
+    boardAt = now
+    local nav = ForeverNav and ForeverNav.v1
+    board = nil
+    if not (nav and nav.DockBoard) then return nil end
+    -- Read here, not Waypoints.player: that one is only kept current while there's a waypoint.
+    local mapID, x, y = Map.PlayerPosition()
+    local continent, north, west
+    if mapID then continent, north, west = Map.WorldPosition(mapID, x, y) end
+    if continent then board = nav.DockBoard(continent, north, west) end
+    return board
 end
 
 -- Planned seconds of the route's legs after the one being guided now (0 without a route).

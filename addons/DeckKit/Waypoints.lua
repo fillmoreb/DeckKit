@@ -49,7 +49,8 @@ end
 -- Guidance: where a point is, relative to the player
 --   state: "ok", "far" (another continent), "nopos" (can't read position here)
 --   yards, bearing (radians counter-clockwise from north), angle (counter-clockwise from facing)
---   steer ({ yards, bearing }: the next corner of the walk there, when there is one) and eta (seconds), see Steer
+--   steer ({ yards, bearing }: the next corner of the walk there, when there is one), eta (seconds to the waypoint)
+--   and legEta (seconds to this leg's end), see Steer
 -- W.guide, what the displays show, is the active waypoint's; or, while it has a route (Route.lua, ForeverNav), the
 -- current leg's: its point is where that leg goes, `leg` says what it is ({ text, method, ride, index, count }) and
 -- `goal` is the waypoint's own guidance. Arriving is always the waypoint's.
@@ -277,7 +278,19 @@ local function Steer(g)
             g.steer = { yards = math.sqrt(dN * dN + dW * dW), bearing = math.atan2(dW, dN) }
         end
     end
-    g.eta = left / speed + (g.leg and ns.Route.LaterSeconds() or 0)
+    -- legEta: this leg alone (on foot: the walk left; a ride: its planned wait and trip).
+    g.legEta = left / speed
+    if g.leg and g.leg.ride then
+        g.legEta = ns.Route.CurrentSeconds() or g.legEta
+        g.ride = ns.Route.CurrentRide() -- { departIn, arriveIn, guess }
+        -- Aboard and matched (ForeverNav's ride observer): the timetable's own arrival, live.
+        local aboard = ns.Route.Riding and ns.Route.Riding()
+        if g.ride and aboard and aboard.arriveIn then
+            g.ride = { departIn = 0, arriveIn = aboard.arriveIn, guess = false, aboard = true }
+            g.legEta = aboard.arriveIn
+        end
+    end
+    g.eta = g.legEta + (g.leg and ns.Route.LaterSeconds() or 0)
 end
 
 -- Seconds as the compass shows them: "45s", "3:05", "1h 12m".

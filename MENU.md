@@ -48,6 +48,7 @@ Every action that changes your Edit Mode layout, in one place. Each one backs up
 | Option | Now | What it does |
 |---|---|---|
 | Apply everything suggested | (action) | Turns on every suggested game setting above, frees the grip keys, and applies the suggested layout: your frame and the target's, party frames in a row between them, the focus frame centered, raid frames top-left, buffs under the status bar, the compact crossbar near the bottom. On a new character, a game preset layout is first copied to a layout called "DeckKit". |
+| Buffs in rows of 4 | (action) | Your buffs four to a row, the fifth starting a new row below. |
 | Buffs under the bar | (action) | Moves your buffs down to just under the status bar. |
 | Line up party frames | (action) | Raid-style party frames in a row, filling the gap between your frame and the target frame, just under them. |
 | Center the focus frame | (action) | The focus frame in the middle of that gap, at their height (with "Name and health", it also turns on Use Larger Frame, which the focus's buffs need). |

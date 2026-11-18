@@ -126,13 +126,17 @@ local function Mirror(tip)
     card:SetAlpha(tip:GetAlpha() * Opacity())
 end
 
+-- Under the bar, and further down while the compass shows a route's lines under its pointer (Compass.lua).
+local placedGap
 local function Place()
+    local gap = GAP + (ns.CompassLinesHeight and ns.CompassLinesHeight() or 0)
+    placedGap = gap
     card:ClearAllPoints()
     local status = DeckHUDStatusBar
     if status and status:IsShown() then
-        card:SetPoint("TOP", status, "BOTTOM", 0, -GAP)
+        card:SetPoint("TOP", status, "BOTTOM", 0, -gap)
     else
-        card:SetPoint("TOP", UIParent, "TOP", 0, -GAP)
+        card:SetPoint("TOP", UIParent, "TOP", 0, -gap)
     end
 end
 
@@ -169,6 +173,8 @@ GameTooltip:HookScript("OnUpdate", function(tip)
     if not ours then return end
     Fade(tip, 0)
     Mirror(tip)
+    -- The compass's route lines come and go: follow them.
+    if GAP + (ns.CompassLinesHeight and ns.CompassLinesHeight() or 0) ~= placedGap then Place() end
     card:Show()
 end)
 GameTooltip:HookScript("OnShow", function(tip)

@@ -4,7 +4,8 @@
 -- plum at rest, lilac as the waypoint comes within 45 degrees. On the strip:
 --   * the active waypoint (DeckKit.Waypoints): the lilac pin, hanging below the bar, pointing along the walk
 --     there (its next corner, when ForeverNav has a walk), with the time to get there under it at your run
---     speed (dropping clear of the pointer as it reaches the middle); "Arrived" when reached
+--     speed (dropping clear of the pointer as it reaches the middle); on a route, under the pointer instead:
+--     the step and its time, and below it, dimmer, where the trip ends and the whole time; "Arrived" when reached
 --   * Blizzard's map pin and a guard's directions (the flag), sized and hung like the pin
 --   * the focused quest (the game's super-tracked one), drawn as Blizzard's map and objective tracker draw
 --     it: its classification's disc (gold, blue for dailies...) with the dots, or the ? once complete;
@@ -56,7 +57,7 @@ local function Width() return DB() and DB().compassWidth or DEFAULT_WIDTH end
 local function View() return DB() and DB().compassView or DEFAULT_VIEW end
 
 local W -- DeckKit.Waypoints
-local frame, clip, backing, ticks, letters, pin, yards, dist, note, step
+local frame, clip, backing, ticks, letters, pin, yards, dist, note, step, trip
 local pointer, gem
 local over -- the layer above the strip, not clipped (the pin, the pointer, big marks)
 
@@ -153,6 +154,12 @@ local function Create()
     if sfont then step:SetFont(sfont, 11, "OUTLINE") end
     step:SetPoint("TOP", pointer, "BOTTOM", 0, -1)
     step:Hide()
+    -- Under it, dimmer: where the trip ends, and the time for all of it.
+    trip = over:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    if sfont then trip:SetFont(sfont, 11, "OUTLINE") end
+    trip:SetPoint("TOP", step, "BOTTOM", 0, -1)
+    trip:SetTextColor(0.62, 0.62, 0.62)
+    trip:Hide()
 end
 
 local function Place()
@@ -529,15 +536,61 @@ end
 local SMOOTH = 16
 local shownFacing
 
+-- How far the route's lines under the pointer reach below the compass (0 when none show), for the mouseover
+-- tooltip (Tooltip.lua), which moves down to clear them.
+function ns.CompassLinesHeight()
+    if not (step and step:IsShown()) then return 0 end
+    return step:GetStringHeight() + 1 + ((trip and trip:IsShown()) and (trip:GetStringHeight() + 1) or 0)
+end
+
 -- The route's step under the pointer: shown whenever the waypoint has one, whatever else the strip shows.
 local function Step(g)
     if not step then return end
     local leg = not W.arrival and g and g.leg
     if leg then
-        step:SetText(leg.text)
+        -- The step and its own time; under it, dimmer, where the trip ends and the time for all of it.
+        local when = g.legEta and ("  (" .. W.FormatETA(g.legEta) .. ")") or ""
+        local r = g.ride
+        if r then -- a ride: when it leaves, then when it gets there; "~" while the route was never timed
+            when = r.departIn > 0 and ("  (leaves in " .. (r.guess and "~" or "") .. W.FormatETA(r.departIn) .. ")")
+                or ("  (arrives in " .. (r.guess and "~" or "") .. W.FormatETA(r.arriveIn) .. ")")
+        end
+        step:SetText(leg.text .. when)
         step:Show()
+        local dest = g.goal and g.goal.point
+        local name = dest and (dest.label or DeckKit.Map.Name(dest.mapID))
+        if name and g.eta then
+            trip:SetTextColor(0.62, 0.62, 0.62) -- dimmer: the whole trip, under the step
+            trip:SetText(name .. "  (" .. W.FormatETA(g.eta) .. ")")
+            trip:Show()
+        else
+            trip:Hide()
+        end
     else
-        step:Hide()
+        -- No route step: aboard a boat or zeppelin, where it's going; else at a dock (or a pair of towers), what
+        -- leaves (the first two, soonest), in the same two lines.
+        local lines = {}
+        local aboard = not W.arrival and DeckKit.Route and DeckKit.Route.Riding and DeckKit.Route.Riding()
+        if aboard then
+            step:SetText("On the " .. aboard.kind .. (aboard.to and (" to " .. aboard.to) or "")
+                .. (aboard.arriveIn and ("  (arrives in " .. W.FormatETA(aboard.arriveIn) .. ")") or ""))
+            step:Show()
+            trip:Hide()
+            return
+        end
+        local b = not W.arrival and DeckKit.Route and DeckKit.Route.DockBoard and DeckKit.Route.DockBoard()
+        for i, d in ipairs(b and b.departures or {}) do
+            if i > 2 then break end
+            local kind = d.kind:sub(1, 1):upper() .. d.kind:sub(2)
+            local when
+            if not d.known then when = "not timed yet"
+            elseif d.docked then when = "boarding, leaves in " .. W.FormatETA(d.departIn)
+            elseif d.arriveIn then when = "arrives in " .. W.FormatETA(d.arriveIn) -- en route here: when it docks
+            else when = "leaves in " .. W.FormatETA(d.departIn) end
+            lines[i] = kind .. " to " .. d.to .. "  (" .. when .. ")"
+        end
+        if lines[1] then step:SetText(lines[1]) step:Show() else step:Hide() end
+        if lines[2] then trip:SetTextColor(1, 1, 1) trip:SetText(lines[2]) trip:Show() else trip:Hide() end
     end
 end
 
@@ -599,9 +652,10 @@ local function Draw(_, elapsed)
         yards:SetPoint("TOP", pin, "BOTTOM", 0, 1 - (YARDS_DROP + 1) * near)
         pin:SetAlpha(off and 0.6 or 1)
         pin:Show()
+        -- The time under the pin, unless the route's step line above says it (the whole trip, Step).
         yards:SetText(g.eta and W.FormatETA(g.eta) or string.format("%d", g.yards + 0.5))
         yards:SetAlpha(off and 0.6 or 1)
-        yards:Show()
+        yards:SetShown(not g.leg)
         dist:Hide()
     elseif g and g.state == "far" then
         pin:Hide(); yards:Hide()
